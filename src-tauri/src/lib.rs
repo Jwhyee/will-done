@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqlitePool, Pool, Sqlite, Row};
+use sqlx::{sqlite::SqlitePool, Pool, Sqlite};
 use std::fs;
 use tauri::{Manager, State};
 use chrono::{Local, NaiveDateTime, NaiveTime, Duration, Timelike, NaiveDate};
@@ -37,6 +37,7 @@ pub struct Task {
     pub workspace_id: i64,
     pub title: String,
     pub planning_memo: Option<String>,
+    pub estimated_minutes: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
@@ -307,11 +308,12 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
 
     // 1. 태스크 생성
     let task_result = sqlx::query(
-        "INSERT INTO tasks (workspace_id, title, planning_memo) VALUES (?1, ?2, ?3)",
+        "INSERT INTO tasks (workspace_id, title, planning_memo, estimated_minutes) VALUES (?1, ?2, ?3, ?4)",
     )
     .bind(input.workspace_id)
     .bind(&input.title)
     .bind(&input.planning_memo)
+    .bind((input.hours * 60 + input.minutes) as i64)
     .execute(&mut *tx)
     .await
     .map_err(|e| e.to_string())?;
@@ -369,7 +371,7 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
             .map_err(|e| e.to_string())?;
 
         let now_dt = Local::now().naive_local();
-        let mut current_start = if let Some((last_end,)) = last_block {
+        let current_start = if let Some((last_end,)) = last_block {
             let le = NaiveDateTime::parse_from_str(&last_end, "%Y-%m-%dT%H:%M:%S").unwrap_or(now_dt);
             if le < now_dt { now_dt } else { le }
         } else {
@@ -545,7 +547,7 @@ async fn process_task_transition(state: State<'_, DbState>, input: TaskTransitio
 
     match input.action.as_str() {
         "COMPLETE_ON_TIME" | "COMPLETE_NOW" | "COMPLETE_AGO" => {
-            let mut end_dt = if input.action == "COMPLETE_NOW" {
+            let end_dt = if input.action == "COMPLETE_NOW" {
                 Local::now().naive_local()
             } else if input.action == "COMPLETE_AGO" {
                 Local::now().naive_local() - Duration::minutes(input.extra_minutes.unwrap_or(0) as i64)
@@ -653,7 +655,7 @@ async fn reorder_blocks(state: State<'_, DbState>, workspace_id: i64, block_ids:
     let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
 
     // 1. 모든 블록 정보 가져오기
-    let mut all_blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE' ORDER BY start_time ASC")
+    let all_blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE' ORDER BY start_time ASC")
         .bind(workspace_id)
         .fetch_all(&mut *tx)
         .await
@@ -674,7 +676,7 @@ async fn reorder_blocks(state: State<'_, DbState>, workspace_id: i64, block_ids:
 
     // 4. 요청된 순서대로 블록 재배치 (UNPLUGGED는 고정이라 제외하고 계산)
     for id in block_ids {
-        if let Some(mut block) = all_blocks.iter().find(|b| b.id == id).cloned() {
+        if let Some(block) = all_blocks.iter().find(|b| b.id == id).cloned() {
             if block.status == "UNPLUGGED" { continue; }
 
             let duration_min = (NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap() - 
@@ -736,7 +738,9 @@ pub fn run() {
                 sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT)").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS unplugged_times (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, label TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
-                sqlx::query("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+                sqlx::query("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, estimated_minutes INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+                // Migration: add column if exists (for existing DBs)
+                sqlx::query("ALTER TABLE tasks ADD COLUMN estimated_minutes INTEGER NOT NULL DEFAULT 0").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS time_blocks (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, status TEXT NOT NULL, review_memo TEXT, FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
 
                 app_handle.manage(DbState { pool });
