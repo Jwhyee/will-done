@@ -4,10 +4,10 @@ This plan details the steps to create a complete boilerplate for the "will-done"
 
 ## Plan Overview
 
-1.  **Phase 1: Scaffolding**: Create the initial Tauri + React + TS application in a temporary directory to avoid conflicts, then move the files to the project root.
-2.  **Phase 2: Frontend Configuration**: Install and configure Tailwind CSS and all required frontend libraries.
-3.  **Phase 3: Backend Configuration**: Add all required Rust crates to the `Cargo.toml` file.
-4.  **Phase 4: UI & Directory Setup**: Initialize `shadcn/ui`, enforce the "Strictly Dark Mode" theme, and create the required directory structure.
+- [x] **Phase 1: Scaffolding**: Create the initial Tauri + React + TS application in a temporary directory to avoid conflicts, then move the files to the project root.
+- [x] **Phase 2: Frontend Configuration**: Install and configure Tailwind CSS and all required frontend libraries.
+- [x] **Phase 3: Backend Configuration**: Add all required Rust crates to the `Cargo.toml` file.
+- [x] **Phase 4: UI & Directory Setup**: Initialize `shadcn/ui`, enforce the "Strictly Dark Mode" theme, and create the required directory structure.
 5.  **Phase 5: Verification & Commit**: Perform a final, non-blocking verification of the entire setup and create a final commit.
 
 ---
