@@ -101,7 +101,7 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, hoverTask
       </div>
       
       {/* Dot on Line - 라인 정중앙에 위치하도록 조정 (-left-[70px]) */}
-      <div className={`absolute -left-[70px] top-1 w-3 h-3 rounded-full border-2 bg-[#09090b] z-10 transition-all duration-300 ${
+      <div className={`absolute -left-[70px] top-1 w-3 h-3 rounded-full border-2 bg-[#111114] z-10 transition-all duration-300 ${
         block.status === "DONE" ? "border-green-500 bg-green-500/20" :
         block.status === "NOW" ? "border-blue-500 scale-125 shadow-[0_0_10px_rgba(59,130,246,0.5)] bg-blue-500/20" :
         block.status === "PENDING" ? "border-orange-500 bg-orange-500/20" :
@@ -123,7 +123,7 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, hoverTask
         block.status === "DONE" ? "bg-green-500/5 border-green-500/20" :
         block.status === "NOW" ? (new Date(block.end_time) < currentTime ? "bg-red-500/10 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-blue-500/5 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]") :
         block.status === "PENDING" ? "bg-orange-500/5 border-orange-500/40 border-dashed" :
-        block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#27272a] opacity-60 border-dashed cursor-default" : "bg-[#18181b]/50 border-[#27272a] hover:bg-[#18181b]"
+        block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#2e2e33] opacity-60 border-dashed cursor-default" : "bg-[#1c1c21]/50 border-[#2e2e33] hover:bg-[#1c1c21]"
       } ${isHovered ? "border-white/40 bg-zinc-800/80 -translate-x-1 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.01]" : ""} ${isFirstOfTask ? "rounded-b-none border-b-0 pb-8 mb-0" : ""} ${isLastOfTask ? "rounded-t-none border-t-0 mt-[-2px]" : ""} ${isMiddleOfTask ? "rounded-none border-y-0 py-8 my-[-2px]" : ""}`}
         style={{
           clipPath: isFirstOfTask 
@@ -418,7 +418,7 @@ function App() {
 
   if (view === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#09090b] text-white antialiased font-bold">
+      <div className="min-h-screen flex items-center justify-center bg-[#111114] text-white antialiased font-bold">
         <p className="animate-pulse">{t.checking}</p>
       </div>
     );
@@ -427,11 +427,11 @@ function App() {
   const isFirstWorkspace = workspaces.length === 0;
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white flex overflow-hidden font-sans antialiased select-none">
+    <div className="min-h-screen bg-[#111114] text-white flex overflow-hidden font-sans antialiased select-none">
       
       {/* 1차 사이드바 */}
       {view === "main" && (
-        <aside className="w-16 border-r border-[#27272a] bg-[#09090b] flex flex-col items-center py-4 space-y-4 shrink-0 shadow-2xl z-20">
+        <aside className="w-16 border-r border-[#2e2e33] bg-[#111114] flex flex-col items-center py-4 space-y-4 shrink-0 shadow-2xl z-20">
           {workspaces.map((ws) => (
             <button
               key={ws.id}
@@ -439,7 +439,7 @@ function App() {
               className={`w-11 h-11 rounded-xl flex items-center justify-center text-xs font-black transition-all duration-300 transform ${
                 activeWorkspaceId === ws.id 
                 ? "bg-white text-black scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]" 
-                : "bg-[#18181b] text-zinc-500 hover:bg-[#27272a] hover:text-white"
+                : "bg-[#1c1c21] text-zinc-500 hover:bg-[#2e2e33] hover:text-white"
               }`}
             >
               {ws.name.substring(0, 2).toUpperCase()}
@@ -450,7 +450,7 @@ function App() {
               workspaceForm.reset();
               setView("workspace_setup");
             }}
-            className="w-11 h-11 rounded-xl bg-[#18181b] border border-[#27272a] flex items-center justify-center text-zinc-500 hover:text-white hover:border-zinc-500 transition-all duration-300"
+            className="w-11 h-11 rounded-xl bg-[#1c1c21] border border-[#2e2e33] flex items-center justify-center text-zinc-500 hover:text-white hover:border-zinc-500 transition-all duration-300"
           >
             <Plus size={22} />
           </button>
@@ -459,8 +459,8 @@ function App() {
 
       {/* 2차 사이드바 */}
       {view === "main" && (
-        <aside className="w-64 border-r border-[#27272a] bg-[#18181b] flex flex-col shrink-0 z-10">
-          <div className="p-5 border-b border-[#27272a] flex items-center space-x-3 text-zinc-400 hover:text-white cursor-pointer transition-all active:scale-95">
+        <aside className="w-64 border-r border-[#2e2e33] bg-[#1c1c21] flex flex-col shrink-0 z-10">
+          <div className="p-5 border-b border-[#2e2e33] flex items-center space-x-3 text-zinc-400 hover:text-white cursor-pointer transition-all active:scale-95">
             <Search size={18} />
             <span className="text-sm font-black tracking-tight">{t.sidebar.date_search}</span>
           </div>
@@ -471,15 +471,15 @@ function App() {
                 <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">
                   {t.sidebar.inbox}
                 </h3>
-                <div className="p-8 border-2 border-dashed border-[#27272a] bg-[#09090b]/40 rounded-2xl text-center">
+                <div className="p-8 border-2 border-dashed border-[#2e2e33] bg-[#111114]/40 rounded-2xl text-center">
                   <p className="text-[11px] text-zinc-600 font-bold italic">{t.sidebar.no_tasks}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="p-5 border-t border-[#27272a]">
-            <Button variant="ghost" className="w-full justify-start text-zinc-400 hover:text-white hover:bg-[#27272a] space-x-4 h-12 px-4 rounded-xl transition-all">
+          <div className="p-5 border-t border-[#2e2e33]">
+            <Button variant="ghost" className="w-full justify-start text-zinc-400 hover:text-white hover:bg-[#2e2e33] space-x-4 h-12 px-4 rounded-xl transition-all">
               <Settings size={20} />
               <span className="font-bold text-sm">{t.sidebar.settings}</span>
             </Button>
@@ -488,11 +488,11 @@ function App() {
       )}
 
       {/* 메인 영역 */}
-      <main className="flex-1 flex flex-col relative overflow-hidden bg-[#09090b] antialiased">
+      <main className="flex-1 flex flex-col relative overflow-hidden bg-[#111114] antialiased">
         {view === "main" ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Header */}
-            <header className="px-8 py-6 flex flex-col space-y-4 shrink-0 bg-[#09090b]/80 backdrop-blur-md z-10">
+            <header className="px-8 py-6 flex flex-col space-y-4 shrink-0 bg-[#111114]/80 backdrop-blur-md z-10">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center space-x-3 text-2xl font-black font-mono tracking-tighter">
@@ -508,7 +508,7 @@ function App() {
               </div>
 
               {/* Task Input Form */}
-              <div className="p-2 bg-[#18181b] border border-[#27272a] rounded-2xl shadow-2xl">
+              <div className="p-2 bg-[#1c1c21] border border-[#2e2e33] rounded-2xl shadow-2xl">
                 <form onSubmit={taskForm.handleSubmit(onTaskSubmit)} className="flex flex-col space-y-2">
                   <div className="flex items-center space-x-2 px-2 pt-2">
                     <Input 
@@ -516,7 +516,7 @@ function App() {
                       placeholder={t.main.task_placeholder} 
                       className="flex-1 bg-transparent border-none text-lg font-bold placeholder:text-zinc-600 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-12"
                     />
-                    <div className="flex items-center bg-[#09090b] border border-[#27272a] rounded-xl h-10 px-3 space-x-2">
+                    <div className="flex items-center bg-[#111114] border border-[#2e2e33] rounded-xl h-10 px-3 space-x-2">
                       <Input 
                         type="number" 
                         {...taskForm.register("hours", { valueAsNumber: true })}
@@ -532,7 +532,7 @@ function App() {
                       <span className="text-[10px] font-black text-zinc-500 uppercase">{t.main.mins}</span>
                     </div>
                     
-                    <label className="flex items-center space-x-2 bg-[#09090b] border border-[#27272a] rounded-xl h-10 px-4 cursor-pointer hover:bg-zinc-900 transition-colors">
+                    <label className="flex items-center space-x-2 bg-[#111114] border border-[#2e2e33] rounded-xl h-10 px-4 cursor-pointer hover:bg-zinc-900 transition-colors">
                       <input type="checkbox" {...taskForm.register("is_urgent")} className="hidden" />
                       <Zap size={14} className={taskForm.watch("is_urgent") ? "text-red-500 fill-red-500" : "text-zinc-500"} />
                       <span className={`text-[10px] font-black uppercase ${taskForm.watch("is_urgent") ? "text-red-500" : "text-zinc-500"}`}>{t.main.urgent}</span>
@@ -595,7 +595,7 @@ function App() {
 
             {/* Transition Modal */}
             <Dialog open={!!transitionBlock} onOpenChange={(open) => !open && setTransitionBlock(null)}>
-              <DialogContent className="sm:max-w-[500px] bg-[#18181b] border-[#27272a] text-white shadow-2xl rounded-3xl p-8 antialiased [&>button]:hidden">
+              <DialogContent className="sm:max-w-[500px] bg-[#1c1c21] border-[#2e2e33] text-white shadow-2xl rounded-3xl p-8 antialiased [&>button]:hidden">
                 <DialogHeader className="space-y-4">
                   <DialogTitle className="text-2xl font-black tracking-tighter text-white leading-none flex items-center gap-3">
                     <Sparkles className="text-yellow-400" size={24} />
@@ -607,7 +607,7 @@ function App() {
                 </DialogHeader>
 
                 <div className="py-6 space-y-6">
-                  <div className="p-4 bg-[#09090b] border border-[#27272a] rounded-2xl flex items-center justify-between">
+                  <div className="p-4 bg-[#111114] border border-[#2e2e33] rounded-2xl flex items-center justify-between">
                     <span className="text-xs font-black text-zinc-500 uppercase tracking-widest">Current Task</span>
                     <span className="font-bold text-sm">{transitionBlock?.title}</span>
                   </div>
@@ -618,7 +618,7 @@ function App() {
                       value={reviewMemo}
                       onChange={(e) => setReviewMemo(e.target.value)}
                       placeholder={t.main.transition.review_placeholder}
-                      className="w-full min-h-[80px] bg-[#09090b] border-[#27272a] rounded-2xl p-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-zinc-700 font-bold"
+                      className="w-full min-h-[80px] bg-[#111114] border-[#2e2e33] rounded-2xl p-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-zinc-700 font-bold"
                     />
                   </div>
 
@@ -627,7 +627,7 @@ function App() {
                       <Button 
                         onClick={() => handleTransition("COMPLETE_ON_TIME")}
                         variant="outline"
-                        className="flex-1 border-[#27272a] bg-zinc-900/50 hover:bg-[#27272a] text-zinc-300 font-black h-12 rounded-xl text-xs active:scale-95 whitespace-normal"
+                        className="flex-1 border-[#2e2e33] bg-zinc-900/50 hover:bg-[#2e2e33] text-zinc-300 font-black h-12 rounded-xl text-xs active:scale-95 whitespace-normal"
                       >
                         {t.main.transition.complete_target}
                       </Button>
@@ -639,7 +639,7 @@ function App() {
                       </Button>
                     </div>
 
-                    <div className="flex items-center space-x-3 bg-[#09090b] border border-[#27272a] rounded-xl px-4 h-12">
+                    <div className="flex items-center space-x-3 bg-[#111114] border border-[#2e2e33] rounded-xl px-4 h-12">
                        <Input 
                           type="number" 
                           value={agoMinutes} 
@@ -656,10 +656,10 @@ function App() {
                         </Button>
                     </div>
                     
-                    <Separator className="bg-[#27272a]" />
+                    <Separator className="bg-[#2e2e33]" />
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="col-span-1 flex items-center bg-[#09090b] border border-[#27272a] rounded-xl px-3">
+                      <div className="col-span-1 flex items-center bg-[#111114] border border-[#2e2e33] rounded-xl px-3">
                         <Input 
                           type="number" 
                           value={customDelay} 
@@ -671,7 +671,7 @@ function App() {
                       <Button 
                         variant="outline"
                         onClick={() => handleTransition("DELAY", customDelay)}
-                        className="col-span-1 border-[#27272a] bg-zinc-900/50 hover:bg-[#27272a] text-zinc-300 font-black h-10 rounded-xl active:scale-95 text-xs"
+                        className="col-span-1 border-[#2e2e33] bg-zinc-900/50 hover:bg-[#2e2e33] text-zinc-300 font-black h-10 rounded-xl active:scale-95 text-xs"
                       >
                         {t.main.transition.delay}
                       </Button>
@@ -685,7 +685,7 @@ function App() {
           <div className="flex-1 flex items-center justify-center p-8">
             {/* Onboarding Dialog */}
             <Dialog open={view === "onboarding"}>
-              <DialogContent className="sm:max-w-[425px] bg-[#18181b] border-[#27272a] text-white shadow-2xl [&>button]:hidden rounded-2xl p-8 border-t-zinc-700/50 antialiased">
+              <DialogContent className="sm:max-w-[425px] bg-[#1c1c21] border-[#2e2e33] text-white shadow-2xl [&>button]:hidden rounded-2xl p-8 border-t-zinc-700/50 antialiased">
                 <DialogHeader className="space-y-3">
                   <DialogTitle className="text-2xl font-black tracking-tighter text-white leading-none">{t.onboarding.title}</DialogTitle>
                   <DialogDescription className="text-zinc-400 font-bold text-sm leading-relaxed">{t.onboarding.description}</DialogDescription>
@@ -693,14 +693,14 @@ function App() {
                 <form onSubmit={userForm.handleSubmit(onUserSubmit)} className="space-y-8 mt-6">
                   <div className="space-y-3">
                     <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.onboarding.nickname_label}</Label>
-                    <Input {...userForm.register("nickname")} placeholder={t.onboarding.nickname_placeholder} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold focus:ring-1 focus:ring-white/10" />
+                    <Input {...userForm.register("nickname")} placeholder={t.onboarding.nickname_placeholder} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold focus:ring-1 focus:ring-white/10" />
                     {userForm.formState.errors.nickname && (
                       <p className="text-[11px] text-red-400 font-bold flex items-center gap-1"><AlertCircle size={12}/> {userForm.formState.errors.nickname.message}</p>
                     )}
                   </div>
                   <div className="space-y-3">
                     <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
-                    <Input type="password" {...userForm.register("gemini_api_key")} placeholder={t.onboarding.api_key_placeholder} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold focus:ring-1 focus:ring-white/10" />
+                    <Input type="password" {...userForm.register("gemini_api_key")} placeholder={t.onboarding.api_key_placeholder} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold focus:ring-1 focus:ring-white/10" />
                     <p className="text-[10px] text-zinc-500 font-bold leading-relaxed">{t.onboarding.api_key_guide}</p>
                   </div>
                   <Button type="submit" className="w-full bg-white text-black hover:bg-zinc-200 font-black h-14 rounded-xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95">
@@ -719,7 +719,7 @@ function App() {
                 }
               }}
             >
-              <DialogContent className={`sm:max-w-[550px] h-[85vh] bg-[#18181b] border-[#27272a] text-white shadow-2xl flex flex-col rounded-2xl p-0 border-t-zinc-700/50 overflow-hidden antialiased ${isFirstWorkspace ? "[&>button]:hidden" : ""}`}>
+              <DialogContent className={`sm:max-w-[550px] h-[85vh] bg-[#1c1c21] border-[#2e2e33] text-white shadow-2xl flex flex-col rounded-2xl p-0 border-t-zinc-700/50 overflow-hidden antialiased ${isFirstWorkspace ? "[&>button]:hidden" : ""}`}>
                 <DialogHeader className="p-8 pb-4 shrink-0 space-y-3">
                   <DialogTitle className="text-2xl font-black tracking-tighter text-white leading-none">
                     {isFirstWorkspace ? t.workspace_setup.title_first : t.workspace_setup.title_new}
@@ -731,7 +731,7 @@ function App() {
                   <form id="ws-form" onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="space-y-10 py-6">
                     <div className="space-y-3">
                       <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
-                      <Input {...workspaceForm.register("name")} placeholder={t.workspace_setup.name_placeholder} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold" />
+                      <Input {...workspaceForm.register("name")} placeholder={t.workspace_setup.name_placeholder} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold" />
                       {workspaceForm.formState.errors.name && (
                         <p className="text-[11px] text-red-400 font-bold flex items-center gap-1"><AlertCircle size={12}/> {workspaceForm.formState.errors.name.message}</p>
                       )}
@@ -758,8 +758,8 @@ function App() {
                         </Button>
                       </div>
                       <div className="grid grid-cols-2 gap-6">
-                        <Input type="time" {...workspaceForm.register("core_time_start")} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
-                        <Input type="time" {...workspaceForm.register("core_time_end")} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                        <Input type="time" {...workspaceForm.register("core_time_start")} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                        <Input type="time" {...workspaceForm.register("core_time_end")} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
                       </div>
                       {workspaceForm.formState.errors.core_time_end && (
                         <p className="text-[11px] text-red-400 font-bold flex items-center gap-1"><AlertCircle size={12}/> {workspaceForm.formState.errors.core_time_end.message}</p>
@@ -780,7 +780,7 @@ function App() {
                             e.preventDefault();
                             append({ label: "", start_time: "12:00", end_time: "13:00" });
                           }} 
-                          className="border-[#27272a] bg-[#09090b] hover:bg-[#27272a] text-zinc-200 font-black rounded-lg h-9"
+                          className="border-[#2e2e33] bg-[#111114] hover:bg-[#2e2e33] text-zinc-200 font-black rounded-lg h-9"
                         >
                           <Plus size={16} className="mr-2" /> {t.workspace_setup.add_unplugged}
                         </Button>
@@ -788,7 +788,7 @@ function App() {
                       
                       <div className="space-y-4 pb-2">
                         {fields.map((field, index) => (
-                          <div key={field.id} className="p-5 bg-[#09090b]/60 border border-[#27272a] rounded-2xl space-y-5 relative animate-in slide-in-from-top-4 duration-300">
+                          <div key={field.id} className="p-5 bg-[#111114]/60 border border-[#2e2e33] rounded-2xl space-y-5 relative animate-in slide-in-from-top-4 duration-300">
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-black text-zinc-600 tracking-widest uppercase">Block #{index + 1}</span>
                               <button type="button" onClick={() => remove(index)} className="text-zinc-600 hover:text-red-400 transition-colors active:scale-75">
@@ -796,15 +796,15 @@ function App() {
                               </button>
                             </div>
                             <div className="space-y-2">
-                                <Input {...workspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-[#18181b] border-[#27272a] h-11 rounded-xl px-4 font-bold" />
+                                <Input {...workspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl px-4 font-bold" />
                                 {workspaceForm.formState.errors.unplugged_times?.[index]?.label && (
                                     <p className="text-[10px] text-red-400 font-bold pl-1">{workspaceForm.formState.errors.unplugged_times[index]?.label?.message}</p>
                                 )}
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                              <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.start_time` as const)} className="bg-[#18181b] border-[#27272a] h-11 rounded-xl font-bold [color-scheme:dark]" />
+                              <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.start_time` as const)} className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl font-bold [color-scheme:dark]" />
                               <div className="space-y-1">
-                                <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.end_time` as const)} className="bg-[#18181b] border-[#27272a] h-11 rounded-xl font-bold [color-scheme:dark]" />
+                                <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.end_time` as const)} className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl font-bold [color-scheme:dark]" />
                                 {workspaceForm.formState.errors.unplugged_times?.[index]?.end_time && (
                                     <p className="text-[10px] text-red-400 font-bold pl-1">{workspaceForm.formState.errors.unplugged_times[index]?.end_time?.message}</p>
                                 )}
@@ -815,20 +815,20 @@ function App() {
                       </div>
                     </div>
 
-                    <Separator className="bg-[#27272a]" />
+                    <Separator className="bg-[#2e2e33]" />
 
                     <div className="space-y-3">
                       <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.role_intro}</Label>
                       <textarea 
                         {...workspaceForm.register("role_intro")}
                         placeholder={t.workspace_setup.role_placeholder}
-                        className="w-full min-h-[140px] bg-[#09090b] border-[#27272a] rounded-2xl p-5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-zinc-700 font-bold leading-relaxed shadow-inner"
+                        className="w-full min-h-[140px] bg-[#111114] border-[#2e2e33] rounded-2xl p-5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-zinc-700 font-bold leading-relaxed shadow-inner"
                       />
                     </div>
                   </form>
                 </div>
 
-                <DialogFooter className="p-8 pt-4 pb-8 border-t border-[#27272a] bg-[#18181b] shrink-0">
+                <DialogFooter className="p-8 pt-4 pb-8 border-t border-[#2e2e33] bg-[#1c1c21] shrink-0">
                   <Button type="submit" form="ws-form" className="w-full bg-white text-black hover:bg-zinc-200 font-black h-12 rounded-xl text-md transition-all shadow-xl shadow-black/20 active:scale-95">
                     {t.workspace_setup.submit_btn}
                   </Button>
