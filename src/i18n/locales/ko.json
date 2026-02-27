@@ -25,12 +25,15 @@
       "title": "시간 및 역할",
       "coreTimeStart": "코어 시간 시작",
       "coreTimeEnd": "코어 시간 종료",
+      "coreTimeStart": "코어 시간 시작",
+      "coreTimeEnd": "코어 시간 종료",
+      "coreTimeDescription": "업무에 집중할 시간을 입력해주세요.",
       "roleIntro": "역할 소개",
       "roleIntroPlaceholder": "본인의 역할을 설명해주세요...",
       "unpluggedTimes": "언플러그드 타임",
+      "unpluggedTimeDescription": "코어 타임 중 점심 시간 혹은 저녁 시간과 같이 주기적으로 쉬는 시간을 입력해주세요.",
       "addUnplugged": "언플러그드 타임 추가",
       "labelPlaceholder": "라벨 (예: 점심시간)"
-    },
     "ai": {
       "title": "AI 설정",
       "apiKey": "AI API 키 (선택)",
