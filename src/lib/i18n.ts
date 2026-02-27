@@ -49,6 +49,19 @@ export const translations = {
       planning_placeholder: "업무의 구체적인 단계나 목표를 마크다운으로 작성해보세요.",
       retrospective_btn: "일일 회고 생성",
       empty_timeline: "오늘의 일정이 아직 없습니다. 새로운 태스크를 추가해보세요.",
+      transition: {
+        title: "태스크 종료 분기",
+        description: "현재 태스크가 종료되었습니다. 다음 단계를 선택해주세요.",
+        complete: "완료 및 다음으로",
+        delay_15: "15분 연장",
+        delay_30: "30분 연장",
+        delay_custom: "직접 입력",
+        review_placeholder: "업무 결과나 소감을 간단히 기록해보세요. (회고에 사용됩니다)",
+      },
+      status: {
+        overdue: "시간 초과",
+        remaining: "남음",
+      }
     }
   },
   en: {
@@ -101,6 +114,19 @@ export const translations = {
       planning_placeholder: "Write specific steps or goals for this task using markdown.",
       retrospective_btn: "Generate Review",
       empty_timeline: "No schedule for today. Add a new task to start.",
+      transition: {
+        title: "Task Transition",
+        description: "Task time is up. Select your next step.",
+        complete: "Complete & Next",
+        delay_15: "Delay 15m",
+        delay_30: "Delay 30m",
+        delay_custom: "Custom Delay",
+        review_placeholder: "Briefly record your results or feelings. (Used for review)",
+      },
+      status: {
+        overdue: "Overdue",
+        remaining: "Remaining",
+      }
     }
   }
 };

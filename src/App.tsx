@@ -50,6 +50,8 @@ function App() {
   const [greeting, setGreeting] = useState<string>("");
   const [timeline, setTimeline] = useState<TimeBlock[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [transitionBlock, setTransitionBlock] = useState<TimeBlock | null>(null);
+  const [reviewMemo, setReviewMemo] = useState("");
 
   const lang = useMemo(() => getLang(), []);
   const t = translations[lang];
@@ -168,10 +170,48 @@ function App() {
     try {
       const g = await invoke<string>("get_greeting", { workspaceId: activeWorkspaceId });
       setGreeting(g);
-      const t = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId });
-      setTimeline(t);
+      const list = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId });
+      
+      const now = new Date();
+      // 1. 만약 현재 진행중인(NOW) 블록이 종료 시간을 지났는데 transition 모달이 없다면 띄우기
+      const active = list.find(b => b.status === "NOW");
+      if (active && new Date(active.end_time) < now && !transitionBlock) {
+        setTransitionBlock(active);
+      }
+
+      // 2. 만약 현재 진행중인 블록이 없고, 미래(WILL) 블록 중 시작 시간이 지났다면 자동으로 NOW로 변경 요청 (간단하게 첫번째 것만)
+      if (!active) {
+        const next = list.find(b => b.status === "WILL" && new Date(b.start_time) <= now);
+        if (next) {
+          await invoke("update_block_status", { blockId: next.id, status: "NOW" });
+          const updatedList = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId });
+          setTimeline(updatedList);
+          return;
+        }
+      }
+
+      setTimeline(list);
     } catch (error) {
       console.error("Fetch failed:", error);
+    }
+  };
+
+  const handleTransition = async (action: string, extraMinutes?: number) => {
+    if (!transitionBlock) return;
+    try {
+      await invoke("process_task_transition", {
+        input: {
+          block_id: transitionBlock.id,
+          action,
+          extra_minutes: extraMinutes || null,
+          review_memo: reviewMemo || null
+        }
+      });
+      setTransitionBlock(null);
+      setReviewMemo("");
+      fetchMainData();
+    } catch (error) {
+      console.error("Transition failed:", error);
     }
   };
 
@@ -383,12 +423,31 @@ function App() {
                         {/* Block Card */}
                         <div className={`p-4 rounded-2xl border transition-all duration-300 transform hover:-translate-x-1 ${
                           block.status === "DONE" ? "bg-green-500/5 border-green-500/20" :
-                          block.status === "NOW" ? "bg-red-500/5 border-red-500/50 shadow-lg" :
+                          block.status === "NOW" ? (new Date(block.end_time) < currentTime ? "bg-red-500/10 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-red-500/5 border-red-500/50 shadow-lg") :
                           block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#27272a] opacity-60 border-dashed" : "bg-[#18181b]/50 border-[#27272a] hover:bg-[#18181b]"
                         }`}>
                           <div className="flex items-center justify-between">
-                            <h4 className={`font-black text-sm tracking-tight ${block.status === "UNPLUGGED" ? "text-zinc-500" : "text-white"}`}>{block.title}</h4>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
+                            <div className="flex items-center space-x-3">
+                              <h4 className={`font-black text-sm tracking-tight ${block.status === "UNPLUGGED" ? "text-zinc-500" : "text-white"}`}>{block.title}</h4>
+                              {block.status === "NOW" && new Date(block.end_time) < currentTime && (
+                                <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                  {t.main.status.overdue}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
+                              {block.status === "NOW" && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => setTransitionBlock(block)}
+                                  className="h-7 w-7 p-0 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                                >
+                                  <AlertCircle size={14} />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -397,6 +456,61 @@ function App() {
                 )}
               </div>
             </ScrollArea>
+
+            {/* Transition Modal */}
+            <Dialog open={!!transitionBlock} onOpenChange={(open) => !open && setTransitionBlock(null)}>
+              <DialogContent className="sm:max-w-[450px] bg-[#18181b] border-[#27272a] text-white shadow-2xl rounded-3xl p-8 antialiased [&>button]:hidden">
+                <DialogHeader className="space-y-4">
+                  <DialogTitle className="text-2xl font-black tracking-tighter text-white leading-none flex items-center gap-3">
+                    <Sparkles className="text-yellow-400" size={24} />
+                    {t.main.transition.title}
+                  </DialogTitle>
+                  <DialogDescription className="text-zinc-400 font-bold text-sm leading-relaxed">
+                    {t.main.transition.description}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="py-6 space-y-6">
+                  <div className="p-4 bg-[#09090b] border border-[#27272a] rounded-2xl flex items-center justify-between">
+                    <span className="text-xs font-black text-zinc-500 uppercase tracking-widest">Current Task</span>
+                    <span className="font-bold text-sm">{transitionBlock?.title}</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.main.transition.review_placeholder}</Label>
+                    <textarea 
+                      value={reviewMemo}
+                      onChange={(e) => setReviewMemo(e.target.value)}
+                      placeholder={t.main.transition.review_placeholder}
+                      className="w-full min-h-[100px] bg-[#09090b] border-[#27272a] rounded-2xl p-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-zinc-700 font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <Button 
+                      onClick={() => handleTransition("COMPLETE")}
+                      className="col-span-2 bg-white text-black hover:bg-zinc-200 font-black h-14 rounded-2xl text-lg shadow-xl active:scale-95"
+                    >
+                      {t.main.transition.complete}
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleTransition("DELAY_15")}
+                      className="border-[#27272a] bg-zinc-900/50 hover:bg-[#27272a] text-zinc-300 font-black h-12 rounded-2xl active:scale-95"
+                    >
+                      {t.main.transition.delay_15}
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleTransition("DELAY_30")}
+                      className="border-[#27272a] bg-zinc-900/50 hover:bg-[#27272a] text-zinc-300 font-black h-12 rounded-2xl active:scale-95"
+                    >
+                      {t.main.transition.delay_30}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center p-8">

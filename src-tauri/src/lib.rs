@@ -454,6 +454,17 @@ async fn get_timeline(state: State<'_, DbState>, workspace_id: i64) -> Result<Ve
     Ok(blocks)
 }
 
+#[tauri::command]
+async fn update_block_status(state: State<'_, DbState>, block_id: i64, status: String) -> Result<(), String> {
+    sqlx::query("UPDATE time_blocks SET status = ?1 WHERE id = ?2")
+        .bind(status)
+        .bind(block_id)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -499,7 +510,8 @@ pub fn run() {
             get_greeting,
             add_task,
             get_timeline,
-            process_task_transition
+            process_task_transition,
+            update_block_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
