@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Settings, X, AlertCircle, Sparkles, Send, Clock, Zap, GripVertical, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Settings, X, AlertCircle, Sparkles, Send, Clock, Zap, GripVertical, Calendar as CalendarIcon, Inbox } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -76,7 +76,7 @@ const formatDisplayTime = (isoString: string) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
-const SortableItem = ({ block, timeline, currentTime, t, onTransition, hoverTaskId, setHoverTaskId }: any) => {
+const SortableItem = ({ block, timeline, currentTime, t, onTransition, onMoveToInbox, hoverTaskId, setHoverTaskId }: any) => {
   const {
     attributes,
     listeners,
@@ -170,17 +170,30 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, hoverTask
                 </div>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={(e) => {
-              e.stopPropagation();
-              onTransition(block);
-            }}
-            className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 ${isHovered ? "bg-white text-black hover:bg-zinc-200" : "bg-zinc-800 text-zinc-500 hover:text-white"}`}
-          >
-            <AlertCircle size={16} />
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveToInbox(block.id);
+              }}
+              className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 ${isHovered ? "bg-zinc-700 text-white hover:bg-zinc-600" : "bg-zinc-800 text-zinc-500 hover:text-white"}`}
+            >
+              <Inbox size={16} />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onTransition(block);
+              }}
+              className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 ${isHovered ? "bg-white text-black hover:bg-zinc-200" : "bg-zinc-800 text-zinc-500 hover:text-white"}`}
+            >
+              <AlertCircle size={16} />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -410,7 +423,7 @@ function App() {
     const activeId = active.id.toString();
     const overId = over.id.toString();
 
-    // Case 1: Reordering Timeline
+    // Only Timeline Reordering
     if (!activeId.includes("inbox") && !overId.includes("inbox")) {
       if (activeId !== overId) {
         const oldIndex = timeline.findIndex((item) => item.id.toString() === activeId);
@@ -422,20 +435,6 @@ function App() {
           await invoke("reorder_blocks", { workspaceId: activeWorkspaceId, blockIds: ids });
           fetchMainData();
         }
-      }
-    }
-    // Case 2: Move from Timeline to Inbox
-    else if (!activeId.includes("inbox") && overId.includes("inbox")) {
-      const blockId = parseInt(activeId);
-      await invoke("move_to_inbox", { blockId });
-      fetchMainData();
-    }
-    // Case 3: Move from Inbox to Timeline
-    else if (activeId.includes("inbox") && !overId.includes("inbox")) {
-      const taskId = parseInt(activeId.replace("inbox-", ""));
-      if (activeWorkspaceId) {
-        await invoke("move_to_timeline", { taskId, workspaceId: activeWorkspaceId });
-        fetchMainData();
       }
     }
   };
@@ -614,11 +613,12 @@ function App() {
             </Popover>
             
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-5 pb-2">
-                <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">
-                  {t.sidebar.inbox}
-                </h3>
-              </div>
+            <div className="p-5 pb-2 flex items-center space-x-2">
+              <Inbox size={14} className="text-zinc-600" />
+              <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">
+                {t.sidebar.inbox}
+              </h3>
+            </div>
               <ScrollArea className="flex-1 p-5 pt-0">
                 <div id="inbox" className="space-y-3 py-3 min-h-[100px]">
                   <SortableContext 
@@ -742,6 +742,10 @@ function App() {
                               currentTime={currentTime}
                               t={t}
                               onTransition={setTransitionBlock}
+                            onMoveToInbox={async (blockId: number) => {
+                              await invoke("move_to_inbox", { blockId });
+                              fetchMainData();
+                            }}
                               hoverTaskId={hoverTaskId}
                               setHoverTaskId={setHoverTaskId}
                             />
