@@ -11,6 +11,7 @@ pub struct UnpluggedTimeInput {
 pub fn initialize_workspace(
     conn: &mut Connection,
     name: String,
+    nickname: String,
     core_time_start: Option<String>,
     core_time_end: Option<String>,
     role_intro: String,
@@ -22,8 +23,8 @@ pub fn initialize_workspace(
 
     // Insert workspace
     tx.execute(
-        "INSERT INTO workspaces (name, core_time_start, core_time_end, role_intro) VALUES (?1, ?2, ?3, ?4)",
-        params![name, core_time_start, core_time_end, role_intro],
+        "INSERT INTO workspaces (name, nickname, core_time_start, core_time_end, role_intro) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![name, nickname, core_time_start, core_time_end, role_intro],
     )
     .map_err(|e| format!("Insert workspace failed: {}", e))?;
 

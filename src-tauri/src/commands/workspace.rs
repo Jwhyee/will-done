@@ -14,12 +14,15 @@ pub struct WorkspaceWithUnplugged {
 #[tauri::command]
 pub fn setup_workspace(
     name: String,
+    nickname: String,
     core_time_start: Option<String>,
     core_time_end: Option<String>,
     role_intro: String,
     unplugged_times: Vec<UnpluggedTimeInput>,
     state: State<'_, Mutex<Connection>>,
 ) -> Result<i64, String> {
+    let core_time_start = if core_time_start.as_deref() == Some("") { None } else { core_time_start };
+    let core_time_end = if core_time_end.as_deref() == Some("") { None } else { core_time_end };
     let mut conn = state
         .lock()
         .map_err(|e| format!("Failed to lock state: {}", e))?;
@@ -27,6 +30,7 @@ pub fn setup_workspace(
     initialize_workspace(
         &mut conn,
         name,
+        nickname,
         core_time_start,
         core_time_end,
         role_intro,

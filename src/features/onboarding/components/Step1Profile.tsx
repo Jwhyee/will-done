@@ -1,16 +1,15 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UseFormRegister, FieldErrors } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
+
 import { OnboardingData } from "../schema";
 import { useTranslation } from "react-i18next";
 import { User } from "lucide-react";
 
-interface Step1Props {
-  register: UseFormRegister<OnboardingData>;
-  errors: FieldErrors<OnboardingData>;
-}
 
-export function Step1Profile({ register, errors }: Step1Props) {
+
+export function Step1Profile() {
+  const { register, formState: { errors } } = useFormContext<OnboardingData>();
   const { t } = useTranslation();
   
   return (

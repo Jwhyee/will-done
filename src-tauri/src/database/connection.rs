@@ -29,6 +29,7 @@ pub fn init_db(app_handle: &tauri::AppHandle) -> Result<Connection, String> {
         CREATE TABLE IF NOT EXISTS workspaces (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
+            nickname TEXT NOT NULL,
             core_time_start TEXT,
             core_time_end TEXT,
             role_intro TEXT NOT NULL,

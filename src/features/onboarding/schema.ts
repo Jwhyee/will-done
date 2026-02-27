@@ -3,7 +3,8 @@ import { z } from "zod";
 const koreanMessages = {
   required: "필수 입력 항목입니다",
   invalidTime: "잘못된 시간 형식입니다",
-  endTimeAfterStart: "종료 시간은 시작 시간 이후여야 합니다"
+  endTimeAfterStart: "종료 시간은 시작 시간 이후여야 합니다",
+  bothTimesRequired: "시작과 종료 시간을 모두 입력해야 합니다"
 };
 
 export const unpluggedTimeSchema = z.object({
@@ -23,6 +24,9 @@ export const onboardingSchema = z.object({
   roleIntro: z.string(),
   unpluggedTimes: z.array(unpluggedTimeSchema),
   apiKey: z.string().optional()
+}).refine(data => !((data.coreTimeStart && !data.coreTimeEnd) || (!data.coreTimeStart && data.coreTimeEnd)), {
+  message: koreanMessages.bothTimesRequired,
+  path: ["coreTimeEnd"]
 });
 
 export type OnboardingData = z.infer<typeof onboardingSchema>;

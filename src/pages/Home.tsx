@@ -48,10 +48,22 @@ export default function Home() {
     setTimelineEntries(newEntries);
   };
 
+  const handleGenerateRetrospective = () => {
+    // This will be implemented in future sprints
+    alert("Generating retrospective... (Coming soon)");
+  };
+
+  const hasCompletedTasks = timelineEntries.some((entry) => entry.status === "Done");
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 p-6 md:p-12 font-sans selection:bg-zinc-800">
       <div className="max-w-3xl mx-auto">
-        <Header nickname={nickname} workspaceId={workspaceId} />
+        <Header 
+          nickname={nickname} 
+          workspaceId={workspaceId} 
+          hasCompletedTasks={hasCompletedTasks}
+          onGenerateRetrospective={handleGenerateRetrospective}
+        />
         
         <main className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 fill-mode-both">
           <TaskInput workspaceId={workspaceId} onTaskAdded={handleTaskAdded} />

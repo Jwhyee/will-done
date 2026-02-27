@@ -1,0 +1,2 @@
+- Added descriptive text to Core Time and Unplugged Time sections in Step3TimeRole.tsx.
+- Changed Unplugged Time container to flex-col and moved the 'Add Unplugged Time' button below the description.

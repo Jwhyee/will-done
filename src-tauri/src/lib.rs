@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports)]
 mod commands;
 pub mod database;
 mod models;

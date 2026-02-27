@@ -34,6 +34,7 @@
       "unpluggedTimeDescription": "코어 타임 중 점심 시간 혹은 저녁 시간과 같이 주기적으로 쉬는 시간을 입력해주세요.",
       "addUnplugged": "언플러그드 타임 추가",
       "labelPlaceholder": "라벨 (예: 점심시간)"
+    },  
     "ai": {
       "title": "AI 설정",
       "apiKey": "AI API 키 (선택)",

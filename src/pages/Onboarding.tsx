@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -21,7 +21,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const { register, handleSubmit, control, formState: { errors }, trigger } = useForm<OnboardingData>({
+  const methods = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       nickname: "",
@@ -33,8 +33,20 @@ export default function Onboarding() {
       apiKey: ""
     }
   });
-  console.log("Form Errors:", errors);
+  const { handleSubmit, trigger } = methods;
 
+
+  const onSubmit: SubmitHandler<OnboardingData> = async (data) => {
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        name: data.workspaceName,
+        nickname: data.nickname,
+        core_time_start: data.coreTimeStart,
+        core_time_end: data.coreTimeEnd,
+        role_intro: data.roleIntro,
+        unplugged_times: data.unpluggedTimes,
+      };
       console.log("Payload:", payload);
       await invoke("setup_workspace", payload);
 
@@ -43,6 +55,7 @@ export default function Onboarding() {
 
       navigate("/home");
     } catch (e) {
+      console.error("Failed to setup workspace:", e);
       alert(t("alerts.setupFailed", { error: e instanceof Error ? e.message : String(e) }));
     } finally {
       setIsSubmitting(false);
@@ -69,10 +82,10 @@ export default function Onboarding() {
   };
 
   const steps = [
-    <Step1Profile register={register} errors={errors} />,
-    <Step2Workspace register={register} errors={errors} />,
-    <Step3TimeRole register={register} control={control} errors={errors} />,
-    <Step4AI register={register} />
+    <Step1Profile />,
+    <Step2Workspace />,
+    <Step3TimeRole />,
+    <Step4AI />
   ];
 
   const stepTitles = [
@@ -124,7 +137,8 @@ export default function Onboarding() {
           </div>
         </CardHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <FormProvider {...methods}>
+          <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="min-h-[280px]">
             <StepLayout direction={direction}>
               {steps[step]}
@@ -165,7 +179,8 @@ export default function Onboarding() {
               </Button>
             )}
           </CardFooter>
-        </form>
+          </form>
+        </FormProvider>
       </Card>
     </div>
   );

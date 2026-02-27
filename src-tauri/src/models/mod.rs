@@ -31,6 +31,7 @@ pub struct Task {
     pub status: String, // 'Scheduled', 'InProgress', 'Completed'
 }
 
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TimeBlock {
     pub id: i64,
@@ -57,7 +58,6 @@ pub struct TimeBlockInput {
     pub end_time: String,   // ISO8601
     pub status: String,
 }
-
 // Timeline entry for unified view
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TimelineEntry {
