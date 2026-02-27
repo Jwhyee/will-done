@@ -126,7 +126,7 @@ function App() {
       const wsList = await invoke<any[]>("get_workspaces");
       setWorkspaces(wsList);
       setActiveWorkspaceId(id);
-      workspaceForm.reset(); // 폼 초기화
+      workspaceForm.reset();
       setView("main");
     } catch (error) {
       console.error("Workspace creation failed:", error);
@@ -140,6 +140,8 @@ function App() {
       </div>
     );
   }
+
+  const isFirstWorkspace = workspaces.length === 0;
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white flex overflow-hidden font-sans antialiased select-none">
@@ -211,7 +213,6 @@ function App() {
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center p-8">
-            {/* Onboarding Dialog */}
             <Dialog open={view === "onboarding"}>
               <DialogContent className="sm:max-w-[425px] bg-[#18181b] border-[#27272a] text-white shadow-2xl [&>button]:hidden rounded-2xl p-8 border-t-zinc-700/50">
                 <DialogHeader className="space-y-3">
@@ -238,99 +239,108 @@ function App() {
               </DialogContent>
             </Dialog>
 
-            {/* Workspace Setup Dialog */}
-            <Dialog open={view === "workspace_setup"}>
-              <DialogContent className="sm:max-w-[550px] bg-[#18181b] border-[#27272a] text-white shadow-2xl max-h-[90vh] flex flex-col [&>button]:hidden rounded-2xl p-0 border-t-zinc-700/50 overflow-hidden">
-                <DialogHeader className="p-8 pb-4 space-y-3">
-                  <DialogTitle className="text-3xl font-black tracking-tighter text-white">
-                    {workspaces.length === 0 ? t.workspace_setup.title_first : t.workspace_setup.title_new}
+            <Dialog 
+              open={view === "workspace_setup"} 
+              onOpenChange={(open) => {
+                if (!open && !isFirstWorkspace) {
+                  setView("main");
+                }
+              }}
+            >
+              <DialogContent className={`sm:max-w-[550px] bg-[#18181b] border-[#27272a] text-white shadow-2xl max-h-[85vh] flex flex-col rounded-2xl p-0 border-t-zinc-700/50 overflow-hidden ${isFirstWorkspace ? "[&>button]:hidden" : ""}`}>
+                <DialogHeader className="p-8 pb-2 shrink-0">
+                  <DialogTitle className="text-2xl font-black tracking-tighter text-white">
+                    {isFirstWorkspace ? t.workspace_setup.title_first : t.workspace_setup.title_new}
                   </DialogTitle>
-                  <DialogDescription className="text-zinc-400 font-bold text-sm leading-relaxed">{t.workspace_setup.description}</DialogDescription>
+                  <DialogDescription className="text-zinc-400 font-bold text-sm">{t.workspace_setup.description}</DialogDescription>
                 </DialogHeader>
                 
-                <ScrollArea className="flex-1 px-8">
-                  <form id="ws-form" onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="space-y-10 py-6">
-                    <div className="space-y-3">
-                      <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
-                      <Input {...workspaceForm.register("name")} placeholder={t.workspace_setup.name_placeholder} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold" />
-                      {workspaceForm.formState.errors.name && (
-                        <p className="text-[11px] text-red-400 font-bold flex items-center gap-1"><AlertCircle size={12}/> {workspaceForm.formState.errors.name.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-4">
-                      <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
-                      <div className="grid grid-cols-2 gap-6">
-                        <Input type="time" {...workspaceForm.register("core_time_start")} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
-                        <Input type="time" {...workspaceForm.register("core_time_end")} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                <div className="flex-1 overflow-hidden relative flex flex-col">
+                  <ScrollArea className="h-full px-8 pb-4">
+                    <form id="ws-form" onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="space-y-8 py-6">
+                      <div className="space-y-3">
+                        <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
+                        <Input {...workspaceForm.register("name")} placeholder={t.workspace_setup.name_placeholder} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold" />
+                        {workspaceForm.formState.errors.name && (
+                          <p className="text-[11px] text-red-400 font-bold flex items-center gap-1"><AlertCircle size={12}/> {workspaceForm.formState.errors.name.message}</p>
+                        )}
                       </div>
-                      {workspaceForm.formState.errors.core_time_end && (
-                        <p className="text-[11px] text-red-400 font-bold flex items-center gap-1"><AlertCircle size={12}/> {workspaceForm.formState.errors.core_time_end.message}</p>
-                      )}
-                    </div>
 
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            append({ label: "", start_time: "12:00", end_time: "13:00" });
-                          }} 
-                          className="border-[#27272a] bg-[#09090b] hover:bg-[#27272a] text-zinc-200 font-black rounded-lg h-9"
-                        >
-                          <Plus size={16} className="mr-2" /> {t.workspace_setup.add_unplugged}
-                        </Button>
-                      </div>
-                      <p className="text-[10px] text-zinc-500 font-bold italic">{t.workspace_setup.unplugged_guide}</p>
-                      
                       <div className="space-y-4">
-                        {fields.map((field, index) => (
-                          <div key={field.id} className="p-5 bg-[#09090b]/60 border border-[#27272a] rounded-2xl space-y-5 relative animate-in slide-in-from-top-4 duration-300">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black text-zinc-600 tracking-widest uppercase">Block #{index + 1}</span>
-                              <button type="button" onClick={() => remove(index)} className="text-zinc-600 hover:text-red-400 transition-colors active:scale-75">
-                                <X size={16} />
-                              </button>
-                            </div>
-                            <div className="space-y-2">
-                                <Input {...workspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder="Label (e.g. Lunch)" className="bg-[#18181b] border-[#27272a] h-11 rounded-xl px-4" />
-                                {workspaceForm.formState.errors.unplugged_times?.[index]?.label && (
-                                    <p className="text-[10px] text-red-400 font-bold pl-1">{workspaceForm.formState.errors.unplugged_times[index]?.label?.message}</p>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.start_time` as const)} className="bg-[#18181b] border-[#27272a] h-11 rounded-xl [color-scheme:dark]" />
-                              <div className="space-y-1">
-                                <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.end_time` as const)} className="bg-[#18181b] border-[#27272a] h-11 rounded-xl [color-scheme:dark]" />
-                                {workspaceForm.formState.errors.unplugged_times?.[index]?.end_time && (
-                                    <p className="text-[10px] text-red-400 font-bold pl-1">{workspaceForm.formState.errors.unplugged_times[index]?.end_time?.message}</p>
-                                )}
+                        <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
+                        <p className="text-[10px] text-zinc-500 font-bold italic mb-2">{t.workspace_setup.core_time_guide}</p>
+                        <div className="grid grid-cols-2 gap-6">
+                          <Input type="time" {...workspaceForm.register("core_time_start")} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                          <Input type="time" {...workspaceForm.register("core_time_end")} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                        </div>
+                        {workspaceForm.formState.errors.core_time_end && (
+                          <p className="text-[11px] text-red-400 font-bold flex items-center gap-1"><AlertCircle size={12}/> {workspaceForm.formState.errors.core_time_end.message}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              append({ label: "", start_time: "12:00", end_time: "13:00" });
+                            }} 
+                            className="border-[#27272a] bg-[#09090b] hover:bg-[#27272a] text-zinc-200 font-black rounded-lg h-9"
+                          >
+                            <Plus size={16} className="mr-2" /> {t.workspace_setup.add_unplugged}
+                          </Button>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 font-bold italic">{t.workspace_setup.unplugged_guide}</p>
+                        
+                        <div className="space-y-4">
+                          {fields.map((field, index) => (
+                            <div key={field.id} className="p-5 bg-[#09090b]/60 border border-[#27272a] rounded-2xl space-y-5 relative animate-in slide-in-from-top-4 duration-300">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black text-zinc-600 tracking-widest uppercase">Block #{index + 1}</span>
+                                <button type="button" onClick={() => remove(index)} className="text-zinc-600 hover:text-red-400 transition-colors active:scale-75">
+                                  <X size={16} />
+                                </button>
+                              </div>
+                              <div className="space-y-2">
+                                  <Input {...workspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-[#18181b] border-[#27272a] h-11 rounded-xl px-4" />
+                                  {workspaceForm.formState.errors.unplugged_times?.[index]?.label && (
+                                      <p className="text-[10px] text-red-400 font-bold pl-1">{workspaceForm.formState.errors.unplugged_times[index]?.label?.message}</p>
+                                  )}
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.start_time` as const)} className="bg-[#18181b] border-[#27272a] h-11 rounded-xl [color-scheme:dark]" />
+                                <div className="space-y-1">
+                                  <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.end_time` as const)} className="bg-[#18181b] border-[#27272a] h-11 rounded-xl [color-scheme:dark]" />
+                                  {workspaceForm.formState.errors.unplugged_times?.[index]?.end_time && (
+                                      <p className="text-[10px] text-red-400 font-bold pl-1">{workspaceForm.formState.errors.unplugged_times[index]?.end_time?.message}</p>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    <Separator className="bg-[#27272a]" />
+                      <Separator className="bg-[#27272a]" />
 
-                    <div className="space-y-3">
-                      <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.role_intro}</Label>
-                      <textarea 
-                        {...workspaceForm.register("role_intro")}
-                        placeholder={t.workspace_setup.role_placeholder}
-                        className="w-full min-h-[140px] bg-[#09090b] border-[#27272a] rounded-2xl p-5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-zinc-700 font-bold leading-relaxed shadow-inner"
-                      />
-                    </div>
-                  </form>
-                </ScrollArea>
+                      <div className="space-y-3">
+                        <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.role_intro}</Label>
+                        <textarea 
+                          {...workspaceForm.register("role_intro")}
+                          placeholder={t.workspace_setup.role_placeholder}
+                          className="w-full min-h-[140px] bg-[#09090b] border-[#27272a] rounded-2xl p-5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-zinc-700 font-bold leading-relaxed shadow-inner"
+                        />
+                      </div>
+                    </form>
+                  </ScrollArea>
+                </div>
 
-                <DialogFooter className="p-8 pt-6 border-t border-[#27272a] bg-[#18181b]">
-                  <Button type="submit" form="ws-form" className="w-full bg-white text-black hover:bg-zinc-200 font-black h-16 rounded-xl text-xl transition-all shadow-2xl shadow-black/40 active:scale-95">
+                <DialogFooter className="p-8 pt-4 pb-8 border-t border-[#27272a] bg-[#18181b] shrink-0">
+                  <Button type="submit" form="ws-form" className="w-full bg-white text-black hover:bg-zinc-200 font-black h-12 rounded-xl text-md transition-all shadow-xl shadow-black/20 active:scale-95">
                     {t.workspace_setup.submit_btn}
                   </Button>
                 </DialogFooter>
