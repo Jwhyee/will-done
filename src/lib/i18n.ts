@@ -13,6 +13,26 @@ export const translations = {
       api_key_placeholder: "API 키를 입력해주세요.",
       api_key_guide: "* 이 키는 AI 자동 회고 기능에 사용됩니다. 설정에서 나중에 추가할 수 있습니다.",
       submit_btn: "시작하기",
+    },
+    workspace_setup: {
+      title: "첫 워크스페이스 생성",
+      description: "업무 환경을 분리하여 관리할 수 있습니다.",
+      name_label: "워크스페이스 이름",
+      name_placeholder: "예: 회사, 사이드 프로젝트",
+      core_time: "코어 타임 (선택)",
+      core_time_guide: "업무에 집중할 시간을 입력해주세요.",
+      unplugged_time: "언플러그드 타임",
+      unplugged_guide: "점심/저녁 식사 등 고정적으로 업무에 포함되지 않는 시간을 입력해주세요.",
+      add_unplugged: "언플러그드 타임 추가",
+      role_intro: "직무 소개 (AI 컨텍스트)",
+      role_placeholder: "본인의 역할과 주요 업무를 설명해주세요. AI가 회고를 작성할 때 참고합니다.",
+      submit_btn: "워크스페이스 생성 완료",
+    },
+    sidebar: {
+      inbox: "인박스",
+      settings: "설정",
+      date_search: "날짜 검색",
+      no_tasks: "대기 중인 태스크가 없습니다.",
     }
   },
   en: {
@@ -29,6 +49,26 @@ export const translations = {
       api_key_placeholder: "Enter your API key",
       api_key_guide: "* This key is used for AI-generated retrospectives. You can add it later in settings.",
       submit_btn: "Get Started",
+    },
+    workspace_setup: {
+      title: "Create Your First Workspace",
+      description: "Separate your work environments.",
+      name_label: "Workspace Name",
+      name_placeholder: "e.g., Company, Side Project",
+      core_time: "Core Time (Optional)",
+      core_time_guide: "Please enter the time to focus on work.",
+      unplugged_time: "Unplugged Time",
+      unplugged_guide: "Please enter times not included in work (e.g., lunch/dinner).",
+      add_unplugged: "Add Unplugged Time",
+      role_intro: "Role Introduction (AI Context)",
+      role_placeholder: "Describe your role and responsibilities. AI will use this for retrospectives.",
+      submit_btn: "Complete Workspace Setup",
+    },
+    sidebar: {
+      inbox: "Inbox",
+      settings: "Settings",
+      date_search: "Search Date",
+      no_tasks: "No pending tasks.",
     }
   }
 };
