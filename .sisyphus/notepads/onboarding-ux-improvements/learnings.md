@@ -1,0 +1,2 @@
+- When adding descriptions to form sections, use `<p className="text-xs text-zinc-500">` or `<p className="text-xs text-zinc-500 mt-1">` depending on the spacing needed.
+- To stack a label and a button vertically, use `flex flex-col` on their container.

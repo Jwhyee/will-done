@@ -24,6 +24,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { motion, AnimatePresence } from "framer-motion";
 
 import {
   Dialog,
@@ -299,9 +300,15 @@ function App() {
   const [agoMinutes, setAgoMinutes] = useState<number>(5);
   const [hoverTaskId, setHoverTaskId] = useState<number | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
 
   const lang = useMemo(() => getLang(), []);
   const t = translations[lang];
+
+  const showToast = (message: string, type: "error" | "success" = "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // --- Validation Schemas ---
   const userSchema = z.object({
@@ -481,9 +488,25 @@ function App() {
 
     // Only Timeline Reordering
     if (!activeId.includes("inbox") && !overId.includes("inbox")) {
-      if (activeId !== overId) {
-        const oldIndex = timeline.findIndex((item) => item.id.toString() === activeId);
-        const newIndex = timeline.findIndex((item) => item.id.toString() === overId);
+      const oldIndex = timeline.findIndex((item) => item.id.toString() === activeId);
+      const newIndex = timeline.findIndex((item) => item.id.toString() === overId);
+
+      if (oldIndex !== newIndex) {
+        const nowIndex = timeline.findIndex(b => b.status === "NOW");
+        const activeBlock = timeline[oldIndex];
+
+        // Validation: Cannot move WILL/PENDING task to before/at NOW block's position
+        if (activeBlock.status !== "NOW") {
+          if (nowIndex !== -1 && newIndex <= nowIndex) {
+            showToast(t.main.toast.past_time_error);
+            return;
+          }
+          if (nowIndex === -1 && timeline.length > 0 && newIndex === 0 && new Date(timeline[0].start_time) < currentTime) {
+            showToast(t.main.toast.past_time_error);
+            return;
+          }
+        }
+
         const newTimeline = arrayMove(timeline, oldIndex, newIndex);
         setTimeline(newTimeline);
         const ids = newTimeline.filter(b => b.status !== "UNPLUGGED").map(b => b.id);
@@ -1290,6 +1313,20 @@ function App() {
           )
         ) : null}
       </DragOverlay>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-red-500 text-white px-6 py-3 rounded-2xl shadow-2xl font-black text-sm flex items-center gap-3 border border-red-400/50"
+          >
+            <AlertCircle size={18} />
+            {toast.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DndContext>
   );
 }

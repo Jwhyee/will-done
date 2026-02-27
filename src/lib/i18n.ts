@@ -74,6 +74,9 @@ export const translations = {
         description: "인박스에 있는 모든 태스크를 타임라인으로 옮기시겠습니까?",
         btn: "모두 이동",
         cancel: "취소",
+      },
+      toast: {
+        past_time_error: "현재 시간 이전으로 태스크를 이동할 수 없습니다.",
       }
     }
   },
@@ -152,6 +155,9 @@ export const translations = {
         description: "Would you like to move all tasks in the inbox to the timeline?",
         btn: "Move All",
         cancel: "Cancel",
+      },
+      toast: {
+        past_time_error: "Cannot move task to before current time.",
       }
     }
   }
