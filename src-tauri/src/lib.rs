@@ -18,7 +18,10 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::setup_workspace,
-            commands::get_current_workspace
+            commands::get_current_workspace,
+            commands::add_task,
+            commands::get_timeline,
+            commands::get_greeting
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
