@@ -442,8 +442,9 @@ async fn move_to_timeline(state: State<'_, DbState>, task_id: i64, workspace_id:
         now_dt
     };
 
-    // 기본 30분 할당
-    schedule_task_blocks(&mut tx, workspace_id, task_id, &task.title, current_start, 30).await?;
+    // Use task's estimated_minutes or fallback to 30
+    let duration = if task.estimated_minutes > 0 { task.estimated_minutes as i64 } else { 30 };
+    schedule_task_blocks(&mut tx, workspace_id, task_id, &task.title, current_start, duration).await?;
 
     tx.commit().await.map_err(|e| e.to_string())?;
     Ok(())

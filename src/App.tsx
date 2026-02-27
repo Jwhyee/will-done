@@ -84,13 +84,15 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, onMoveToI
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: block.id, disabled: block.status === "UNPLUGGED" });
+  } = useSortable({ id: block.id, disabled: block.status === "UNPLUGGED" || block.status === "DONE" });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : (hoverTaskId === block.task_id ? 10 : 1),
     opacity: isDragging ? 0.6 : 1,
+    scale: isDragging ? 1.05 : 1,
+    boxShadow: isDragging ? "0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.3)" : undefined,
   };
 
   const taskBlocks = block.task_id ? timeline.filter((b: any) => b.task_id === block.task_id) : [];
@@ -200,7 +202,7 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, onMoveToI
   );
 };
 
-const InboxItem = ({ task }: any) => {
+const InboxItem = ({ task, onMoveToTimeline }: any) => {
   const {
     attributes,
     listeners,
@@ -215,19 +217,34 @@ const InboxItem = ({ task }: any) => {
     transition,
     zIndex: isDragging ? 50 : 1,
     opacity: isDragging ? 0.6 : 1,
+    scale: isDragging ? 1.05 : 1,
+    boxShadow: isDragging ? "0 10px 20px rgba(0,0,0,0.5)" : undefined,
   };
 
   return (
     <div 
       ref={setNodeRef} 
       style={style} 
-      {...attributes} 
-      {...listeners} 
-      className="p-4 bg-[#111114]/60 border border-[#2e2e33] rounded-2xl cursor-grab active:cursor-grabbing hover:bg-[#111114] hover:border-zinc-700 transition-all"
+      className="p-4 bg-[#111114]/60 border border-[#2e2e33] rounded-2xl group transition-all"
     >
-      <div className="flex items-center space-x-3">
-        <GripVertical size={14} className="text-zinc-700" />
-        <h4 className="font-bold text-xs text-zinc-300 truncate">{task.title}</h4>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3 overflow-hidden">
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing shrink-0">
+            <GripVertical size={14} className="text-zinc-700 group-hover:text-zinc-500" />
+          </div>
+          <h4 className="font-bold text-xs text-zinc-300 truncate">{task.title}</h4>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={(e) => {
+            e.stopPropagation();
+            onMoveToTimeline(task.id);
+          }}
+          className="h-8 w-8 p-0 rounded-xl bg-zinc-800 text-zinc-600 hover:text-white hover:bg-zinc-700 shrink-0"
+        >
+          <Clock size={14} />
+        </Button>
       </div>
     </div>
   );
@@ -631,7 +648,16 @@ function App() {
                       </div>
                     ) : (
                       inboxTasks.map((task) => (
-                        <InboxItem key={task.id} task={task} />
+                        <InboxItem 
+                          key={task.id} 
+                          task={task} 
+                          onMoveToTimeline={async (taskId: number) => {
+                            if (activeWorkspaceId) {
+                              await invoke("move_to_timeline", { taskId, workspaceId: activeWorkspaceId });
+                              fetchMainData();
+                            }
+                          }}
+                        />
                       ))
                     )}
                   </SortableContext>
