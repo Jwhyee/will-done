@@ -3,7 +3,24 @@ import { invoke } from "@tauri-apps/api/core";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Settings, Search, X, AlertCircle, Sparkles, Send, Clock, Zap } from "lucide-react";
+import { Plus, Settings, Search, X, AlertCircle, Sparkles, Send, Clock, Zap, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import {
   Dialog,
@@ -43,6 +60,96 @@ const formatDisplayTime = (isoString: string) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
+const SortableItem = ({ block, idx, timeline, currentTime, t, onTransition }: any) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: block.id, disabled: block.status === "UNPLUGGED" });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 1,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  const isSplitWithNext = block.task_id && timeline[idx + 1]?.task_id === block.task_id;
+  const isSplitWithPrev = block.task_id && timeline[idx - 1]?.task_id === block.task_id;
+  const isPending = block.status === "PENDING";
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative group">
+      {/* Time Indicator */}
+      <div className="absolute -left-[5rem] top-0 w-14 text-right space-y-1">
+        <p className="text-[10px] font-black font-mono text-zinc-500">{formatDisplayTime(block.start_time)}</p>
+        <p className="text-[10px] font-bold font-mono text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity">{formatDisplayTime(block.end_time)}</p>
+      </div>
+      
+      {/* Dot on Line */}
+      <div className={`absolute -left-[3.4rem] top-1 w-3 h-3 rounded-full border-2 bg-[#09090b] z-10 transition-colors ${
+        block.status === "DONE" ? "border-green-500 bg-green-500/20" :
+        block.status === "NOW" ? "border-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.5)]" :
+        block.status === "PENDING" ? "border-orange-500 bg-orange-500/20" :
+        block.status === "UNPLUGGED" ? "border-zinc-700 bg-zinc-800" : "border-zinc-600"
+      }`} />
+
+      {/* Connection Line (Right Side) for Split Tasks */}
+      {isSplitWithNext && (
+        <div className="absolute right-[-8px] top-8 bottom-[-24px] w-[2px] bg-zinc-800 rounded-full z-0" />
+      )}
+
+      {/* Block Card */}
+      <div 
+        {...attributes}
+        {...listeners}
+        onClick={() => {
+          if (block.status === "UNPLUGGED") return;
+          onTransition(block);
+        }}
+        className={`p-4 rounded-2xl border transition-all duration-300 transform cursor-pointer group-active:scale-95 ${
+        block.status === "DONE" ? "bg-green-500/5 border-green-500/20" :
+        block.status === "NOW" ? (new Date(block.end_time) < currentTime ? "bg-red-500/10 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-red-500/5 border-red-500/50 shadow-lg") :
+        block.status === "PENDING" ? "bg-orange-500/5 border-orange-500/40 border-dashed" :
+        block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#27272a] opacity-60 border-dashed cursor-default" : "bg-[#18181b]/50 border-[#27272a] hover:bg-[#18181b]"
+      } ${isSplitWithNext ? "rounded-b-none border-b-none" : ""} ${isSplitWithPrev ? "rounded-t-none border-t-none mt-[-2px]" : ""}`}
+        style={{
+          clipPath: isSplitWithNext && !isSplitWithPrev 
+            ? "polygon(0% 0%, 100% 0%, 100% 100%, 98% 97%, 96% 100%, 94% 97%, 92% 100%, 90% 97%, 88% 100%, 0% 100%)"
+            : isSplitWithPrev && !isSplitWithNext
+            ? "polygon(0% 0%, 88% 0%, 90% 3%, 92% 0%, 94% 3%, 96% 0%, 98% 3%, 100% 0%, 100% 100%, 0% 100%)"
+            : isSplitWithNext && isSplitWithPrev
+            ? "polygon(0% 0%, 88% 0%, 90% 3%, 92% 0%, 94% 3%, 96% 0%, 98% 3%, 100% 0%, 100% 100%, 98% 97%, 96% 100%, 94% 97%, 92% 100%, 90% 97%, 88% 100%, 0% 100%)"
+            : undefined
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <GripVertical size={14} className="text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <h4 className={`font-black text-sm tracking-tight ${block.status === "UNPLUGGED" ? "text-zinc-500" : "text-white"}`}>{block.title}</h4>
+            {block.status === "NOW" && new Date(block.end_time) < currentTime && (
+              <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                {t.main.status.overdue}
+              </span>
+            )}
+            {isPending && (
+              <span className="bg-orange-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                INTERRUPTED
+              </span>
+            )}
+          </div>
+          <div className="flex items-center space-x-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [view, setView] = useState<"loading" | "onboarding" | "workspace_setup" | "main">("loading");
   const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -53,6 +160,7 @@ function App() {
   const [transitionBlock, setTransitionBlock] = useState<TimeBlock | null>(null);
   const [reviewMemo, setReviewMemo] = useState("");
   const [customDelay, setCustomDelay] = useState<number>(15);
+  const [agoMinutes, setAgoMinutes] = useState<number>(5);
 
   const lang = useMemo(() => getLang(), []);
   const t = translations[lang];
@@ -257,6 +365,31 @@ function App() {
     }
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = timeline.findIndex((item) => item.id === active.id);
+      const newIndex = timeline.findIndex((item) => item.id === over.id);
+      
+      const newTimeline = arrayMove(timeline, oldIndex, newIndex);
+      setTimeline(newTimeline);
+
+      // 백엔드 순서 저장 (ID 리스트 전송)
+      const ids = newTimeline.filter(b => b.status !== "UNPLUGGED").map(b => b.id);
+      if (activeWorkspaceId) {
+        await invoke("reorder_blocks", { workspaceId: activeWorkspaceId, blockIds: ids });
+        fetchMainData();
+      }
+    }
+  };
+
   if (view === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#09090b] text-white antialiased font-bold">
@@ -406,61 +539,28 @@ function App() {
                   </div>
                 ) : (
                   <div className="space-y-6 relative pl-12 border-l border-zinc-800 ml-4 py-4">
-                    {timeline.map((block, idx) => {
-                      const isSplitWithNext = block.task_id && timeline[idx + 1]?.task_id === block.task_id;
-                      const isSplitWithPrev = block.task_id && timeline[idx - 1]?.task_id === block.task_id;
-
-                      return (
-                        <div key={idx} className="relative group">
-                          {/* Time Indicator - Moved further left to avoid overlap */}
-                          <div className="absolute -left-[5rem] top-0 w-14 text-right space-y-1">
-                            <p className="text-[10px] font-black font-mono text-zinc-500">{formatDisplayTime(block.start_time)}</p>
-                            <p className="text-[10px] font-bold font-mono text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity">{formatDisplayTime(block.end_time)}</p>
-                          </div>
-                          
-                          {/* Dot on Line */}
-                          <div className={`absolute -left-[3.4rem] top-1 w-3 h-3 rounded-full border-2 bg-[#09090b] z-10 transition-colors ${
-                            block.status === "DONE" ? "border-green-500 bg-green-500/20" :
-                            block.status === "NOW" ? "border-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.5)]" :
-                            block.status === "UNPLUGGED" ? "border-zinc-700 bg-zinc-800" : "border-zinc-600"
-                          }`} />
-
-                          {/* Split Connection Line (Right Side) */}
-                          {isSplitWithNext && (
-                            <div className="absolute right-[-8px] top-8 bottom-[-24px] w-[2px] bg-zinc-800 rounded-full z-0" />
-                          )}
-
-                          {/* Block Card */}
-                          <div className={`p-4 rounded-2xl border transition-all duration-300 transform hover:-translate-x-1 ${
-                            block.status === "DONE" ? "bg-green-500/5 border-green-500/20" :
-                            block.status === "NOW" ? (new Date(block.end_time) < currentTime ? "bg-red-500/10 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-red-500/5 border-red-500/50 shadow-lg") :
-                            block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#27272a] opacity-60 border-dashed" : "bg-[#18181b]/50 border-[#27272a] hover:bg-[#18181b]"
-                          } ${isSplitWithNext ? "rounded-b-none border-b-dashed border-b-zinc-800 pb-8" : ""} ${isSplitWithPrev ? "rounded-t-none border-t-dashed border-t-zinc-800 mt-[-1px]" : ""}`}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <h4 className={`font-black text-sm tracking-tight ${block.status === "UNPLUGGED" ? "text-zinc-500" : "text-white"}`}>{block.title}</h4>
-                                {block.status === "NOW" && new Date(block.end_time) < currentTime && (
-                                  <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                    {t.main.status.overdue}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center space-x-3">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
-                                {block.status === "NOW" && (
-                                  <button 
-                                    onClick={() => setTransitionBlock(block)}
-                                    className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-                                  >
-                                    <AlertCircle size={14} />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    <DndContext 
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext 
+                        items={timeline.map(b => b.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {timeline.map((block, idx) => (
+                          <SortableItem 
+                            key={block.id === -1 ? `unplugged-${idx}` : block.id} 
+                            block={block} 
+                            idx={idx} 
+                            timeline={timeline}
+                            currentTime={currentTime}
+                            t={t}
+                            onTransition={setTransitionBlock}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
                   </div>
                 )}
               </div>
@@ -468,7 +568,7 @@ function App() {
 
             {/* Transition Modal */}
             <Dialog open={!!transitionBlock} onOpenChange={(open) => !open && setTransitionBlock(null)}>
-              <DialogContent className="sm:max-w-[450px] bg-[#18181b] border-[#27272a] text-white shadow-2xl rounded-3xl p-8 antialiased [&>button]:hidden">
+              <DialogContent className="sm:max-w-[500px] bg-[#18181b] border-[#27272a] text-white shadow-2xl rounded-3xl p-8 antialiased [&>button]:hidden">
                 <DialogHeader className="space-y-4">
                   <DialogTitle className="text-2xl font-black tracking-tighter text-white leading-none flex items-center gap-3">
                     <Sparkles className="text-yellow-400" size={24} />
@@ -496,13 +596,41 @@ function App() {
                   </div>
 
                   <div className="space-y-4">
-                    <Button 
-                      onClick={() => handleTransition("COMPLETE")}
-                      className="w-full bg-white text-black hover:bg-zinc-200 font-black h-12 rounded-xl text-md shadow-xl active:scale-95"
-                    >
-                      {t.main.transition.complete}
-                    </Button>
+                    <div className="flex items-center gap-4">
+                      <Button 
+                        onClick={() => handleTransition("COMPLETE_ON_TIME")}
+                        variant="outline"
+                        className="flex-1 border-[#27272a] bg-zinc-900/50 hover:bg-[#27272a] text-zinc-300 font-black h-12 rounded-xl text-xs active:scale-95 whitespace-normal"
+                      >
+                        {t.main.transition.complete_target}
+                      </Button>
+                      <Button 
+                        onClick={() => handleTransition("COMPLETE_NOW")}
+                        className="flex-1 bg-white text-black hover:bg-zinc-200 font-black h-12 rounded-xl text-xs shadow-xl active:scale-95 whitespace-normal"
+                      >
+                        {t.main.transition.complete_now}
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center space-x-3 bg-[#09090b] border border-[#27272a] rounded-xl px-4 h-12">
+                       <Input 
+                          type="number" 
+                          value={agoMinutes} 
+                          onChange={(e) => setAgoMinutes(parseInt(e.target.value) || 0)}
+                          className="w-10 bg-transparent border-none text-center font-black focus-visible:ring-0 p-0"
+                        />
+                        <span className="text-[10px] font-black text-zinc-500 uppercase flex-1">{t.main.transition.complete_ago}</span>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleTransition("COMPLETE_AGO", agoMinutes)}
+                          className="text-white hover:text-white font-black hover:bg-zinc-800 h-8 rounded-lg"
+                        >
+                          <Send size={16} />
+                        </Button>
+                    </div>
                     
+                    <Separator className="bg-[#27272a]" />
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-1 flex items-center bg-[#09090b] border border-[#27272a] rounded-xl px-3">
                         <Input 
@@ -521,14 +649,6 @@ function App() {
                         {t.main.transition.delay}
                       </Button>
                     </div>
-
-                    <Button 
-                      variant="ghost"
-                      onClick={() => handleTransition("FORGOT")}
-                      className="w-full text-zinc-500 hover:text-zinc-300 font-bold h-10 rounded-xl text-xs"
-                    >
-                      {t.main.transition.forgot}
-                    </Button>
                   </div>
                 </div>
               </DialogContent>

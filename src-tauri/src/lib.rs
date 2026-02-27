@@ -257,7 +257,6 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
 
     // 2. 긴급 업무 여부에 따른 처리
     if input.is_urgent {
-        // 현재 활성 태스크(NOW)가 있는지 확인
         let current_now: Option<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status = 'NOW' LIMIT 1")
             .bind(input.workspace_id)
             .fetch_optional(&mut *tx)
@@ -268,32 +267,27 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
         let urgent_duration = (input.hours * 60 + input.minutes) as i64;
 
         if let Some(block) = current_now {
-            // 현재 태스크 분할: [과거~현재(DONE)] -> [긴급 업무] -> [현재+긴급시간~원래종료+긴급시간(WILL)]
-            
-            // 1. 현재 태스크를 현재 시점에서 종료 (DONE)
-            sqlx::query("UPDATE time_blocks SET end_time = ?1, status = 'DONE' WHERE id = ?2")
+            // 현재 태스크 중단 -> PENDING 처리 (찢어진 UI용)
+            sqlx::query("UPDATE time_blocks SET end_time = ?1, status = 'PENDING' WHERE id = ?2")
                 .bind(now_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
                 .bind(block.id)
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-            // 2. 현재 태스크의 남은 부분을 미래로 밀어내기 위해 정보 보관
             let original_end = NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
             let remaining_duration = (original_end - now_dt).num_minutes();
 
-            // 3. 긴급 업무 삽입 (이후 모든 블록은 urgent_duration만큼 뒤로 밀림)
+            // 긴급 업무 삽입
             schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration).await?;
 
-            // 4. 원래 태스크의 남은 부분 삽입
+            // 남은 부분 삽입
             let resume_start = now_dt + Duration::minutes(urgent_duration);
             schedule_task_blocks(&mut tx, input.workspace_id, block.task_id.unwrap(), &block.title, resume_start, remaining_duration).await?;
 
-            // 5. 이후의 모든 WILL 블록들도 urgent_duration만큼 뒤로 밀기
+            // 이후 블록 밀기
             shift_future_blocks(&mut tx, input.workspace_id, original_end, urgent_duration).await?;
-
         } else {
-            // 현재 진행 중인 태스크가 없으면 그냥 현재 시각에 추가하고 뒤를 밀어냄
             schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration).await?;
             shift_future_blocks(&mut tx, input.workspace_id, now_dt, urgent_duration).await?;
         }
@@ -415,10 +409,26 @@ async fn process_task_transition(state: State<'_, DbState>, input: TaskTransitio
         .map_err(|e| e.to_string())?;
 
     match input.action.as_str() {
-        "COMPLETE" | "FORGOT" => {
-            // COMPLETE: 현재 시점 또는 원래 종료 시점에 완료 (여기서는 단순하게 DONE 처리)
-            // FORGOT: 이미 끝난 업무이므로 상태만 DONE으로 변경 (미래 블록 밀지 않음)
-            sqlx::query("UPDATE time_blocks SET status = 'DONE', review_memo = ?1 WHERE id = ?2")
+        "COMPLETE_ON_TIME" | "COMPLETE_NOW" | "COMPLETE_AGO" => {
+            let mut end_dt = if input.action == "COMPLETE_NOW" {
+                Local::now().naive_local()
+            } else if input.action == "COMPLETE_AGO" {
+                Local::now().naive_local() - Duration::minutes(input.extra_minutes.unwrap_or(0) as i64)
+            } else {
+                NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap()
+            };
+
+            // 만약 현재 시각보다 늦게 완료했다면, 그만큼 미래 블록들을 밀어야 함 (COMPLETE_NOW/AGO 시에만)
+            if input.action != "COMPLETE_ON_TIME" {
+                let original_end = NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+                if end_dt > original_end {
+                    let diff = (end_dt - original_end).num_minutes();
+                    shift_future_blocks(&mut tx, block.workspace_id, original_end, diff).await?;
+                }
+            }
+
+            sqlx::query("UPDATE time_blocks SET status = 'DONE', end_time = ?1, review_memo = ?2 WHERE id = ?3")
+                .bind(end_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
                 .bind(input.review_memo)
                 .bind(input.block_id)
                 .execute(&mut *tx)
@@ -493,6 +503,65 @@ async fn update_block_status(state: State<'_, DbState>, block_id: i64, status: S
     Ok(())
 }
 
+#[tauri::command]
+async fn reorder_blocks(state: State<'_, DbState>, workspace_id: i64, block_ids: Vec<i64>) -> Result<(), String> {
+    let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
+
+    // 1. 모든 블록 정보 가져오기
+    let mut all_blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 ORDER BY start_time ASC")
+        .bind(workspace_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if all_blocks.is_empty() { return Ok(()); }
+
+    // 2. 시작 기준 시간 설정 (첫 블록의 시작 시간)
+    let start_dt = NaiveDateTime::parse_from_str(&all_blocks[0].start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+    let mut current_time = start_dt;
+
+    // 3. 언플러그드 타임 로드
+    let unplugged: Vec<UnpluggedTime> = sqlx::query_as("SELECT * FROM unplugged_times WHERE workspace_id = ?1")
+        .bind(workspace_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // 4. 요청된 순서대로 블록 재배치 (UNPLUGGED는 고정이라 제외하고 계산)
+    for id in block_ids {
+        if let Some(mut block) = all_blocks.iter().find(|b| b.id == id).cloned() {
+            if block.status == "UNPLUGGED" { continue; }
+
+            let duration_min = (NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap() - 
+                               NaiveDateTime::parse_from_str(&block.start_time, "%Y-%m-%dT%H:%M:%S").unwrap()).num_minutes();
+            
+            // 언플러그드 타임 체크 및 건너뛰기
+            for ut in &unplugged {
+                let ut_start = current_time.date().and_time(NaiveTime::parse_from_str(&ut.start_time, "%H:%M").unwrap());
+                let ut_end = current_time.date().and_time(NaiveTime::parse_from_str(&ut.end_time, "%H:%M").unwrap());
+                if current_time >= ut_start && current_time < ut_end {
+                    current_time = ut_end;
+                }
+            }
+
+            let new_end = current_time + Duration::minutes(duration_min);
+            
+            sqlx::query("UPDATE time_blocks SET start_time = ?1, end_time = ?2 WHERE id = ?3")
+                .bind(current_time.format("%Y-%m-%dT%H:%M:%S").to_string())
+                .bind(new_end.format("%Y-%m-%dT%H:%M:%S").to_string())
+                .bind(block.id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            current_time = new_end;
+        }
+    }
+
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -539,7 +608,8 @@ pub fn run() {
             add_task,
             get_timeline,
             process_task_transition,
-            update_block_status
+            update_block_status,
+            reorder_blocks
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
