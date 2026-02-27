@@ -8,12 +8,8 @@ import { Plus, Trash2, Clock, Briefcase, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface Step3Props {
-  register: UseFormRegister<OnboardingData>;
-  control: Control<OnboardingData>;
-  errors: FieldErrors<OnboardingData>;
-}
 
-export function Step3TimeRole({ register, control, errors }: Step3Props) {
+export function Step3TimeRole() {
   const { t } = useTranslation();
   const { fields, append, remove } = useFieldArray({
     control,

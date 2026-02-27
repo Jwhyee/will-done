@@ -34,17 +34,6 @@ export default function Onboarding() {
     }
   });
   console.log("Form Errors:", errors);
-    resolver: zodResolver(onboardingSchema),
-    defaultValues: {
-      nickname: "",
-      workspaceName: "",
-      coreTimeStart: "",
-      coreTimeEnd: "",
-      roleIntro: "",
-      unpluggedTimes: [],
-      apiKey: ""
-    }
-  });
 
   const onSubmit: SubmitHandler<OnboardingData> = async (data) => {
     setIsSubmitting(true);
@@ -66,7 +55,6 @@ export default function Onboarding() {
 
       navigate("/home");
     } catch (e) {
-      console.error("Onboarding failed:", e);
       console.error("Onboarding failed:", e);
       alert(t("alerts.setupFailed", { error: e instanceof Error ? e.message : String(e) }));
     } finally {
