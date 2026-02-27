@@ -1,18 +1,18 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "will-done-temp",
+  "productName": "will-done",
   "version": "0.1.0",
-  "identifier": "com.jwhy.will-done-temp",
+  "identifier": "com.will-done.app",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
-        "title": "will-done-temp",
+        "title": "will-done",
         "width": 800,
         "height": 600
       }
