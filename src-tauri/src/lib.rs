@@ -81,6 +81,15 @@ pub fn run() {
 
                 let pool = SqlitePool::connect(&db_url).await.expect("failed to connect to database");
                 
+                // 개발(dev) 모드일 때 테이블 초기화
+                if cfg!(debug_assertions) {
+                    println!("Debug mode detected: Dropping existing tables for initialization.");
+                    sqlx::query("DROP TABLE IF EXISTS users")
+                        .execute(&pool)
+                        .await
+                        .expect("failed to drop users table");
+                }
+
                 // 테이블 생성 (Migration)
                 sqlx::query(
                     "CREATE TABLE IF NOT EXISTS users (
