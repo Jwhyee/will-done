@@ -23,5 +23,3 @@ dist-ssr
 *.sln
 *.sw?
 docs/ai/*
-.sisyphus/*
-AGENTS.md
