@@ -16,14 +16,24 @@ export const unpluggedTimeSchema = z.object({
   path: ["end_time"]
 });
 
+// Use .default() to make them optional in the input but guaranteed in the output
 export const onboardingSchema = z.object({
   nickname: z.string().min(1, koreanMessages.required),
-  workspaceName: z.string().min(1, koreanMessages.required),
+  workspaceName: z.string().min(1, koreanMessages.required).default("My Workspace"),
   coreTimeStart: z.string().optional().nullable(),
   coreTimeEnd: z.string().optional().nullable(),
-  roleIntro: z.string(),
-  unpluggedTimes: z.array(unpluggedTimeSchema),
+  roleIntro: z.string().default(""),
+  unpluggedTimes: z.array(unpluggedTimeSchema).default([]),
   apiKey: z.string().optional().nullable()
 });
 
-export type OnboardingData = z.infer<typeof onboardingSchema>;
+// Explicitly define the type to match exactly what's needed
+export type OnboardingData = {
+  nickname: string;
+  workspaceName: string;
+  roleIntro: string;
+  unpluggedTimes: { label: string; start_time: string; end_time: string; }[];
+  coreTimeStart?: string | null;
+  coreTimeEnd?: string | null;
+  apiKey?: string | null;
+};
