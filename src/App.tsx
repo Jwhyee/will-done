@@ -267,8 +267,10 @@ function App() {
                     </div>
 
                     <div className="space-y-4">
-                      <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
-                      <p className="text-[11px] text-zinc-500 font-bold italic mb-2">{t.workspace_setup.core_time_guide}</p>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
+                        <p className="text-[10px] text-zinc-500 font-bold italic">{t.workspace_setup.core_time_guide}</p>
+                      </div>
                       <div className="grid grid-cols-2 gap-6">
                         <Input type="time" {...workspaceForm.register("core_time_start")} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
                         <Input type="time" {...workspaceForm.register("core_time_end")} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
@@ -280,7 +282,10 @@ function App() {
 
                     <div className="space-y-6">
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
+                          <p className="text-[10px] text-zinc-500 font-bold italic">{t.workspace_setup.unplugged_guide}</p>
+                        </div>
                         <Button 
                           type="button" 
                           variant="outline" 
@@ -294,7 +299,6 @@ function App() {
                           <Plus size={16} className="mr-2" /> {t.workspace_setup.add_unplugged}
                         </Button>
                       </div>
-                      <p className="text-[10px] text-zinc-500 font-bold italic">{t.workspace_setup.unplugged_guide}</p>
                       
                       <div className="space-y-4 pb-2">
                         {fields.map((field, index) => (
