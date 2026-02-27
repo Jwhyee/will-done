@@ -33,6 +33,18 @@ export default function Onboarding() {
       apiKey: ""
     }
   });
+  console.log("Form Errors:", errors);
+    resolver: zodResolver(onboardingSchema),
+    defaultValues: {
+      nickname: "",
+      workspaceName: "",
+      coreTimeStart: "",
+      coreTimeEnd: "",
+      roleIntro: "",
+      unpluggedTimes: [],
+      apiKey: ""
+    }
+  });
 
   const onSubmit: SubmitHandler<OnboardingData> = async (data) => {
     setIsSubmitting(true);
@@ -44,7 +56,9 @@ export default function Onboarding() {
         role_intro: data.roleIntro,
         unplugged_times: data.unpluggedTimes
       };
+      };
 
+      console.log("Payload:", payload);
       await invoke("setup_workspace", payload);
 
       localStorage.setItem("nickname", data.nickname);
@@ -53,7 +67,8 @@ export default function Onboarding() {
       navigate("/home");
     } catch (e) {
       console.error("Onboarding failed:", e);
-      alert(t("alerts.setupFailed", { error: e }));
+      console.error("Onboarding failed:", e);
+      alert(t("alerts.setupFailed", { error: e instanceof Error ? e.message : String(e) }));
     } finally {
       setIsSubmitting(false);
     }
