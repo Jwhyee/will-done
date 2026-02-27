@@ -47,7 +47,7 @@ pub fn initialize_workspace(
 
 pub fn get_current_workspace(conn: &Connection) -> Result<Option<Workspace>, String> {
     let mut stmt = conn
-        .prepare("SELECT id, name, core_time_start, core_time_end, role_intro, created_at FROM workspaces ORDER BY id DESC LIMIT 1")
+        .prepare("SELECT id, name, nickname, core_time_start, core_time_end, role_intro, created_at FROM workspaces ORDER BY id DESC LIMIT 1")
         .map_err(|e| format!("Prepare failed: {}", e))?;
 
     let result = stmt
@@ -55,10 +55,11 @@ pub fn get_current_workspace(conn: &Connection) -> Result<Option<Workspace>, Str
             Ok(Workspace {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                core_time_start: row.get(2)?,
-                core_time_end: row.get(3)?,
-                role_intro: row.get(4)?,
-                created_at: row.get(5)?,
+                nickname: row.get(2)?,
+                core_time_start: row.get(3)?,
+                core_time_end: row.get(4)?,
+                role_intro: row.get(5)?,
+                created_at: row.get(6)?,
             })
         });
 

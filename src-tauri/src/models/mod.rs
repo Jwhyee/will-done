@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct Workspace {
     pub id: i64,
     pub name: String,
+    pub nickname: String,
     pub core_time_start: Option<String>, // HH:mm
     pub core_time_end: Option<String>,   // HH:mm
     pub role_intro: String,

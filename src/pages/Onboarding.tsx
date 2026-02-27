@@ -23,6 +23,7 @@ export default function Onboarding() {
 
   const methods = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
+    mode: "all",
     defaultValues: {
       nickname: "",
       workspaceName: "",
@@ -33,33 +34,47 @@ export default function Onboarding() {
       apiKey: ""
     }
   });
-  const { handleSubmit, trigger } = methods;
-
+  const { handleSubmit, trigger, formState: { errors: formErrors } } = methods;
 
   const onSubmit: SubmitHandler<OnboardingData> = async (data) => {
+    console.log("Onboarding submission started", data);
     setIsSubmitting(true);
     try {
       const payload = {
         name: data.workspaceName,
         nickname: data.nickname,
-        core_time_start: data.coreTimeStart,
-        core_time_end: data.coreTimeEnd,
-        role_intro: data.roleIntro,
-        unplugged_times: data.unpluggedTimes,
+        core_time_start: data.coreTimeStart || null,
+        core_time_end: data.coreTimeEnd || null,
+        role_intro: data.roleIntro || "",
+        unplugged_times: data.unpluggedTimes.map(ut => ({
+          label: ut.label,
+          start_time: ut.start_time,
+          end_time: ut.end_time
+        })),
       };
-      console.log("Payload:", payload);
-      await invoke("setup_workspace", payload);
-
+      
+      console.log("Invoking setup_workspace with payload:", payload);
+      const workspaceId = await invoke("setup_workspace", payload);
+      console.log("Workspace setup successful, ID:", workspaceId);
+      
       localStorage.setItem("nickname", data.nickname);
       if (data.apiKey) localStorage.setItem("apiKey", data.apiKey);
 
-      navigate("/home");
+      // Final confirmation
+      console.log("Navigating to Home...");
+      navigate("/home"); 
     } catch (e) {
       console.error("Failed to setup workspace:", e);
-      alert(t("alerts.setupFailed", { error: e instanceof Error ? e.message : String(e) }));
+      alert(t("alerts.setupFailed", { error: String(e) }));
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const onInvalid = (errors: any) => {
+    console.error("Form validation failed:", errors);
+    // If there are errors in previous steps, we might want to go back to that step
+    // but for now, let's just log them.
   };
 
   const nextStep = async () => {
@@ -73,6 +88,8 @@ export default function Onboarding() {
     if (isValid) {
       setDirection(1);
       setStep((s) => s + 1);
+    } else {
+      console.log("Validation failed for step", step, methods.formState.errors);
     }
   };
 
@@ -138,11 +155,33 @@ export default function Onboarding() {
         </CardHeader>
 
         <FormProvider {...methods}>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, onInvalid)}>
           <CardContent className="min-h-[280px]">
             <StepLayout direction={direction}>
               {steps[step]}
             </StepLayout>
+            
+            {/* Global validation error summary for debugging/visibility */}
+            {Object.keys(formErrors).length > 0 && (
+              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg animate-in fade-in duration-300">
+                <p className="text-xs text-red-400 font-medium mb-1 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  입력 내용 중 수정이 필요한 항목이 있습니다:
+                </p>
+                <ul className="list-disc list-inside text-[10px] text-red-400/80">
+                  {Object.entries(formErrors).map(([key, value]: [string, any]) => {
+                    if (key === "unpluggedTimes" && Array.isArray(value)) return null; // Already handled in Step3
+                    return (
+                      <li key={key}>
+                        {key === "nickname" ? "닉네임" : 
+                         key === "workspaceName" ? "워크스페이스 이름" : 
+                         key === "coreTimeEnd" ? "시간 설정" : key}: {value.message}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </CardContent>
 
           <CardFooter className="flex justify-between pt-4">

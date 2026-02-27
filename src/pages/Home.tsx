@@ -7,18 +7,31 @@ export default function Home() {
   const [nickname, setNickname] = useState("User");
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [workspaceId, setWorkspaceId] = useState<number | null>(null);
+  const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(true);
   
-  // Hardcode workspace_id = 1 for MVP
-  const workspaceId = 1;
-
   useEffect(() => {
-    const storedNickname = localStorage.getItem("nickname");
-    if (storedNickname) {
-      setNickname(storedNickname);
-    }
+    const fetchWorkspace = async () => {
+      try {
+        setIsWorkspaceLoading(true);
+        const workspace = await invoke<any>("get_current_workspace");
+        if (workspace) {
+          // If workspace is an object with workspace field (due to setup_workspace result)
+          const ws = workspace.workspace || workspace;
+          setWorkspaceId(ws.id);
+          setNickname(ws.nickname || localStorage.getItem("nickname") || "User");
+        }
+      } catch (error) {
+        console.error("Failed to fetch workspace:", error);
+      } finally {
+        setIsWorkspaceLoading(false);
+      }
+    };
+    fetchWorkspace();
   }, []);
 
   const fetchTimeline = useCallback(async () => {
+    if (!workspaceId) return;
     try {
       setIsLoading(true);
       const today = new Date().toISOString().split("T")[0];
@@ -35,25 +48,40 @@ export default function Home() {
   }, [workspaceId]);
 
   useEffect(() => {
-    fetchTimeline();
-  }, [fetchTimeline]);
+    if (workspaceId) {
+      fetchTimeline();
+    }
+  }, [workspaceId, fetchTimeline]);
 
   const handleTaskAdded = () => {
     fetchTimeline();
   };
 
   const handleReorder = (newEntries: TimelineEntry[]) => {
-    // In a real app, we would send the new order to the backend here
-    // For now, we just update the local state
     setTimelineEntries(newEntries);
   };
 
   const handleGenerateRetrospective = () => {
-    // This will be implemented in future sprints
     alert("Generating retrospective... (Coming soon)");
   };
 
   const hasCompletedTasks = timelineEntries.some((entry) => entry.status === "Done");
+
+  if (isWorkspaceLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6 md:p-12">
+        <div className="w-8 h-8 border-4 border-zinc-800 border-t-indigo-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!workspaceId) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-50 flex items-center justify-center">
+        <p>Workspace not found. Please onboarding first.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 p-6 md:p-12 font-sans selection:bg-zinc-800">
