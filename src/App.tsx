@@ -60,7 +60,7 @@ const formatDisplayTime = (isoString: string) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
-const SortableItem = ({ block, idx, timeline, currentTime, t, onTransition, hoverTaskId, setHoverTaskId }: any) => {
+const SortableItem = ({ block, timeline, currentTime, t, onTransition, hoverTaskId, setHoverTaskId }: any) => {
   const {
     attributes,
     listeners,
@@ -77,55 +77,60 @@ const SortableItem = ({ block, idx, timeline, currentTime, t, onTransition, hove
     opacity: isDragging ? 0.6 : 1,
   };
 
-  const isSplitWithNext = block.task_id && timeline[idx + 1]?.task_id === block.task_id;
-  const isSplitWithPrev = block.task_id && timeline[idx - 1]?.task_id === block.task_id;
+  // Split Logic: 업무가 쪼개진 경우 무조건 찢어진 효과 적용
+  const taskBlocks = block.task_id ? timeline.filter((b: any) => b.task_id === block.task_id) : [];
+  const blockIndexInTask = taskBlocks.findIndex((b: any) => b.id === block.id);
+  const isSplit = taskBlocks.length > 1;
+  const isFirstOfTask = isSplit && blockIndexInTask === 0;
+  const isLastOfTask = isSplit && blockIndexInTask === taskBlocks.length - 1;
+  const isMiddleOfTask = isSplit && blockIndexInTask > 0 && blockIndexInTask < taskBlocks.length - 1;
+
+  // 인접 여부와 상관 없이 찢어진 효과 (심슨 머리)
   const isPending = block.status === "PENDING";
   const isHovered = block.task_id && hoverTaskId === block.task_id;
 
-  // 심슨 머리 스타일의 톱니 모양 clip-path (더 촘촘하게)
   const zigzagBottom = "polygon(0% 0%, 100% 0%, 100% 92%, 98% 100%, 96% 92%, 94% 100%, 92% 92%, 90% 100%, 88% 92%, 86% 100%, 84% 92%, 82% 100%, 80% 92%, 78% 100%, 76% 92%, 74% 100%, 72% 92%, 70% 100%, 68% 92%, 66% 100%, 64% 92%, 62% 100%, 60% 92%, 58% 100%, 56% 92%, 54% 100%, 52% 92%, 50% 100%, 48% 92%, 46% 100%, 44% 92%, 42% 100%, 40% 92%, 38% 100%, 36% 92%, 34% 100%, 32% 92%, 30% 100%, 28% 92%, 26% 100%, 24% 92%, 22% 100%, 20% 92%, 18% 100%, 16% 92%, 14% 100%, 12% 92%, 10% 100%, 8% 92%, 6% 100%, 4% 92%, 2% 100%, 0% 92%)";
   const zigzagTop = "polygon(0% 8%, 2% 0%, 4% 8%, 6% 0%, 8% 8%, 10% 0%, 12% 8%, 14% 0%, 16% 8%, 18% 0%, 20% 8%, 22% 0%, 24% 8%, 26% 0%, 28% 8%, 30% 0%, 32% 8%, 34% 0%, 36% 8%, 38% 0%, 40% 8%, 42% 0%, 44% 8%, 46% 0%, 48% 8%, 50% 0%, 52% 8%, 54% 0%, 56% 8%, 58% 0%, 60% 8%, 62% 0%, 64% 8%, 66% 0%, 68% 8%, 70% 0%, 72% 8%, 74% 0%, 76% 8%, 78% 0%, 80% 8%, 82% 0%, 84% 8%, 86% 0%, 88% 8%, 90% 0%, 92% 8%, 94% 0%, 96% 8%, 98% 0%, 100% 8%, 100% 100%, 0% 100%)";
   const zigzagBoth = "polygon(0% 8%, 2% 0%, 4% 8%, 6% 0%, 8% 8%, 10% 0%, 12% 8%, 14% 0%, 16% 8%, 18% 0%, 20% 8%, 22% 0%, 24% 8%, 26% 0%, 28% 8%, 30% 0%, 32% 8%, 34% 0%, 36% 8%, 38% 0%, 40% 8%, 42% 0%, 44% 8%, 46% 0%, 48% 8%, 50% 0%, 52% 8%, 54% 0%, 56% 8%, 58% 0%, 60% 8%, 62% 0%, 64% 8%, 66% 0%, 68% 8%, 70% 0%, 72% 8%, 74% 0%, 76% 8%, 78% 0%, 80% 8%, 82% 0%, 84% 8%, 86% 0%, 88% 8%, 90% 0%, 92% 8%, 94% 0%, 96% 8%, 98% 0%, 100% 8%, 100% 92%, 98% 100%, 96% 92%, 94% 100%, 92% 92%, 90% 100%, 88% 92%, 86% 100%, 84% 92%, 82% 100%, 80% 92%, 78% 100%, 76% 92%, 74% 100%, 72% 92%, 70% 100%, 68% 92%, 66% 100%, 64% 92%, 62% 100%, 60% 92%, 58% 100%, 56% 92%, 54% 100%, 52% 92%, 50% 100%, 48% 92%, 46% 100%, 44% 92%, 42% 100%, 40% 92%, 38% 100%, 36% 92%, 34% 100%, 32% 92%, 30% 100%, 28% 92%, 26% 100%, 24% 92%, 22% 100%, 20% 92%, 18% 100%, 16% 92%, 14% 100%, 12% 92%, 10% 100%, 8% 92%, 6% 100%, 4% 92%, 2% 100%, 0% 92%)";
 
   return (
     <div ref={setNodeRef} style={style} className="relative group/item">
-      {/* Time Indicator */}
-      <div className="absolute -left-[6.5rem] top-0 w-16 text-right space-y-1">
+      {/* Time Indicator - Dot level보다 아래로 이동 */}
+      <div className="absolute -left-[6.5rem] top-6 w-16 text-right space-y-1">
         <p className="text-[10px] font-black font-mono text-zinc-500">{formatDisplayTime(block.start_time)}</p>
-        <p className="text-[10px] font-bold font-mono text-zinc-700 opacity-0 group-hover/item:opacity-100 transition-opacity">{formatDisplayTime(block.end_time)}</p>
       </div>
       
-      {/* Dot on Line */}
-      <div className={`absolute -left-[3.4rem] top-1 w-3 h-3 rounded-full border-2 bg-[#09090b] z-10 transition-colors ${
+      {/* Dot on Line - 라인 정중앙에 위치하도록 조정 (-left-[70px]) */}
+      <div className={`absolute -left-[70px] top-1 w-3 h-3 rounded-full border-2 bg-[#09090b] z-10 transition-all duration-300 ${
         block.status === "DONE" ? "border-green-500 bg-green-500/20" :
-        block.status === "NOW" ? "border-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.5)]" :
+        block.status === "NOW" ? "border-blue-500 scale-125 shadow-[0_0_10px_rgba(59,130,246,0.5)] bg-blue-500/20" :
         block.status === "PENDING" ? "border-orange-500 bg-orange-500/20" :
         block.status === "UNPLUGGED" ? "border-zinc-700 bg-zinc-800" : "border-zinc-600"
       }`} />
 
       {/* Connection Line (Right Side) for Split Tasks */}
-      {isSplitWithNext && (
+      {isSplit && blockIndexInTask < taskBlocks.length - 1 && (
         <div className={`absolute right-[-10px] top-8 bottom-[-24px] w-[3px] rounded-full z-0 transition-colors duration-300 ${isHovered ? "bg-white/40 shadow-[0_0_10px_rgba(255,255,255,0.2)]" : "bg-zinc-800"}`} />
       )}
 
-      {/* Block Card */}
+      {/* Block Card - border 두께 1.5px로 증가 */}
       <div 
         {...attributes}
         {...listeners}
         onMouseEnter={() => block.task_id && setHoverTaskId(block.task_id)}
         onMouseLeave={() => setHoverTaskId(null)}
-        className={`p-5 rounded-2xl border transition-all duration-300 transform ${
+        className={`p-5 rounded-2xl border-[1.5px] transition-all duration-300 transform ${
         block.status === "DONE" ? "bg-green-500/5 border-green-500/20" :
-        block.status === "NOW" ? (new Date(block.end_time) < currentTime ? "bg-red-500/10 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-red-500/5 border-red-500/50 shadow-lg") :
+        block.status === "NOW" ? (new Date(block.end_time) < currentTime ? "bg-red-500/10 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-blue-500/5 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]") :
         block.status === "PENDING" ? "bg-orange-500/5 border-orange-500/40 border-dashed" :
         block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#27272a] opacity-60 border-dashed cursor-default" : "bg-[#18181b]/50 border-[#27272a] hover:bg-[#18181b]"
-      } ${isHovered ? "border-white/40 bg-zinc-800/80 -translate-x-1 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02]" : ""} ${isSplitWithNext ? "rounded-b-none border-b-none pb-8 mb-0" : ""} ${isSplitWithPrev ? "rounded-t-none border-t-none mt-[-2px]" : ""}`}
+      } ${isHovered ? "border-white/40 bg-zinc-800/80 -translate-x-1 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.01]" : ""} ${isFirstOfTask ? "rounded-b-none border-b-0 pb-8 mb-0" : ""} ${isLastOfTask ? "rounded-t-none border-t-0 mt-[-2px]" : ""} ${isMiddleOfTask ? "rounded-none border-y-0 py-8 my-[-2px]" : ""}`}
         style={{
-          clipPath: isSplitWithNext && !isSplitWithPrev 
+          clipPath: isFirstOfTask 
             ? zigzagBottom
-            : isSplitWithPrev && !isSplitWithNext
+            : isLastOfTask
             ? zigzagTop
-            : isSplitWithNext && isSplitWithPrev
+            : isMiddleOfTask
             ? zigzagBoth
             : undefined
         }}
@@ -134,9 +139,15 @@ const SortableItem = ({ block, idx, timeline, currentTime, t, onTransition, hove
           <div className="flex items-center space-x-4">
             <GripVertical size={14} className={`transition-opacity duration-300 ${isHovered || isDragging ? "text-white opacity-100" : "text-zinc-700 opacity-20"}`} />
             <div className="space-y-1">
-                <h4 className={`font-black text-sm tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-zinc-500" : (isHovered ? "text-white" : "text-zinc-200")}`}>{block.title}</h4>
+                <div className="flex items-center gap-3">
+                  <h4 className={`font-black text-sm tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-zinc-500" : (isHovered ? "text-white" : "text-zinc-200")}`}>{block.title}</h4>
+                  {/* Card 내부 시간 정보 */}
+                  <span className="text-[10px] font-mono font-bold text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded-md">
+                    {formatDisplayTime(block.start_time)} - {formatDisplayTime(block.end_time)}
+                  </span>
+                </div>
                 <div className="flex items-center space-x-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${block.status === "NOW" ? "text-blue-400" : "text-zinc-600"}`}>{block.status}</span>
                     {block.status === "NOW" && new Date(block.end_time) < currentTime && (
                         <span className="bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
                             {t.main.status.overdue}
@@ -567,7 +578,6 @@ function App() {
                           <SortableItem 
                             key={block.id === -1 ? `unplugged-${idx}` : block.id} 
                             block={block} 
-                            idx={idx} 
                             timeline={timeline}
                             currentTime={currentTime}
                             t={t}
