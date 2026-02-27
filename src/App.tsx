@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Settings, X, AlertCircle, Sparkles, Send, Clock, Zap, GripVertical, Calendar as CalendarIcon, Inbox } from "lucide-react";
+import { Plus, Settings, X, AlertCircle, Sparkles, Send, Clock, Zap, GripVertical, Calendar as CalendarIcon, Inbox, Pencil, AlertTriangle } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -12,6 +12,9 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  defaultDropAnimationSideEffects,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -50,6 +53,7 @@ interface TimeBlock {
   end_time: string;
   status: "DONE" | "NOW" | "WILL" | "UNPLUGGED" | "PENDING";
   review_memo: string | null;
+  is_urgent: boolean;
 }
 
 interface Task {
@@ -152,6 +156,7 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, onMoveToI
             </div>
             <div className="space-y-1">
                 <div className="flex items-center gap-3">
+                  {block.is_urgent && <AlertTriangle size={14} className="text-red-500 fill-red-500/20" />}
                   <h4 className={`font-black text-sm tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-zinc-500" : (isHovered ? "text-white" : "text-zinc-200")}`}>{block.title}</h4>
                   <span className="text-[10px] font-mono font-bold text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded-md">
                     {formatDisplayTime(block.start_time)} - {formatDisplayTime(block.end_time)}
@@ -193,7 +198,7 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, onMoveToI
               }}
               className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 ${isHovered ? "bg-white text-black hover:bg-zinc-200" : "bg-zinc-800 text-zinc-500 hover:text-white"}`}
             >
-              <AlertCircle size={16} />
+              <Pencil size={16} />
             </Button>
             {block.task_id && (
               <Button 
@@ -293,6 +298,7 @@ function App() {
   const [customDelay, setCustomDelay] = useState<number>(15);
   const [agoMinutes, setAgoMinutes] = useState<number>(5);
   const [hoverTaskId, setHoverTaskId] = useState<number | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const lang = useMemo(() => getLang(), []);
   const t = translations[lang];
@@ -461,7 +467,12 @@ function App() {
     }
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id.toString());
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
     if (!over) return;
 
@@ -624,6 +635,7 @@ function App() {
     <DndContext 
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
       <div className="h-screen bg-[#111114] text-white flex overflow-hidden font-sans antialiased select-none">
@@ -864,7 +876,7 @@ function App() {
                       onClick={() => setDeleteTaskId(null)}
                       className="flex-1 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white font-black rounded-xl"
                     >
-                      Cancel
+                      {t.main.delete_confirm.cancel}
                     </Button>
                     <Button 
                       onClick={handleDelete}
@@ -894,7 +906,7 @@ function App() {
                       onClick={() => setMoveAllConfirm(false)}
                       className="flex-1 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white font-black rounded-xl"
                     >
-                      Cancel
+                      {t.main.move_all.cancel}
                     </Button>
                     <Button 
                       onClick={handleMoveAllToTimeline}
@@ -1243,6 +1255,41 @@ function App() {
           )}
         </main>
       </div>
+      <DragOverlay dropAnimation={{
+        sideEffects: defaultDropAnimationSideEffects({
+          styles: {
+            active: {
+              opacity: '0.4',
+            },
+          },
+        }),
+      }}>
+        {activeId ? (
+          activeId.startsWith('inbox-') ? (
+            <div className="w-64 opacity-90 scale-105">
+              <InboxItem 
+                task={inboxTasks.find(t => `inbox-${t.id}` === activeId)} 
+                onMoveToTimeline={() => {}}
+                onDelete={() => {}}
+              />
+            </div>
+          ) : (
+            <div className="w-[calc(100vw-350px)] opacity-90 scale-105">
+              <SortableItem 
+                block={timeline.find(b => b.id.toString() === activeId)}
+                timeline={timeline}
+                currentTime={currentTime}
+                t={t}
+                onTransition={() => {}}
+                onMoveToInbox={() => {}}
+                onDelete={() => {}}
+                hoverTaskId={null}
+                setHoverTaskId={() => {}}
+              />
+            </div>
+          )
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

@@ -67,11 +67,13 @@ export const translations = {
         title: "태스크 삭제",
         description: "정말로 이 태스크를 삭제하시겠습니까?",
         btn: "삭제",
+        cancel: "취소",
       },
       move_all: {
         title: "인박스 태스크 이동",
         description: "인박스에 있는 모든 태스크를 타임라인으로 옮기시겠습니까?",
         btn: "모두 이동",
+        cancel: "취소",
       }
     }
   },
@@ -143,11 +145,13 @@ export const translations = {
         title: "Delete Task",
         description: "Are you sure you want to delete this task?",
         btn: "Delete",
+        cancel: "Cancel",
       },
       move_all: {
         title: "Move Inbox Tasks",
         description: "Would you like to move all tasks in the inbox to the timeline?",
         btn: "Move All",
+        cancel: "Cancel",
       }
     }
   }

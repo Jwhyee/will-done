@@ -50,6 +50,7 @@ pub struct TimeBlock {
     pub end_time: String,
     pub status: String, // DONE, NOW, WILL, UNPLUGGED, PENDING
     pub review_memo: Option<String>,
+    pub is_urgent: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -347,7 +348,7 @@ async fn move_all_to_timeline(state: State<'_, DbState>, workspace_id: i64) -> R
             break;
         }
 
-        schedule_task_blocks(&mut tx, workspace_id, task.id, &task.title, current_start, duration).await?;
+        schedule_task_blocks(&mut tx, workspace_id, task.id, &task.title, current_start, duration, false).await?;
     }
 
     tx.commit().await.map_err(|e| e.to_string())?;
@@ -429,20 +430,20 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
             let remaining_duration = (original_end - now_dt).num_minutes();
 
             // 긴급 업무 삽입
-            schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration).await?;
+            schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration, true).await?;
 
             // 남은 부분 삽입
             let resume_start = now_dt + Duration::minutes(urgent_duration);
-            schedule_task_blocks(&mut tx, input.workspace_id, block.task_id.unwrap(), &block.title, resume_start, remaining_duration).await?;
+            schedule_task_blocks(&mut tx, input.workspace_id, block.task_id.unwrap(), &block.title, resume_start, remaining_duration, block.is_urgent).await?;
 
             // 이후 블록 밀기
             shift_future_blocks(&mut tx, input.workspace_id, original_end, urgent_duration).await?;
         } else {
-            schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration).await?;
+            schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration, true).await?;
             shift_future_blocks(&mut tx, input.workspace_id, now_dt, urgent_duration).await?;
         }
     } else {
-        schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, current_start, duration).await?;
+        schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, current_start, duration, false).await?;
     }
 
     tx.commit().await.map_err(|e| e.to_string())?;
@@ -509,7 +510,7 @@ async fn move_to_timeline(state: State<'_, DbState>, task_id: i64, workspace_id:
 
     // Use task's estimated_minutes or fallback to 30
     let duration = if task.estimated_minutes > 0 { task.estimated_minutes as i64 } else { 30 };
-    schedule_task_blocks(&mut tx, workspace_id, task_id, &task.title, current_start, duration).await?;
+    schedule_task_blocks(&mut tx, workspace_id, task_id, &task.title, current_start, duration, false).await?;
 
     tx.commit().await.map_err(|e| e.to_string())?;
     Ok(())
@@ -522,7 +523,8 @@ async fn schedule_task_blocks(
     task_id: i64,
     title: &str,
     start_dt: NaiveDateTime,
-    mut remaining_minutes: i64
+    mut remaining_minutes: i64,
+    is_urgent: bool
 ) -> Result<(), String> {
     let mut current_start = start_dt;
     
@@ -556,10 +558,11 @@ async fn schedule_task_blocks(
         let duration = (end - current_start).num_minutes();
 
         if duration > 0 {
-            sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status) VALUES (?1, ?2, ?3, ?4, ?5, 'WILL')")
+            sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status, is_urgent) VALUES (?1, ?2, ?3, ?4, ?5, 'WILL', ?6)")
                 .bind(task_id).bind(workspace_id).bind(title)
                 .bind(current_start.format("%Y-%m-%dT%H:%M:%S").to_string())
                 .bind(end.format("%Y-%m-%dT%H:%M:%S").to_string())
+                .bind(is_urgent)
                 .execute(&mut **tx).await.map_err(|e| e.to_string())?;
         }
 
@@ -618,11 +621,11 @@ async fn process_task_transition(state: State<'_, DbState>, input: TaskTransitio
                 NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap()
             };
 
-            // 만약 현재 시각보다 늦게 완료했다면, 그만큼 미래 블록들을 밀어야 함 (COMPLETE_NOW/AGO 시에만)
+            // 만약 실제 완료 시간이 원래 종료 시간과 다르다면, 그 차이만큼 미래 블록들을 밀거나 당겨야 함
             if input.action != "COMPLETE_ON_TIME" {
                 let original_end = NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
-                if end_dt > original_end {
-                    let diff = (end_dt - original_end).num_minutes();
+                let diff = (end_dt - original_end).num_minutes();
+                if diff != 0 {
                     shift_future_blocks(&mut tx, block.workspace_id, original_end, diff).await?;
                 }
             }
@@ -695,6 +698,7 @@ async fn get_timeline(state: State<'_, DbState>, workspace_id: i64, date: Option
             end_time: target_date.and_time(NaiveTime::parse_from_str(&ut.end_time, "%H:%M").unwrap()).format("%Y-%m-%dT%H:%M:%S").to_string(),
             status: "UNPLUGGED".to_string(),
             review_memo: None,
+            is_urgent: false,
         });
     }
 
@@ -804,7 +808,9 @@ pub fn run() {
                 sqlx::query("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, estimated_minutes INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
                 // Migration: add column if exists (for existing DBs)
                 sqlx::query("ALTER TABLE tasks ADD COLUMN estimated_minutes INTEGER NOT NULL DEFAULT 0").execute(&pool).await.ok();
-                sqlx::query("CREATE TABLE IF NOT EXISTS time_blocks (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, status TEXT NOT NULL, review_memo TEXT, FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+                sqlx::query("CREATE TABLE IF NOT EXISTS time_blocks (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, status TEXT NOT NULL, review_memo TEXT, is_urgent BOOLEAN NOT NULL DEFAULT 0, FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+                // Migration: add column if exists (for existing DBs)
+                sqlx::query("ALTER TABLE time_blocks ADD COLUMN is_urgent BOOLEAN NOT NULL DEFAULT 0").execute(&pool).await.ok();
 
                 app_handle.manage(DbState { pool });
             });
