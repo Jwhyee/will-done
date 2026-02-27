@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqlitePool, Pool, Sqlite, Row};
 use std::fs;
 use tauri::{Manager, State};
-use chrono::{Local, NaiveDateTime, NaiveTime, Duration, Timelike};
+use chrono::{Local, NaiveDateTime, NaiveTime, Duration, Timelike, NaiveDate};
 
 // --- Entities ---
 
@@ -47,7 +47,7 @@ pub struct TimeBlock {
     pub title: String,
     pub start_time: String,
     pub end_time: String,
-    pub status: String, // DONE, NOW, WILL, UNPLUGGED
+    pub status: String, // DONE, NOW, WILL, UNPLUGGED, PENDING
     pub review_memo: Option<String>,
 }
 
@@ -59,6 +59,7 @@ pub struct AddTaskInput {
     pub minutes: i32,
     pub planning_memo: Option<String>,
     pub is_urgent: bool,
+    pub is_inbox: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -174,6 +175,68 @@ async fn get_workspaces(state: State<'_, DbState>) -> Result<Vec<Workspace>, Str
 }
 
 #[tauri::command]
+async fn get_workspace(state: State<'_, DbState>, id: i64) -> Result<Option<Workspace>, String> {
+    let ws = sqlx::query_as::<_, Workspace>("SELECT * FROM workspaces WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(ws)
+}
+
+#[tauri::command]
+async fn get_unplugged_times(state: State<'_, DbState>, workspace_id: i64) -> Result<Vec<UnpluggedTime>, String> {
+    let list = sqlx::query_as::<_, UnpluggedTime>("SELECT * FROM unplugged_times WHERE workspace_id = ?1")
+        .bind(workspace_id)
+        .fetch_all(&state.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(list)
+}
+
+#[tauri::command]
+async fn update_workspace(
+    state: State<'_, DbState>,
+    id: i64,
+    input: CreateWorkspaceInput,
+) -> Result<(), String> {
+    let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
+    sqlx::query(
+        "UPDATE workspaces SET name=?1, core_time_start=?2, core_time_end=?3, role_intro=?4 WHERE id=?5",
+    )
+    .bind(&input.name)
+    .bind(&input.core_time_start)
+    .bind(&input.core_time_end)
+    .bind(&input.role_intro)
+    .bind(id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    sqlx::query("DELETE FROM unplugged_times WHERE workspace_id = ?1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    for ut in input.unplugged_times {
+        sqlx::query(
+            "INSERT INTO unplugged_times (workspace_id, label, start_time, end_time) VALUES (?1, ?2, ?3, ?4)",
+        )
+        .bind(id)
+        .bind(ut.label)
+        .bind(ut.start_time)
+        .bind(ut.end_time)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+    }
+
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn get_greeting(state: State<'_, DbState>, workspace_id: i64, lang: String) -> Result<String, String> {
     let user = get_user(state.clone()).await?.ok_or("User not found")?;
     let now = Local::now();
@@ -255,7 +318,13 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
 
     let task_id = task_result.last_insert_rowid();
 
-    // 2. 긴급 업무 여부에 따른 처리
+    // 2. 인박스 여부에 따른 처리
+    if input.is_inbox.unwrap_or(false) {
+        tx.commit().await.map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    // 3. 긴급 업무 여부에 따른 처리
     if input.is_urgent {
         let current_now: Option<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status = 'NOW' LIMIT 1")
             .bind(input.workspace_id)
@@ -310,6 +379,71 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
         let duration = (input.hours * 60 + input.minutes) as i64;
         schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, current_start, duration).await?;
     }
+
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_inbox(state: State<'_, DbState>, workspace_id: i64) -> Result<Vec<Task>, String> {
+    let list = sqlx::query_as::<_, Task>(
+        "SELECT * FROM tasks WHERE workspace_id = ?1 AND id NOT IN (SELECT task_id FROM time_blocks WHERE task_id IS NOT NULL)"
+    )
+    .bind(workspace_id)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(list)
+}
+
+#[tauri::command]
+async fn move_to_inbox(state: State<'_, DbState>, block_id: i64) -> Result<(), String> {
+    let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
+    
+    let block: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = ?1")
+        .bind(block_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Some(task_id) = block.task_id {
+        sqlx::query("DELETE FROM time_blocks WHERE task_id = ?1")
+            .bind(task_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn move_to_timeline(state: State<'_, DbState>, task_id: i64, workspace_id: i64) -> Result<(), String> {
+    let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
+
+    let task: Task = sqlx::query_as("SELECT * FROM tasks WHERE id = ?1")
+        .bind(task_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let last_block: Option<(String,)> = sqlx::query_as("SELECT end_time FROM time_blocks WHERE workspace_id = ?1 AND status != 'UNPLUGGED' ORDER BY end_time DESC LIMIT 1")
+        .bind(workspace_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let now_dt = Local::now().naive_local();
+    let current_start = if let Some((last_end,)) = last_block {
+        let le = NaiveDateTime::parse_from_str(&last_end, "%Y-%m-%dT%H:%M:%S").unwrap_or(now_dt);
+        if le < now_dt { now_dt } else { le }
+    } else {
+        now_dt
+    };
+
+    // 기본 30분 할당
+    schedule_task_blocks(&mut tx, workspace_id, task_id, &task.title, current_start, 30).await?;
 
     tx.commit().await.map_err(|e| e.to_string())?;
     Ok(())
@@ -459,11 +593,22 @@ async fn process_task_transition(state: State<'_, DbState>, input: TaskTransitio
 }
 
 #[tauri::command]
-async fn get_timeline(state: State<'_, DbState>, workspace_id: i64) -> Result<Vec<TimeBlock>, String> {
+async fn get_timeline(state: State<'_, DbState>, workspace_id: i64, date: Option<String>) -> Result<Vec<TimeBlock>, String> {
+    let target_date = if let Some(d) = date {
+        NaiveDate::parse_from_str(&d, "%Y-%m-%d").unwrap_or(Local::now().date_naive())
+    } else {
+        Local::now().date_naive()
+    };
+
+    let start_of_day = target_date.and_hms_opt(0, 0, 0).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let end_of_day = target_date.and_hms_opt(23, 59, 59).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
+
     let mut blocks = sqlx::query_as::<_, TimeBlock>(
-        "SELECT * FROM time_blocks WHERE workspace_id = ?1 ORDER BY start_time ASC"
+        "SELECT * FROM time_blocks WHERE workspace_id = ?1 AND start_time >= ?2 AND start_time <= ?3 ORDER BY start_time ASC"
     )
     .bind(workspace_id)
+    .bind(start_of_day)
+    .bind(end_of_day)
     .fetch_all(&state.pool)
     .await
     .map_err(|e| e.to_string())?;
@@ -474,15 +619,14 @@ async fn get_timeline(state: State<'_, DbState>, workspace_id: i64) -> Result<Ve
         .await
         .map_err(|e| e.to_string())?;
 
-    let today = Local::now().date_naive();
     for ut in unplugged {
         blocks.push(TimeBlock {
             id: -1,
             task_id: None,
             workspace_id,
             title: ut.label,
-            start_time: today.and_time(NaiveTime::parse_from_str(&ut.start_time, "%H:%M").unwrap()).format("%Y-%m-%dT%H:%M:%S").to_string(),
-            end_time: today.and_time(NaiveTime::parse_from_str(&ut.end_time, "%H:%M").unwrap()).format("%Y-%m-%dT%H:%M:%S").to_string(),
+            start_time: target_date.and_time(NaiveTime::parse_from_str(&ut.start_time, "%H:%M").unwrap()).format("%Y-%m-%dT%H:%M:%S").to_string(),
+            end_time: target_date.and_time(NaiveTime::parse_from_str(&ut.end_time, "%H:%M").unwrap()).format("%Y-%m-%dT%H:%M:%S").to_string(),
             status: "UNPLUGGED".to_string(),
             review_memo: None,
         });
@@ -508,7 +652,7 @@ async fn reorder_blocks(state: State<'_, DbState>, workspace_id: i64, block_ids:
     let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
 
     // 1. 모든 블록 정보 가져오기
-    let mut all_blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 ORDER BY start_time ASC")
+    let mut all_blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE' ORDER BY start_time ASC")
         .bind(workspace_id)
         .fetch_all(&mut *tx)
         .await
@@ -581,11 +725,11 @@ pub fn run() {
                 let pool = SqlitePool::connect(&db_url).await.expect("failed to connect to database");
                 
                 if cfg!(debug_assertions) {
-                    sqlx::query("DROP TABLE IF EXISTS time_blocks").execute(&pool).await.ok();
-                    sqlx::query("DROP TABLE IF EXISTS tasks").execute(&pool).await.ok();
-                    sqlx::query("DROP TABLE IF EXISTS unplugged_times").execute(&pool).await.ok();
-                    sqlx::query("DROP TABLE IF EXISTS workspaces").execute(&pool).await.ok();
-                    sqlx::query("DROP TABLE IF EXISTS users").execute(&pool).await.ok();
+                    // sqlx::query("DROP TABLE IF EXISTS time_blocks").execute(&pool).await.ok();
+                    // sqlx::query("DROP TABLE IF EXISTS tasks").execute(&pool).await.ok();
+                    // sqlx::query("DROP TABLE IF EXISTS unplugged_times").execute(&pool).await.ok();
+                    // sqlx::query("DROP TABLE IF EXISTS workspaces").execute(&pool).await.ok();
+                    // sqlx::query("DROP TABLE IF EXISTS users").execute(&pool).await.ok();
                 }
 
                 sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT)").execute(&pool).await.ok();
@@ -604,9 +748,15 @@ pub fn run() {
             check_user_exists,
             create_workspace,
             get_workspaces,
+            get_workspace,
+            update_workspace,
+            get_unplugged_times,
             get_greeting,
             add_task,
             get_timeline,
+            get_inbox,
+            move_to_inbox,
+            move_to_timeline,
             process_task_transition,
             update_block_status,
             reorder_blocks
