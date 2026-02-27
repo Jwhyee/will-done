@@ -662,6 +662,24 @@ async fn process_task_transition(state: State<'_, DbState>, input: TaskTransitio
 }
 
 #[tauri::command]
+async fn get_active_dates(state: State<'_, DbState>, workspace_id: i64) -> Result<Vec<String>, String> {
+    let rows = sqlx::query(
+        "SELECT DISTINCT SUBSTR(start_time, 1, 10) as date_str FROM time_blocks WHERE workspace_id = ?1 ORDER BY date_str ASC"
+    )
+    .bind(workspace_id)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let dates: Vec<String> = rows.iter().map(|r| {
+        let s: String = sqlx::Row::get(r, "date_str");
+        s
+    }).collect();
+
+    Ok(dates)
+}
+
+#[tauri::command]
 async fn get_timeline(state: State<'_, DbState>, workspace_id: i64, date: Option<String>) -> Result<Vec<TimeBlock>, String> {
     let target_date = if let Some(d) = date {
         NaiveDate::parse_from_str(&d, "%Y-%m-%d").unwrap_or(Local::now().date_naive())
@@ -835,7 +853,8 @@ pub fn run() {
             delete_task,
             process_task_transition,
             update_block_status,
-            reorder_blocks
+            reorder_blocks,
+            get_active_dates
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

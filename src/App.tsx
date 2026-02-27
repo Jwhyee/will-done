@@ -301,6 +301,8 @@ function App() {
   const [hoverTaskId, setHoverTaskId] = useState<number | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
+  const [activeDates, setActiveDates] = useState<string[]>([]);
+  const [manualDate, setManualDate] = useState("");
 
   const lang = useMemo(() => getLang(), []);
   const t = translations[lang];
@@ -308,6 +310,27 @@ function App() {
   const showToast = (message: string, type: "error" | "success" = "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleManualDateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeWorkspaceId) return;
+
+    // Validate format YYYY-MM-DD
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!datePattern.test(manualDate)) {
+      showToast("Invalid format (YYYY-MM-DD)");
+      return;
+    }
+
+    const hasData = activeDates.includes(manualDate);
+    if (!hasData) {
+      showToast(t.main.toast.no_data_for_date);
+      return;
+    }
+
+    setSelectedDate(new Date(manualDate));
+    setManualDate("");
   };
 
   // --- Validation Schemas ---
@@ -447,7 +470,9 @@ function App() {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
       const list = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId, date: dateStr });
       const inbox = await invoke<Task[]>("get_inbox", { workspaceId: activeWorkspaceId });
+      const activeD = await invoke<string[]>("get_active_dates", { workspaceId: activeWorkspaceId });
       
+      setActiveDates(activeD);
       const now = new Date();
       const isToday = dateStr === format(now, "yyyy-MM-dd");
 
@@ -694,25 +719,50 @@ function App() {
         {/* 2차 사이드바 */}
         {view === "main" && (
           <aside className="w-64 border-r border-[#2e2e33] bg-[#1c1c21] flex flex-col shrink-0 z-10">
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="p-5 border-b border-[#2e2e33] flex items-center space-x-3 text-zinc-400 hover:text-white cursor-pointer transition-all active:scale-95">
-                  <CalendarIcon size={18} />
-                  <span className="text-sm font-black tracking-tight">
-                    {format(selectedDate, "yyyy. MM. dd.")}
-                  </span>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-[#1c1c21] border-[#2e2e33]" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  initialFocus
-                  className="bg-[#1c1c21] text-white"
+            <div className="p-5 border-b border-[#2e2e33] space-y-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <div className="flex items-center space-x-3 text-zinc-400 hover:text-white cursor-pointer transition-all active:scale-95">
+                    <CalendarIcon size={18} />
+                    <span className="text-sm font-black tracking-tight">
+                      {format(selectedDate, "yyyy. MM. dd.")}
+                    </span>
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-[#1c1c21] border-[#2e2e33]" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                    className="bg-[#1c1c21] text-white"
+                    disabled={(date) => {
+                      const dateStr = format(date, "yyyy-MM-dd");
+                      const isToday = format(new Date(), "yyyy-MM-dd") === dateStr;
+                      return !activeDates.includes(dateStr) && !isToday;
+                    }}
+                    modifiers={{
+                      hasData: (date) => activeDates.includes(format(date, "yyyy-MM-dd"))
+                    }}
+                    modifiersClassNames={{
+                      hasData: "font-black text-blue-400"
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <form onSubmit={handleManualDateSubmit} className="relative">
+                <Input
+                  value={manualDate}
+                  onChange={(e) => setManualDate(e.target.value)}
+                  placeholder="YYYY-MM-DD"
+                  className="bg-[#111114] border-[#2e2e33] text-[11px] font-mono font-bold h-9 rounded-xl focus-visible:ring-1 focus-visible:ring-white/10"
                 />
-              </PopoverContent>
-            </Popover>
+                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white transition-colors">
+                  <Send size={12} />
+                </button>
+              </form>
+            </div>
             
             <div className="flex-1 flex flex-col overflow-hidden">
             <div className="p-5 pb-2 flex items-center space-x-2">
