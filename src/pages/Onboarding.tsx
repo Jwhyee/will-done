@@ -35,18 +35,6 @@ export default function Onboarding() {
   });
   console.log("Form Errors:", errors);
 
-  const onSubmit: SubmitHandler<OnboardingData> = async (data) => {
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        name: data.workspaceName,
-        core_time_start: data.coreTimeStart || null,
-        core_time_end: data.coreTimeEnd || null,
-        role_intro: data.roleIntro,
-        unplugged_times: data.unpluggedTimes
-      };
-      };
-
       console.log("Payload:", payload);
       await invoke("setup_workspace", payload);
 
@@ -55,7 +43,6 @@ export default function Onboarding() {
 
       navigate("/home");
     } catch (e) {
-      console.error("Onboarding failed:", e);
       alert(t("alerts.setupFailed", { error: e instanceof Error ? e.message : String(e) }));
     } finally {
       setIsSubmitting(false);
