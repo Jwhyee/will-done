@@ -267,9 +267,24 @@ function App() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
-                        <p className="text-[10px] text-zinc-500 font-bold italic">{t.workspace_setup.core_time_guide}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
+                          <p className="text-[10px] text-zinc-500 font-bold italic">{t.workspace_setup.core_time_guide}</p>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            workspaceForm.setValue("core_time_start", "");
+                            workspaceForm.setValue("core_time_end", "");
+                          }} 
+                          className="h-8 text-[10px] font-black text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all rounded-lg uppercase tracking-wider"
+                        >
+                          {t.workspace_setup.core_time_reset}
+                        </Button>
                       </div>
                       <div className="grid grid-cols-2 gap-6">
                         <Input type="time" {...workspaceForm.register("core_time_start")} className="bg-[#09090b] border-[#27272a] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
