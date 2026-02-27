@@ -76,7 +76,7 @@ const formatDisplayTime = (isoString: string) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
-const SortableItem = ({ block, timeline, currentTime, t, onTransition, onMoveToInbox, hoverTaskId, setHoverTaskId }: any) => {
+const SortableItem = ({ block, timeline, currentTime, t, onTransition, onMoveToInbox, onDelete, hoverTaskId, setHoverTaskId }: any) => {
   const {
     attributes,
     listeners,
@@ -195,6 +195,19 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, onMoveToI
             >
               <AlertCircle size={16} />
             </Button>
+            {block.task_id && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(block.task_id);
+                }}
+                className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 ${isHovered ? "bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white" : "bg-zinc-800 text-zinc-500 hover:text-white"}`}
+              >
+                <X size={16} />
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -202,7 +215,7 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, onMoveToI
   );
 };
 
-const InboxItem = ({ task, onMoveToTimeline }: any) => {
+const InboxItem = ({ task, onMoveToTimeline, onDelete }: any) => {
   const {
     attributes,
     listeners,
@@ -234,17 +247,30 @@ const InboxItem = ({ task, onMoveToTimeline }: any) => {
           </div>
           <h4 className="font-bold text-xs text-zinc-300 truncate">{task.title}</h4>
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={(e) => {
-            e.stopPropagation();
-            onMoveToTimeline(task.id);
-          }}
-          className="h-8 w-8 p-0 rounded-xl bg-zinc-800 text-zinc-600 hover:text-white hover:bg-zinc-700 shrink-0"
-        >
-          <Clock size={14} />
-        </Button>
+        <div className="flex items-center space-x-1 shrink-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveToTimeline(task.id);
+            }}
+            className="h-8 w-8 p-0 rounded-xl bg-zinc-800 text-zinc-600 hover:text-white hover:bg-zinc-700"
+          >
+            <Clock size={14} />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(task.id);
+            }}
+            className="h-8 w-8 p-0 rounded-xl bg-zinc-800 text-zinc-600 hover:text-red-400 hover:bg-red-500/20"
+          >
+            <X size={14} />
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -260,6 +286,8 @@ function App() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transitionBlock, setTransitionBlock] = useState<TimeBlock | null>(null);
+  const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
+  const [moveAllConfirm, setMoveAllConfirm] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [reviewMemo, setReviewMemo] = useState("");
   const [customDelay, setCustomDelay] = useState<number>(15);
@@ -541,6 +569,28 @@ function App() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTaskId) return;
+    try {
+      await invoke("delete_task", { id: deleteTaskId });
+      setDeleteTaskId(null);
+      fetchMainData();
+    } catch (error) {
+      console.error("Delete failed:", error);
+    }
+  };
+
+  const handleMoveAllToTimeline = async () => {
+    if (!activeWorkspaceId) return;
+    try {
+      await invoke("move_all_to_timeline", { workspace_id: activeWorkspaceId });
+      setMoveAllConfirm(false);
+      fetchMainData();
+    } catch (error) {
+      console.error("Move all failed:", error);
+    }
+  };
+
   const handleTransition = async (action: string, extraMinutes?: number) => {
     if (!transitionBlock) return;
     try {
@@ -657,6 +707,7 @@ function App() {
                               fetchMainData();
                             }
                           }}
+                          onDelete={(id: number) => setDeleteTaskId(id)}
                         />
                       ))
                     )}
@@ -750,9 +801,21 @@ function App() {
               <ScrollArea className="flex-1 px-8">
                 <div className="py-8 space-y-4">
                   {timeline.length === 0 ? (
-                    <div className="h-64 flex flex-col items-center justify-center text-zinc-700 space-y-4 border-2 border-dashed border-zinc-800 rounded-3xl">
-                      <Clock size={48} className="opacity-20" />
-                      <p className="font-black text-sm uppercase tracking-widest opacity-50">{t.main.empty_timeline}</p>
+                    <div className="h-64 flex flex-col items-center justify-center text-zinc-700 space-y-4 border-2 border-dashed border-zinc-800 rounded-3xl group relative overflow-hidden">
+                      <Clock size={48} className="opacity-20 transition-transform group-hover:scale-110 duration-500" />
+                      <div className="text-center space-y-2">
+                        <p className="font-black text-sm uppercase tracking-widest opacity-50">{t.main.empty_timeline}</p>
+                        {inboxTasks.length > 0 && (
+                          <Button 
+                            variant="ghost" 
+                            onClick={() => setMoveAllConfirm(true)}
+                            className="text-blue-400 hover:text-blue-300 font-bold text-xs gap-2"
+                          >
+                            <Send size={14} />
+                            {t.main.move_all.description}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div id="timeline" className="space-y-6 relative pl-16 border-l border-zinc-800 ml-4 py-4 min-h-[200px]">
@@ -768,10 +831,11 @@ function App() {
                               currentTime={currentTime}
                               t={t}
                               onTransition={setTransitionBlock}
-                            onMoveToInbox={async (blockId: number) => {
-                              await invoke("move_to_inbox", { blockId });
-                              fetchMainData();
-                            }}
+                              onMoveToInbox={async (blockId: number) => {
+                                await invoke("move_to_inbox", { blockId });
+                                fetchMainData();
+                              }}
+                              onDelete={(id: number) => setDeleteTaskId(id)}
                               hoverTaskId={hoverTaskId}
                               setHoverTaskId={setHoverTaskId}
                             />
@@ -781,6 +845,66 @@ function App() {
                   )}
                 </div>
               </ScrollArea>
+
+              {/* Deletion Confirmation */}
+              <Dialog open={!!deleteTaskId} onOpenChange={(open) => !open && setDeleteTaskId(null)}>
+                <DialogContent className="sm:max-w-[400px] bg-[#1c1c21] border-[#2e2e33] text-white shadow-2xl rounded-3xl p-8 antialiased">
+                  <DialogHeader className="space-y-4">
+                    <DialogTitle className="text-xl font-black tracking-tighter text-white flex items-center gap-3">
+                      <AlertCircle className="text-red-500" size={20} />
+                      {t.main.delete_confirm.title}
+                    </DialogTitle>
+                    <DialogDescription className="text-zinc-400 font-bold text-sm">
+                      {t.main.delete_confirm.description}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="mt-6 flex gap-3">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setDeleteTaskId(null)}
+                      className="flex-1 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white font-black rounded-xl"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleDelete}
+                      className="flex-1 bg-red-500 text-white hover:bg-red-600 font-black rounded-xl"
+                    >
+                      {t.main.delete_confirm.btn}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Move All Confirmation */}
+              <Dialog open={moveAllConfirm} onOpenChange={setMoveAllConfirm}>
+                <DialogContent className="sm:max-w-[400px] bg-[#1c1c21] border-[#2e2e33] text-white shadow-2xl rounded-3xl p-8 antialiased">
+                  <DialogHeader className="space-y-4">
+                    <DialogTitle className="text-xl font-black tracking-tighter text-white flex items-center gap-3">
+                      <Send className="text-blue-500" size={20} />
+                      {t.main.move_all.title}
+                    </DialogTitle>
+                    <DialogDescription className="text-zinc-400 font-bold text-sm">
+                      {t.main.move_all.description}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="mt-6 flex gap-3">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setMoveAllConfirm(false)}
+                      className="flex-1 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white font-black rounded-xl"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleMoveAllToTimeline}
+                      className="flex-1 bg-blue-500 text-white hover:bg-blue-600 font-black rounded-xl"
+                    >
+                      {t.main.move_all.btn}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               {/* Transition Modal */}
               <Dialog open={!!transitionBlock} onOpenChange={(open) => !open && setTransitionBlock(null)}>

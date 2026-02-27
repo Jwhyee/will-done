@@ -303,6 +303,58 @@ async fn get_greeting(state: State<'_, DbState>, workspace_id: i64, lang: String
 }
 
 #[tauri::command]
+async fn delete_task(state: State<'_, DbState>, id: i64) -> Result<(), String> {
+    sqlx::query("DELETE FROM tasks WHERE id = ?1")
+        .bind(id)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn move_all_to_timeline(state: State<'_, DbState>, workspace_id: i64) -> Result<(), String> {
+    let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
+
+    let tasks = sqlx::query_as::<_, Task>(
+        "SELECT * FROM tasks WHERE workspace_id = ?1 AND id NOT IN (SELECT task_id FROM time_blocks WHERE task_id IS NOT NULL)"
+    )
+    .bind(workspace_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    for task in tasks {
+        let last_block: Option<(String,)> = sqlx::query_as("SELECT end_time FROM time_blocks WHERE workspace_id = ?1 AND status != 'UNPLUGGED' ORDER BY end_time DESC LIMIT 1")
+            .bind(workspace_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let now_dt = Local::now().naive_local();
+        let current_start = if let Some((last_end,)) = last_block {
+            let le = NaiveDateTime::parse_from_str(&last_end, "%Y-%m-%dT%H:%M:%S").unwrap_or(now_dt);
+            if le < now_dt { now_dt } else { le }
+        } else {
+            now_dt
+        };
+
+        let duration = if task.estimated_minutes > 0 { task.estimated_minutes as i64 } else { 30 };
+        
+        // If it crosses midnight, we stop moving tasks to timeline
+        let end_dt = current_start + Duration::minutes(duration);
+        if end_dt.date() > current_start.date() {
+            break;
+        }
+
+        schedule_task_blocks(&mut tx, workspace_id, task.id, &task.title, current_start, duration).await?;
+    }
+
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), String> {
     let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -326,7 +378,35 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
         return Ok(());
     }
 
-    // 3. 긴급 업무 여부에 따른 처리
+    // 3. 자정 넘기는지 체크 (미리 계산)
+    let now_dt = Local::now().naive_local();
+    let duration = (input.hours * 60 + input.minutes) as i64;
+    
+    let current_start = if input.is_urgent {
+        now_dt
+    } else {
+        let last_block: Option<(String,)> = sqlx::query_as("SELECT end_time FROM time_blocks WHERE workspace_id = ?1 AND status != 'UNPLUGGED' ORDER BY end_time DESC LIMIT 1")
+            .bind(input.workspace_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some((last_end,)) = last_block {
+            let le = NaiveDateTime::parse_from_str(&last_end, "%Y-%m-%dT%H:%M:%S").unwrap_or(now_dt);
+            if le < now_dt { now_dt } else { le }
+        } else {
+            now_dt
+        }
+    };
+
+    let end_dt = current_start + Duration::minutes(duration);
+    if end_dt.date() > current_start.date() {
+        // 자정을 넘기면 스케줄링하지 않고 인박스에 둠
+        tx.commit().await.map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    // 4. 긴급 업무 여부에 따른 처리
     if input.is_urgent {
         let current_now: Option<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status = 'NOW' LIMIT 1")
             .bind(input.workspace_id)
@@ -334,7 +414,6 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
             .await
             .map_err(|e| e.to_string())?;
 
-        let now_dt = Local::now().naive_local();
         let urgent_duration = (input.hours * 60 + input.minutes) as i64;
 
         if let Some(block) = current_now {
@@ -363,22 +442,6 @@ async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<(), 
             shift_future_blocks(&mut tx, input.workspace_id, now_dt, urgent_duration).await?;
         }
     } else {
-        // 일반 태스크 추가 (마지막 블록 뒤에 붙임)
-        let last_block: Option<(String,)> = sqlx::query_as("SELECT end_time FROM time_blocks WHERE workspace_id = ?1 AND status != 'UNPLUGGED' ORDER BY end_time DESC LIMIT 1")
-            .bind(input.workspace_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let now_dt = Local::now().naive_local();
-        let current_start = if let Some((last_end,)) = last_block {
-            let le = NaiveDateTime::parse_from_str(&last_end, "%Y-%m-%dT%H:%M:%S").unwrap_or(now_dt);
-            if le < now_dt { now_dt } else { le }
-        } else {
-            now_dt
-        };
-
-        let duration = (input.hours * 60 + input.minutes) as i64;
         schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, current_start, duration).await?;
     }
 
@@ -762,6 +825,8 @@ pub fn run() {
             get_inbox,
             move_to_inbox,
             move_to_timeline,
+            move_all_to_timeline,
+            delete_task,
             process_task_transition,
             update_block_status,
             reorder_blocks
