@@ -3,7 +3,7 @@ import { useForm, SubmitHandler, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../lib/tauri";
 import { onboardingSchema, OnboardingData } from "../features/onboarding/schema";
 import { StepLayout } from "../features/onboarding/components/StepLayout";
 import { Step1Profile } from "../features/onboarding/components/Step1Profile";

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/tauri";
 import { Header, TaskInput, TimelineBoard } from "@/features/home/components";
 import { TimelineEntry } from "@/features/home/types";
 
