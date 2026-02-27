@@ -115,8 +115,6 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, hoverTask
 
       {/* Block Card - border 두께 1.5px로 증가 */}
       <div 
-        {...attributes}
-        {...listeners}
         onMouseEnter={() => block.task_id && setHoverTaskId(block.task_id)}
         onMouseLeave={() => setHoverTaskId(null)}
         className={`p-5 rounded-2xl border-[1.5px] transition-all duration-300 transform ${
@@ -137,7 +135,9 @@ const SortableItem = ({ block, timeline, currentTime, t, onTransition, hoverTask
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <GripVertical size={14} className={`transition-opacity duration-300 ${isHovered || isDragging ? "text-white opacity-100" : "text-zinc-700 opacity-20"}`} />
+            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+              <GripVertical size={14} className={`transition-opacity duration-300 ${isHovered || isDragging ? "text-white opacity-100" : "text-zinc-700 opacity-20"}`} />
+            </div>
             <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   <h4 className={`font-black text-sm tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-zinc-500" : (isHovered ? "text-white" : "text-zinc-200")}`}>{block.title}</h4>
@@ -418,7 +418,7 @@ function App() {
 
   if (view === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#111114] text-white antialiased font-bold">
+      <div className="h-screen flex items-center justify-center bg-[#111114] text-white antialiased font-bold">
         <p className="animate-pulse">{t.checking}</p>
       </div>
     );
@@ -427,7 +427,7 @@ function App() {
   const isFirstWorkspace = workspaces.length === 0;
 
   return (
-    <div className="min-h-screen bg-[#111114] text-white flex overflow-hidden font-sans antialiased select-none">
+    <div className="h-screen bg-[#111114] text-white flex overflow-hidden font-sans antialiased select-none">
       
       {/* 1차 사이드바 */}
       {view === "main" && (
