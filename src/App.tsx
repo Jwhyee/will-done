@@ -45,7 +45,7 @@ interface TimeBlock {
   title: string;
   start_time: string;
   end_time: string;
-  status: "DONE" | "NOW" | "WILL" | "UNPLUGGED";
+  status: "DONE" | "NOW" | "WILL" | "UNPLUGGED" | "PENDING";
   review_memo: string | null;
 }
 
@@ -60,7 +60,7 @@ const formatDisplayTime = (isoString: string) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
-const SortableItem = ({ block, idx, timeline, currentTime, t, onTransition }: any) => {
+const SortableItem = ({ block, idx, timeline, currentTime, t, onTransition, hoverTaskId, setHoverTaskId }: any) => {
   const {
     attributes,
     listeners,
@@ -73,20 +73,26 @@ const SortableItem = ({ block, idx, timeline, currentTime, t, onTransition }: an
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 50 : 1,
+    zIndex: isDragging ? 50 : (hoverTaskId === block.task_id ? 10 : 1),
     opacity: isDragging ? 0.6 : 1,
   };
 
   const isSplitWithNext = block.task_id && timeline[idx + 1]?.task_id === block.task_id;
   const isSplitWithPrev = block.task_id && timeline[idx - 1]?.task_id === block.task_id;
   const isPending = block.status === "PENDING";
+  const isHovered = block.task_id && hoverTaskId === block.task_id;
+
+  // 심슨 머리 스타일의 톱니 모양 clip-path (더 촘촘하게)
+  const zigzagBottom = "polygon(0% 0%, 100% 0%, 100% 92%, 98% 100%, 96% 92%, 94% 100%, 92% 92%, 90% 100%, 88% 92%, 86% 100%, 84% 92%, 82% 100%, 80% 92%, 78% 100%, 76% 92%, 74% 100%, 72% 92%, 70% 100%, 68% 92%, 66% 100%, 64% 92%, 62% 100%, 60% 92%, 58% 100%, 56% 92%, 54% 100%, 52% 92%, 50% 100%, 48% 92%, 46% 100%, 44% 92%, 42% 100%, 40% 92%, 38% 100%, 36% 92%, 34% 100%, 32% 92%, 30% 100%, 28% 92%, 26% 100%, 24% 92%, 22% 100%, 20% 92%, 18% 100%, 16% 92%, 14% 100%, 12% 92%, 10% 100%, 8% 92%, 6% 100%, 4% 92%, 2% 100%, 0% 92%)";
+  const zigzagTop = "polygon(0% 8%, 2% 0%, 4% 8%, 6% 0%, 8% 8%, 10% 0%, 12% 8%, 14% 0%, 16% 8%, 18% 0%, 20% 8%, 22% 0%, 24% 8%, 26% 0%, 28% 8%, 30% 0%, 32% 8%, 34% 0%, 36% 8%, 38% 0%, 40% 8%, 42% 0%, 44% 8%, 46% 0%, 48% 8%, 50% 0%, 52% 8%, 54% 0%, 56% 8%, 58% 0%, 60% 8%, 62% 0%, 64% 8%, 66% 0%, 68% 8%, 70% 0%, 72% 8%, 74% 0%, 76% 8%, 78% 0%, 80% 8%, 82% 0%, 84% 8%, 86% 0%, 88% 8%, 90% 0%, 92% 8%, 94% 0%, 96% 8%, 98% 0%, 100% 8%, 100% 100%, 0% 100%)";
+  const zigzagBoth = "polygon(0% 8%, 2% 0%, 4% 8%, 6% 0%, 8% 8%, 10% 0%, 12% 8%, 14% 0%, 16% 8%, 18% 0%, 20% 8%, 22% 0%, 24% 8%, 26% 0%, 28% 8%, 30% 0%, 32% 8%, 34% 0%, 36% 8%, 38% 0%, 40% 8%, 42% 0%, 44% 8%, 46% 0%, 48% 8%, 50% 0%, 52% 8%, 54% 0%, 56% 8%, 58% 0%, 60% 8%, 62% 0%, 64% 8%, 66% 0%, 68% 8%, 70% 0%, 72% 8%, 74% 0%, 76% 8%, 78% 0%, 80% 8%, 82% 0%, 84% 8%, 86% 0%, 88% 8%, 90% 0%, 92% 8%, 94% 0%, 96% 8%, 98% 0%, 100% 8%, 100% 92%, 98% 100%, 96% 92%, 94% 100%, 92% 92%, 90% 100%, 88% 92%, 86% 100%, 84% 92%, 82% 100%, 80% 92%, 78% 100%, 76% 92%, 74% 100%, 72% 92%, 70% 100%, 68% 92%, 66% 100%, 64% 92%, 62% 100%, 60% 92%, 58% 100%, 56% 92%, 54% 100%, 52% 92%, 50% 100%, 48% 92%, 46% 100%, 44% 92%, 42% 100%, 40% 92%, 38% 100%, 36% 92%, 34% 100%, 32% 92%, 30% 100%, 28% 92%, 26% 100%, 24% 92%, 22% 100%, 20% 92%, 18% 100%, 16% 92%, 14% 100%, 12% 92%, 10% 100%, 8% 92%, 6% 100%, 4% 92%, 2% 100%, 0% 92%)";
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group">
+    <div ref={setNodeRef} style={style} className="relative group/item">
       {/* Time Indicator */}
-      <div className="absolute -left-[5rem] top-0 w-14 text-right space-y-1">
+      <div className="absolute -left-[6.5rem] top-0 w-16 text-right space-y-1">
         <p className="text-[10px] font-black font-mono text-zinc-500">{formatDisplayTime(block.start_time)}</p>
-        <p className="text-[10px] font-bold font-mono text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity">{formatDisplayTime(block.end_time)}</p>
+        <p className="text-[10px] font-bold font-mono text-zinc-700 opacity-0 group-hover/item:opacity-100 transition-opacity">{formatDisplayTime(block.end_time)}</p>
       </div>
       
       {/* Dot on Line */}
@@ -99,51 +105,62 @@ const SortableItem = ({ block, idx, timeline, currentTime, t, onTransition }: an
 
       {/* Connection Line (Right Side) for Split Tasks */}
       {isSplitWithNext && (
-        <div className="absolute right-[-8px] top-8 bottom-[-24px] w-[2px] bg-zinc-800 rounded-full z-0" />
+        <div className={`absolute right-[-10px] top-8 bottom-[-24px] w-[3px] rounded-full z-0 transition-colors duration-300 ${isHovered ? "bg-white/40 shadow-[0_0_10px_rgba(255,255,255,0.2)]" : "bg-zinc-800"}`} />
       )}
 
       {/* Block Card */}
       <div 
         {...attributes}
         {...listeners}
-        onClick={() => {
-          if (block.status === "UNPLUGGED") return;
-          onTransition(block);
-        }}
-        className={`p-4 rounded-2xl border transition-all duration-300 transform cursor-pointer group-active:scale-95 ${
+        onMouseEnter={() => block.task_id && setHoverTaskId(block.task_id)}
+        onMouseLeave={() => setHoverTaskId(null)}
+        className={`p-5 rounded-2xl border transition-all duration-300 transform ${
         block.status === "DONE" ? "bg-green-500/5 border-green-500/20" :
         block.status === "NOW" ? (new Date(block.end_time) < currentTime ? "bg-red-500/10 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-red-500/5 border-red-500/50 shadow-lg") :
         block.status === "PENDING" ? "bg-orange-500/5 border-orange-500/40 border-dashed" :
         block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#27272a] opacity-60 border-dashed cursor-default" : "bg-[#18181b]/50 border-[#27272a] hover:bg-[#18181b]"
-      } ${isSplitWithNext ? "rounded-b-none border-b-none" : ""} ${isSplitWithPrev ? "rounded-t-none border-t-none mt-[-2px]" : ""}`}
+      } ${isHovered ? "border-white/40 bg-zinc-800/80 -translate-x-1 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02]" : ""} ${isSplitWithNext ? "rounded-b-none border-b-none pb-8 mb-0" : ""} ${isSplitWithPrev ? "rounded-t-none border-t-none mt-[-2px]" : ""}`}
         style={{
           clipPath: isSplitWithNext && !isSplitWithPrev 
-            ? "polygon(0% 0%, 100% 0%, 100% 100%, 98% 97%, 96% 100%, 94% 97%, 92% 100%, 90% 97%, 88% 100%, 0% 100%)"
+            ? zigzagBottom
             : isSplitWithPrev && !isSplitWithNext
-            ? "polygon(0% 0%, 88% 0%, 90% 3%, 92% 0%, 94% 3%, 96% 0%, 98% 3%, 100% 0%, 100% 100%, 0% 100%)"
+            ? zigzagTop
             : isSplitWithNext && isSplitWithPrev
-            ? "polygon(0% 0%, 88% 0%, 90% 3%, 92% 0%, 94% 3%, 96% 0%, 98% 3%, 100% 0%, 100% 100%, 98% 97%, 96% 100%, 94% 97%, 92% 100%, 90% 97%, 88% 100%, 0% 100%)"
+            ? zigzagBoth
             : undefined
         }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <GripVertical size={14} className="text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <h4 className={`font-black text-sm tracking-tight ${block.status === "UNPLUGGED" ? "text-zinc-500" : "text-white"}`}>{block.title}</h4>
-            {block.status === "NOW" && new Date(block.end_time) < currentTime && (
-              <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                {t.main.status.overdue}
-              </span>
-            )}
-            {isPending && (
-              <span className="bg-orange-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                INTERRUPTED
-              </span>
-            )}
+          <div className="flex items-center space-x-4">
+            <GripVertical size={14} className={`transition-opacity duration-300 ${isHovered || isDragging ? "text-white opacity-100" : "text-zinc-700 opacity-20"}`} />
+            <div className="space-y-1">
+                <h4 className={`font-black text-sm tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-zinc-500" : (isHovered ? "text-white" : "text-zinc-200")}`}>{block.title}</h4>
+                <div className="flex items-center space-x-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
+                    {block.status === "NOW" && new Date(block.end_time) < currentTime && (
+                        <span className="bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
+                            {t.main.status.overdue}
+                        </span>
+                    )}
+                    {isPending && (
+                        <span className="bg-orange-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
+                            INTERRUPTED
+                        </span>
+                    )}
+                </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
-          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onTransition(block);
+            }}
+            className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 ${isHovered ? "bg-white text-black hover:bg-zinc-200" : "bg-zinc-800 text-zinc-500 hover:text-white"}`}
+          >
+            <AlertCircle size={16} />
+          </Button>
         </div>
       </div>
     </div>
@@ -161,6 +178,7 @@ function App() {
   const [reviewMemo, setReviewMemo] = useState("");
   const [customDelay, setCustomDelay] = useState<number>(15);
   const [agoMinutes, setAgoMinutes] = useState<number>(5);
+  const [hoverTaskId, setHoverTaskId] = useState<number | null>(null);
 
   const lang = useMemo(() => getLang(), []);
   const t = translations[lang];
@@ -221,8 +239,8 @@ function App() {
     resolver: zodResolver(workspaceSchema),
     defaultValues: { 
       name: "", 
-      core_time_start: "09:00", 
-      core_time_end: "18:00", 
+      core_time_start: "", 
+      core_time_end: "", 
       role_intro: "",
       unplugged_times: [] 
     }
@@ -237,6 +255,13 @@ function App() {
     control: workspaceForm.control,
     name: "unplugged_times",
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     init();
@@ -282,13 +307,11 @@ function App() {
       const list = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId });
       
       const now = new Date();
-      // 1. 만약 현재 진행중인(NOW) 블록이 종료 시간을 지났는데 transition 모달이 없다면 띄우기
       const active = list.find(b => b.status === "NOW");
       if (active && new Date(active.end_time) < now && !transitionBlock) {
         setTransitionBlock(active);
       }
 
-      // 2. 만약 현재 진행중인 블록이 없고, 미래(WILL) 블록 중 시작 시간이 지났다면 자동으로 NOW로 변경 요청 (간단하게 첫번째 것만)
       if (!active) {
         const next = list.find(b => b.status === "WILL" && new Date(b.start_time) <= now);
         if (next) {
@@ -305,22 +328,20 @@ function App() {
     }
   };
 
-  const handleTransition = async (action: string, extraMinutes?: number) => {
-    if (!transitionBlock) return;
-    try {
-      await invoke("process_task_transition", {
-        input: {
-          block_id: transitionBlock.id,
-          action,
-          extra_minutes: extraMinutes || null,
-          review_memo: reviewMemo || null
-        }
-      });
-      setTransitionBlock(null);
-      setReviewMemo("");
-      fetchMainData();
-    } catch (error) {
-      console.error("Transition failed:", error);
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = timeline.findIndex((item) => item.id === active.id);
+      const newIndex = timeline.findIndex((item) => item.id === over.id);
+      
+      const newTimeline = arrayMove(timeline, oldIndex, newIndex);
+      setTimeline(newTimeline);
+
+      const ids = newTimeline.filter(b => b.status !== "UNPLUGGED").map(b => b.id);
+      if (activeWorkspaceId) {
+        await invoke("reorder_blocks", { workspaceId: activeWorkspaceId, blockIds: ids });
+        fetchMainData();
+      }
     }
   };
 
@@ -365,28 +386,22 @@ function App() {
     }
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = timeline.findIndex((item) => item.id === active.id);
-      const newIndex = timeline.findIndex((item) => item.id === over.id);
-      
-      const newTimeline = arrayMove(timeline, oldIndex, newIndex);
-      setTimeline(newTimeline);
-
-      // 백엔드 순서 저장 (ID 리스트 전송)
-      const ids = newTimeline.filter(b => b.status !== "UNPLUGGED").map(b => b.id);
-      if (activeWorkspaceId) {
-        await invoke("reorder_blocks", { workspaceId: activeWorkspaceId, blockIds: ids });
-        fetchMainData();
-      }
+  const handleTransition = async (action: string, extraMinutes?: number) => {
+    if (!transitionBlock) return;
+    try {
+      await invoke("process_task_transition", {
+        input: {
+          block_id: transitionBlock.id,
+          action,
+          extra_minutes: extraMinutes || null,
+          review_memo: reviewMemo || null
+        }
+      });
+      setTransitionBlock(null);
+      setReviewMemo("");
+      fetchMainData();
+    } catch (error) {
+      console.error("Transition failed:", error);
     }
   };
 
@@ -538,7 +553,7 @@ function App() {
                     <p className="font-black text-sm uppercase tracking-widest opacity-50">{t.main.empty_timeline}</p>
                   </div>
                 ) : (
-                  <div className="space-y-6 relative pl-12 border-l border-zinc-800 ml-4 py-4">
+                  <div className="space-y-6 relative pl-16 border-l border-zinc-800 ml-4 py-4">
                     <DndContext 
                       sensors={sensors}
                       collisionDetection={closestCenter}
@@ -557,6 +572,8 @@ function App() {
                             currentTime={currentTime}
                             t={t}
                             onTransition={setTransitionBlock}
+                            hoverTaskId={hoverTaskId}
+                            setHoverTaskId={setHoverTaskId}
                           />
                         ))}
                       </SortableContext>
