@@ -19,14 +19,11 @@ export const unpluggedTimeSchema = z.object({
 export const onboardingSchema = z.object({
   nickname: z.string().min(1, koreanMessages.required),
   workspaceName: z.string().min(1, koreanMessages.required),
-  coreTimeStart: z.string().optional(),
-  coreTimeEnd: z.string().optional(),
+  coreTimeStart: z.string().optional().nullable(),
+  coreTimeEnd: z.string().optional().nullable(),
   roleIntro: z.string(),
   unpluggedTimes: z.array(unpluggedTimeSchema),
-  apiKey: z.string().optional()
-}).refine(data => !((data.coreTimeStart && !data.coreTimeEnd) || (!data.coreTimeStart && data.coreTimeEnd)), {
-  message: koreanMessages.bothTimesRequired,
-  path: ["coreTimeEnd"]
+  apiKey: z.string().optional().nullable()
 });
 
 export type OnboardingData = z.infer<typeof onboardingSchema>;
