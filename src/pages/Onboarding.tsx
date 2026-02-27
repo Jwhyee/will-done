@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { onboardingSchema, OnboardingData } from "../features/onboarding/schema";
 import { StepLayout } from "../features/onboarding/components/StepLayout";
@@ -16,6 +17,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const { register, handleSubmit, control, formState: { errors }, trigger } = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
@@ -48,7 +50,7 @@ export default function Onboarding() {
       navigate("/home");
     } catch (e) {
       console.error("Onboarding failed:", e);
-      alert("Failed to setup workspace: " + e);
+      alert(t("alerts.setupFailed", { error: e }));
     }
   };
 
@@ -74,7 +76,7 @@ export default function Onboarding() {
   const steps = [
     <Step1Profile register={register} errors={errors} />,
     <Step2Workspace register={register} errors={errors} />,
-    <Step3TimeRole register={register} control={control} />,
+    <Step3TimeRole register={register} control={control} errors={errors} />,
     <Step4AI register={register} />
   ];
 
@@ -82,7 +84,7 @@ export default function Onboarding() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-[400px]">
         <CardHeader>
-          <CardTitle>Step {step + 1} of 4</CardTitle>
+          <CardTitle>{t("onboarding.step", { current: step + 1, total: 4 })}</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent>
@@ -93,15 +95,15 @@ export default function Onboarding() {
           <CardFooter className="flex justify-between">
             {step > 0 && (
               <Button type="button" variant="outline" onClick={prevStep}>
-                Back
+                {t("onboarding.back")}
               </Button>
             )}
             {step < 3 ? (
               <Button type="button" onClick={nextStep}>
-                Next
+                {t("onboarding.next")}
               </Button>
             ) : (
-              <Button type="submit">Complete</Button>
+              <Button type="submit">{t("onboarding.complete")}</Button>
             )}
           </CardFooter>
         </form>
