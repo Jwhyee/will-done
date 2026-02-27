@@ -21,7 +21,7 @@ import { translations, getLang } from "@/lib/i18n";
 
 // --- Time Helper ---
 const isStartTimeBeforeEnd = (start?: string, end?: string) => {
-  if (!start || !end) return true;
+  if (!start || !end || start === "" || end === "") return true;
   return start < end;
 };
 
@@ -41,9 +41,9 @@ function App() {
 
   const workspaceSchema = z.object({
     name: z.string().min(1, t.workspace_setup.name_required),
-    core_time_start: z.string().optional(),
-    core_time_end: z.string().optional(),
-    role_intro: z.string().optional(),
+    core_time_start: z.string().nullable().optional(),
+    core_time_end: z.string().nullable().optional(),
+    role_intro: z.string().nullable().optional(),
     unplugged_times: z.array(z.object({
       label: z.string().min(1, t.workspace_setup.label_required),
       start_time: z.string().min(1, "Required"),
@@ -59,7 +59,7 @@ function App() {
         }
       });
     }),
-  }).refine((data) => isStartTimeBeforeEnd(data.core_time_start, data.core_time_end), {
+  }).refine((data) => isStartTimeBeforeEnd(data.core_time_start || undefined, data.core_time_end || undefined), {
     message: t.workspace_setup.core_time_error,
     path: ["core_time_end"],
   });
@@ -121,7 +121,13 @@ function App() {
 
   const onWorkspaceSubmit = async (data: WorkspaceFormValues) => {
     try {
-      const id = await invoke<number>("create_workspace", { input: data });
+      const sanitizedData = {
+        ...data,
+        core_time_start: data.core_time_start || null,
+        core_time_end: data.core_time_end || null,
+        role_intro: data.role_intro || null,
+      };
+      const id = await invoke<number>("create_workspace", { input: sanitizedData });
       const wsList = await invoke<any[]>("get_workspaces");
       setWorkspaces(wsList);
       setActiveWorkspaceId(id);
