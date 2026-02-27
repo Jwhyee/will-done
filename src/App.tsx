@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Settings, Search, X, AlertCircle } from "lucide-react";
+import { Plus, Settings, Search, X, AlertCircle, Sparkles, Send, Clock, Zap } from "lucide-react";
 
 import {
   Dialog,
@@ -17,7 +17,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { translations, getLang } from "@/lib/i18n";
+
+// --- Types ---
+interface TimeBlock {
+  id: number;
+  task_id: number | null;
+  workspace_id: number;
+  title: string;
+  start_time: string;
+  end_time: string;
+  status: "DONE" | "NOW" | "WILL" | "UNPLUGGED";
+  review_memo: string | null;
+}
 
 // --- Time Helper ---
 const isStartTimeBeforeEnd = (start?: string, end?: string) => {
@@ -25,10 +38,18 @@ const isStartTimeBeforeEnd = (start?: string, end?: string) => {
   return start < end;
 };
 
+const formatDisplayTime = (isoString: string) => {
+  const date = new Date(isoString);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+};
+
 function App() {
   const [view, setView] = useState<"loading" | "onboarding" | "workspace_setup" | "main">("loading");
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<number | null>(null);
+  const [greeting, setGreeting] = useState<string>("");
+  const [timeline, setTimeline] = useState<TimeBlock[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const lang = useMemo(() => getLang(), []);
   const t = translations[lang];
@@ -41,9 +62,9 @@ function App() {
 
   const workspaceSchema = z.object({
     name: z.string().min(1, t.workspace_setup.name_required),
-    core_time_start: z.string().nullable().optional(),
-    core_time_end: z.string().nullable().optional(),
-    role_intro: z.string().nullable().optional(),
+    core_time_start: z.string().optional(),
+    core_time_end: z.string().optional(),
+    role_intro: z.string().optional(),
     unplugged_times: z.array(z.object({
       label: z.string().min(1, t.workspace_setup.label_required),
       start_time: z.string().min(1, "Required"),
@@ -64,8 +85,20 @@ function App() {
     path: ["core_time_end"],
   });
 
+  const taskSchema = z.object({
+    title: z.string().min(1, "Task title is required"),
+    hours: z.number().min(0).max(23),
+    minutes: z.number().min(0).max(59),
+    planning_memo: z.string().optional(),
+    is_urgent: z.boolean(),
+  }).refine((data) => data.hours > 0 || data.minutes > 0, {
+    message: "Duration must be at least 1 minute",
+    path: ["minutes"],
+  });
+
   type UserFormValues = z.infer<typeof userSchema>;
   type WorkspaceFormValues = z.infer<typeof workspaceSchema>;
+  type TaskFormValues = z.infer<typeof taskSchema>;
 
   // --- Forms ---
   const userForm = useForm<UserFormValues>({ 
@@ -84,6 +117,11 @@ function App() {
     }
   });
 
+  const taskForm = useForm<TaskFormValues>({
+    resolver: zodResolver(taskSchema),
+    defaultValues: { title: "", hours: 0, minutes: 30, planning_memo: "", is_urgent: false }
+  });
+
   const { fields, append, remove } = useFieldArray({
     control: workspaceForm.control,
     name: "unplugged_times",
@@ -92,6 +130,17 @@ function App() {
   useEffect(() => {
     init();
   }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (activeWorkspaceId && view === "main") {
+      fetchMainData();
+    }
+  }, [activeWorkspaceId, view]);
 
   const init = async () => {
     try {
@@ -111,6 +160,18 @@ function App() {
       }
     } catch (error) {
       console.error("Init failed:", error);
+    }
+  };
+
+  const fetchMainData = async () => {
+    if (!activeWorkspaceId) return;
+    try {
+      const g = await invoke<string>("get_greeting", { workspaceId: activeWorkspaceId });
+      setGreeting(g);
+      const t = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId });
+      setTimeline(t);
+    } catch (error) {
+      console.error("Fetch failed:", error);
     }
   };
 
@@ -135,6 +196,23 @@ function App() {
       setView("main");
     } catch (error) {
       console.error("Workspace creation failed:", error);
+    }
+  };
+
+  const onTaskSubmit = async (data: TaskFormValues) => {
+    if (!activeWorkspaceId) return;
+    try {
+      await invoke("add_task", { 
+        input: {
+          workspace_id: activeWorkspaceId,
+          ...data,
+          planning_memo: data.planning_memo || null
+        } 
+      });
+      taskForm.reset({ title: "", hours: 0, minutes: 30, planning_memo: "", is_urgent: false });
+      fetchMainData();
+    } catch (error) {
+      console.error("Task add failed:", error);
     }
   };
 
@@ -212,9 +290,113 @@ function App() {
       {/* 메인 영역 */}
       <main className="flex-1 flex flex-col relative overflow-hidden bg-[#09090b] antialiased">
         {view === "main" ? (
-          <div className="flex-1 p-8 flex flex-col items-center justify-center space-y-2">
-             <h2 className="text-3xl font-black text-zinc-800 tracking-tighter uppercase italic drop-shadow-sm">Timeline Section</h2>
-             <p className="text-zinc-600 font-black text-sm uppercase tracking-widest">Sprint 6 Implementation</p>
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            {/* Header */}
+            <header className="px-8 py-6 flex flex-col space-y-4 shrink-0 bg-[#09090b]/80 backdrop-blur-md z-10">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-3 text-2xl font-black font-mono tracking-tighter">
+                    <Clock size={20} className="text-white" />
+                    <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+                  </div>
+                  <p className="text-zinc-500 font-bold text-sm tracking-tight">{greeting}</p>
+                </div>
+                <Button className="bg-zinc-800 hover:bg-zinc-700 text-white font-black rounded-xl gap-2 h-11 border border-zinc-700 shadow-xl shadow-black/40 px-6">
+                  <Sparkles size={18} className="text-yellow-400" />
+                  {t.main.retrospective_btn}
+                </Button>
+              </div>
+
+              {/* Task Input Form */}
+              <div className="p-2 bg-[#18181b] border border-[#27272a] rounded-2xl shadow-2xl">
+                <form onSubmit={taskForm.handleSubmit(onTaskSubmit)} className="flex flex-col space-y-2">
+                  <div className="flex items-center space-x-2 px-2 pt-2">
+                    <Input 
+                      {...taskForm.register("title")}
+                      placeholder={t.main.task_placeholder} 
+                      className="flex-1 bg-transparent border-none text-lg font-bold placeholder:text-zinc-600 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-12"
+                    />
+                    <div className="flex items-center bg-[#09090b] border border-[#27272a] rounded-xl h-10 px-3 space-x-2">
+                      <Input 
+                        type="number" 
+                        {...taskForm.register("hours", { valueAsNumber: true })}
+                        className="w-8 bg-transparent border-none text-center font-black p-0 focus-visible:ring-0"
+                      />
+                      <span className="text-[10px] font-black text-zinc-500 uppercase">{t.main.hours}</span>
+                      <Separator orientation="vertical" className="h-4 bg-zinc-700" />
+                      <Input 
+                        type="number" 
+                        {...taskForm.register("minutes", { valueAsNumber: true })}
+                        className="w-8 bg-transparent border-none text-center font-black p-0 focus-visible:ring-0"
+                      />
+                      <span className="text-[10px] font-black text-zinc-500 uppercase">{t.main.mins}</span>
+                    </div>
+                    
+                    <label className="flex items-center space-x-2 bg-[#09090b] border border-[#27272a] rounded-xl h-10 px-4 cursor-pointer hover:bg-zinc-900 transition-colors">
+                      <input type="checkbox" {...taskForm.register("is_urgent")} className="hidden" />
+                      <Zap size={14} className={taskForm.watch("is_urgent") ? "text-red-500 fill-red-500" : "text-zinc-500"} />
+                      <span className={`text-[10px] font-black uppercase ${taskForm.watch("is_urgent") ? "text-red-500" : "text-zinc-500"}`}>{t.main.urgent}</span>
+                    </label>
+
+                    <Button type="submit" className="h-10 px-6 bg-white text-black hover:bg-zinc-200 font-black rounded-xl">
+                      <Send size={16} className="mr-2" />
+                      {t.main.add_task}
+                    </Button>
+                  </div>
+                  
+                  <div className="px-4 pb-2">
+                    <textarea 
+                      {...taskForm.register("planning_memo")}
+                      placeholder={t.main.planning_placeholder}
+                      className="w-full bg-transparent text-xs font-bold text-zinc-400 placeholder:text-zinc-600 resize-none h-12 focus:outline-none focus:ring-0 py-2"
+                    />
+                  </div>
+                </form>
+              </div>
+            </header>
+
+            {/* Timeline */}
+            <ScrollArea className="flex-1 px-8">
+              <div className="py-8 space-y-4">
+                {timeline.length === 0 ? (
+                  <div className="h-64 flex flex-col items-center justify-center text-zinc-700 space-y-4 border-2 border-dashed border-zinc-800 rounded-3xl">
+                    <Clock size={48} className="opacity-20" />
+                    <p className="font-black text-sm uppercase tracking-widest opacity-50">{t.main.empty_timeline}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6 relative pl-12 border-l border-zinc-800 ml-4 py-4">
+                    {timeline.map((block, idx) => (
+                      <div key={idx} className="relative group">
+                        {/* Time Indicator */}
+                        <div className="absolute -left-[3.5rem] top-0 w-10 text-right space-y-1">
+                          <p className="text-[10px] font-black font-mono text-zinc-500">{formatDisplayTime(block.start_time)}</p>
+                          <p className="text-[10px] font-bold font-mono text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity">{formatDisplayTime(block.end_time)}</p>
+                        </div>
+                        
+                        {/* Dot on Line */}
+                        <div className={`absolute -left-[3.4rem] top-1 w-3 h-3 rounded-full border-2 bg-[#09090b] z-10 transition-colors ${
+                          block.status === "DONE" ? "border-green-500 bg-green-500/20" :
+                          block.status === "NOW" ? "border-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.5)]" :
+                          block.status === "UNPLUGGED" ? "border-zinc-700 bg-zinc-800" : "border-zinc-600"
+                        }`} />
+
+                        {/* Block Card */}
+                        <div className={`p-4 rounded-2xl border transition-all duration-300 transform hover:-translate-x-1 ${
+                          block.status === "DONE" ? "bg-green-500/5 border-green-500/20" :
+                          block.status === "NOW" ? "bg-red-500/5 border-red-500/50 shadow-lg" :
+                          block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#27272a] opacity-60 border-dashed" : "bg-[#18181b]/50 border-[#27272a] hover:bg-[#18181b]"
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <h4 className={`font-black text-sm tracking-tight ${block.status === "UNPLUGGED" ? "text-zinc-500" : "text-white"}`}>{block.title}</h4>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center p-8">

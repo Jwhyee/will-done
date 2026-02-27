@@ -39,6 +39,16 @@ export const translations = {
       settings: "설정",
       date_search: "날짜 검색",
       no_tasks: "대기 중인 태스크가 없습니다.",
+    },
+    main: {
+      task_placeholder: "지금 어떤 일을 계획 중인가요?",
+      hours: "시간",
+      mins: "분",
+      urgent: "긴급",
+      add_task: "등록",
+      planning_placeholder: "업무의 구체적인 단계나 목표를 마크다운으로 작성해보세요.",
+      retrospective_btn: "일일 회고 생성",
+      empty_timeline: "오늘의 일정이 아직 없습니다. 새로운 태스크를 추가해보세요.",
     }
   },
   en: {
@@ -81,6 +91,16 @@ export const translations = {
       settings: "Settings",
       date_search: "Search Date",
       no_tasks: "No pending tasks.",
+    },
+    main: {
+      task_placeholder: "What are you planning to do?",
+      hours: "h",
+      mins: "m",
+      urgent: "Urgent",
+      add_task: "Add",
+      planning_placeholder: "Write specific steps or goals for this task using markdown.",
+      retrospective_btn: "Generate Review",
+      empty_timeline: "No schedule for today. Add a new task to start.",
     }
   }
 };
