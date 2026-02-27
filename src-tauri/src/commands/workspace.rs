@@ -21,6 +21,10 @@ pub fn setup_workspace(
     unplugged_times: Vec<UnpluggedTimeInput>,
     state: State<'_, Mutex<Connection>>,
 ) -> Result<i64, String> {
+    println!(">>> setup_workspace called with: name='{}', nickname='{}'", name, nickname);
+    println!(">>> core_time_start={:?}, core_time_end={:?}, role_intro='{}'", core_time_start, core_time_end, role_intro);
+    println!(">>> unplugged_times count: {}", unplugged_times.len());
+
     let core_time_start = if core_time_start.as_deref() == Some("") { None } else { core_time_start };
     let core_time_end = if core_time_end.as_deref() == Some("") { None } else { core_time_end };
     let mut conn = state

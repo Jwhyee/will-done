@@ -17,6 +17,7 @@ pub fn initialize_workspace(
     role_intro: String,
     unplugged_times: Vec<UnpluggedTimeInput>,
 ) -> Result<i64, String> {
+    println!(">>> initialize_workspace START: name='{}', nickname='{}'", name, nickname);
     let tx = conn
         .transaction()
         .map_err(|e| format!("Transaction failed: {}", e))?;
@@ -29,9 +30,11 @@ pub fn initialize_workspace(
     .map_err(|e| format!("Insert workspace failed: {}", e))?;
 
     let workspace_id = tx.last_insert_rowid();
+    println!(">>> Workspace created with ID: {}", workspace_id);
 
     // Insert unplugged times
     for ut in unplugged_times {
+        println!(">>> Inserting unplugged time: label='{}', range='{} - {}'", ut.label, ut.start_time, ut.end_time);
         tx.execute(
             "INSERT INTO unplugged_times (workspace_id, label, start_time, end_time) VALUES (?1, ?2, ?3, ?4)",
             params![workspace_id, ut.label, ut.start_time, ut.end_time],
@@ -42,6 +45,7 @@ pub fn initialize_workspace(
     tx.commit()
         .map_err(|e| format!("Commit failed: {}", e))?;
 
+    println!(">>> initialize_workspace SUCCESS: id={}", workspace_id);
     Ok(workspace_id)
 }
 
