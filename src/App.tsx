@@ -1,49 +1,70 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+
+interface TestForm {
+  name: string;
+  message: string;
+}
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [response, setResponse] = useState<string>("");
+  const { register, handleSubmit } = useForm<TestForm>();
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const onSubmit = async (data: TestForm) => {
+    try {
+      // Rust의 test_connection 커맨드를 호출합니다.
+      const res = await invoke<string>("test_connection", {
+        name: data.name,
+        message: data.message,
+      });
+      setResponse(res);
+    } catch (error) {
+      console.error(error);
+      setResponse("Error connecting to backend");
+    }
+  };
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-background text-foreground">
+      <div className="w-full max-w-md space-y-8 bg-card p-6 rounded-lg border shadow-sm">
+        <h1 className="text-2xl font-bold text-center">Connection Test</h1>
+        
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Name</label>
+            <input
+              {...register("name")}
+              className="w-full p-2 rounded bg-secondary border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Your name"
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Message</label>
+            <textarea
+              {...register("message")}
+              className="w-full p-2 rounded bg-secondary border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Enter message for Rust backend"
+              rows={3}
+              required
+            />
+          </div>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+          <Button type="submit" className="w-full">
+            Send to Backend
+          </Button>
+        </form>
+
+        {response && (
+          <div className="mt-6 p-4 rounded bg-muted border border-border">
+            <p className="text-sm font-semibold mb-1 text-foreground">Backend Response:</p>
+            <p className="text-sm italic text-foreground/80">"{response}"</p>
+          </div>
+        )}
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
     </main>
   );
 }
