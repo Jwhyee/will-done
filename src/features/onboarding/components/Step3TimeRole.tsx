@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { UseFormRegister, Control, FieldErrors } from "react-hook-form";
 import { OnboardingData } from "../schema";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Clock, Briefcase } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface Step3Props {
@@ -22,65 +22,94 @@ export function Step3TimeRole({ register, control, errors }: Step3Props) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="coreTimeStart">{t("steps.timeRole.coreTimeStart")}</Label>
-          <Input
-            id="coreTimeStart"
-            type="time"
-            {...register("coreTimeStart")}
-          />
+      <div className="text-center mb-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/20 mb-4">
+          <Briefcase className="w-8 h-8 text-amber-400" />
         </div>
-        <div>
-          <Label htmlFor="coreTimeEnd">{t("steps.timeRole.coreTimeEnd")}</Label>
-          <Input
-            id="coreTimeEnd"
-            type="time"
-            {...register("coreTimeEnd")}
-          />
+        <p className="text-zinc-400 text-sm">근무 시간과 역할을 설정해주세요</p>
+      </div>
+
+      <div className="space-y-4">
+        <Label className="text-zinc-300 font-medium flex items-center gap-2">
+          <Clock className="w-4 h-4 text-zinc-500" />
+          코어 타임 (선택)
+        </Label>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Input
+              type="time"
+              className="bg-zinc-950/50 border-zinc-700 text-zinc-100 focus:border-amber-500 focus:ring-amber-500/20"
+              {...register("coreTimeStart")}
+            />
+            <p className="text-xs text-zinc-500 mt-1">시작</p>
+          </div>
+          <div>
+            <Input
+              type="time"
+              className="bg-zinc-950/50 border-zinc-700 text-zinc-100 focus:border-amber-500 focus:ring-amber-500/20"
+              {...register("coreTimeEnd")}
+            />
+            <p className="text-xs text-zinc-500 mt-1">종료</p>
+          </div>
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="roleIntro">{t("steps.timeRole.roleIntro")}</Label>
+      <div className="space-y-2">
+        <Label htmlFor="roleIntro" className="text-zinc-300 font-medium">
+          {t("steps.timeRole.roleIntro")}
+        </Label>
         <textarea
           id="roleIntro"
-          className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          rows={3}
+          className="flex w-full rounded-md border border-zinc-700 bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 focus:ring-amber-500/20 resize-none"
           placeholder={t("steps.timeRole.roleIntroPlaceholder")}
           {...register("roleIntro")}
         />
       </div>
 
-      <div className="space-y-2">
-        <Label>{t("steps.timeRole.unpluggedTimes")}</Label>
+      <div className="space-y-3">
+        <Label className="text-zinc-300 font-medium">
+          {t("steps.timeRole.unpluggedTimes")}
+        </Label>
         {fields.map((field, index) => (
-          <div key={field.id} className="flex gap-2 items-start">
-            <div className="flex-1">
+          <div key={field.id} className="flex gap-2 items-start bg-zinc-950/30 p-3 rounded-lg">
+            <div className="flex-1 space-y-1">
               <Input
                 placeholder={t("steps.timeRole.labelPlaceholder")}
+                className="bg-zinc-950/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500"
                 {...register(`unpluggedTimes.${index}.label` as const)}
               />
               {errors.unpluggedTimes?.[index]?.label && (
-                <p className="text-xs text-destructive mt-1">{errors.unpluggedTimes[index]?.label?.message}</p>
+                <p className="text-xs text-red-400">{errors.unpluggedTimes[index]?.label?.message}</p>
               )}
             </div>
-            <Input
-              type="time"
-              className="w-28"
-              {...register(`unpluggedTimes.${index}.start_time` as const)}
-            />
-            {errors.unpluggedTimes?.[index]?.start_time && (
-              <p className="text-xs text-destructive mt-1">{errors.unpluggedTimes[index]?.start_time?.message}</p>
-            )}
-            <Input
-              type="time"
-              className="w-28"
-              {...register(`unpluggedTimes.${index}.end_time` as const)}
-            />
-            {errors.unpluggedTimes?.[index]?.end_time && (
-              <p className="text-xs text-destructive mt-1">{errors.unpluggedTimes[index]?.end_time?.message}</p>
-            )}
-            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+            <div className="space-y-1">
+              <Input
+                type="time"
+                className="w-28 bg-zinc-950/50 border-zinc-700 text-zinc-100 focus:border-amber-500"
+                {...register(`unpluggedTimes.${index}.start_time` as const)}
+              />
+              {errors.unpluggedTimes?.[index]?.start_time && (
+                <p className="text-xs text-red-400">{errors.unpluggedTimes[index]?.start_time?.message}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Input
+                type="time"
+                className="w-28 bg-zinc-950/50 border-zinc-700 text-zinc-100 focus:border-amber-500"
+                {...register(`unpluggedTimes.${index}.end_time` as const)}
+              />
+              {errors.unpluggedTimes?.[index]?.end_time && (
+                <p className="text-xs text-red-400">{errors.unpluggedTimes[index]?.end_time?.message}</p>
+              )}
+            </div>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => remove(index)}
+              className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -90,8 +119,10 @@ export function Step3TimeRole({ register, control, errors }: Step3Props) {
           variant="outline"
           size="sm"
           onClick={() => append({ label: "", start_time: "", end_time: "" })}
+          className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
         >
-          <Plus className="h-4 w-4 mr-2" /> {t("steps.timeRole.addUnplugged")}
+          <Plus className="h-4 w-4 mr-2" /> 
+          {t("steps.timeRole.addUnplugged")}
         </Button>
       </div>
     </div>
