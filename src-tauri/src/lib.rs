@@ -64,7 +64,7 @@ pub struct AddTaskInput {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TaskTransitionInput {
     pub block_id: i64,
-    pub action: String, // COMPLETE, DELAY_15, DELAY_30, DELAY_CUSTOM
+    pub action: String, // COMPLETE, DELAY, FORGOT
     pub extra_minutes: Option<i32>,
     pub review_memo: Option<String>,
 }
@@ -174,7 +174,7 @@ async fn get_workspaces(state: State<'_, DbState>) -> Result<Vec<Workspace>, Str
 }
 
 #[tauri::command]
-async fn get_greeting(state: State<'_, DbState>, workspace_id: i64) -> Result<String, String> {
+async fn get_greeting(state: State<'_, DbState>, workspace_id: i64, lang: String) -> Result<String, String> {
     let user = get_user(state.clone()).await?.ok_or("User not found")?;
     let now = Local::now();
     let hour = now.hour();
@@ -187,21 +187,52 @@ async fn get_greeting(state: State<'_, DbState>, workspace_id: i64) -> Result<St
     
     let is_active = active_block.is_some();
     let nickname = user.nickname;
+    let is_ko = lang == "ko";
 
     let greeting = match hour {
-        6..11 => if is_active { format!("{}, great focus this morning! Is everything on track?", nickname) } 
-                 else { format!("Good morning, {}. Let's plan an energetic day!", nickname) },
-        11..13 => if is_active { format!("Lunchtime is approaching. Are you wrapping up your current task?") }
-                  else { format!("Great work this morning. Shall we plan the afternoon after eating?") },
-        13..18 => if is_active { format!("Keep it up! Maintain the momentum on your current task.") }
-                  else { format!("Lazy afternoon. Let's set a goal for the rest of the day.") },
-        18..22 => if is_active { format!("Working late. Pace yourself and don't overdo it.") }
-                  else { format!("Past clock-out time. Shall we organize for tomorrow?") },
-        22..24 | 0..4 => if is_active { format!("Working the night shift! Please take a rest after this.") }
-                         else { format!("Great job today. Have a peaceful night.") },
-        4..6 => if is_active { format!("An early start! Don't forget to log your progress.") }
-                else { format!("Early dawn. What plan will you make in this quiet time?") },
-        _ => format!("Hello, {}!", nickname),
+        6..11 => if is_active { 
+            if is_ko { format!("{}, 아침 집중력이 대단하시네요! 계획대로 잘 되고 있나요?", nickname) }
+            else { format!("{}, great focus this morning! Is everything on track?", nickname) }
+        } else { 
+            if is_ko { format!("좋은 아침입니다, {}. 활기찬 하루를 계획해볼까요?", nickname) }
+            else { format!("Good morning, {}. Let's plan an energetic day!", nickname) }
+        },
+        11..13 => if is_active { 
+            if is_ko { format!("곧 점심시간이네요. 진행 중인 업무를 잘 마무리하고 계신가요?") }
+            else { format!("Lunchtime is approaching. Are you wrapping up your current task?") }
+        } else { 
+            if is_ko { format!("오전 업무 수고하셨습니다. 식사 후 오후 계획을 세워볼까요?") }
+            else { format!("Great work this morning. Shall we plan the afternoon after eating?") }
+        },
+        13..18 => if is_active { 
+            if is_ko { format!("오후에도 몰입을 유지해봐요. 지금 하는 일에 집중!") }
+            else { format!("Keep it up! Maintain the momentum on your current task.") }
+        } else { 
+            if is_ko { format!("나른한 오후네요. 남은 하루를 위한 목표를 세워보죠.") }
+            else { format!("Lazy afternoon. Let's set a goal for the rest of the day.") }
+        },
+        18..22 => if is_active { 
+            if is_ko { format!("늦은 시간까지 열정이 넘치시네요. 무리하지 마세요!") }
+            else { format!("Working late. Pace yourself and don't overdo it.") }
+        } else { 
+            if is_ko { format!("퇴근 시간이 지났네요. 내일을 위해 가볍게 정리해볼까요?") }
+            else { format!("Past clock-out time. Shall we organize for tomorrow?") }
+        },
+        22..24 | 0..4 => if is_active { 
+            if is_ko { format!("밤샘 작업 중이시군요! 이번 작업 후엔 꼭 휴식하세요.") }
+            else { format!("Working the night shift! Please take a rest after this.") }
+        } else { 
+            if is_ko { format!("오늘 하루 고생 많으셨습니다. 평온한 밤 되세요.") }
+            else { format!("Great job today. Have a peaceful night.") }
+        },
+        4..6 => if is_active { 
+            if is_ko { format!("벌써 시작하셨나요? 기록하는 걸 잊지 마세요.") }
+            else { format!("An early start! Don't forget to log your progress.") }
+        } else { 
+            if is_ko { format!("이른 새벽이네요. 고요한 시간에 어떤 계획을 세워볼까요?") }
+            else { format!("Early dawn. What plan will you make in this quiet time?") }
+        },
+        _ => if is_ko { format!("안녕하세요, {}님!", nickname) } else { format!("Hello, {}!", nickname) },
     };
 
     Ok(greeting)
@@ -384,7 +415,9 @@ async fn process_task_transition(state: State<'_, DbState>, input: TaskTransitio
         .map_err(|e| e.to_string())?;
 
     match input.action.as_str() {
-        "COMPLETE" => {
+        "COMPLETE" | "FORGOT" => {
+            // COMPLETE: 현재 시점 또는 원래 종료 시점에 완료 (여기서는 단순하게 DONE 처리)
+            // FORGOT: 이미 끝난 업무이므로 상태만 DONE으로 변경 (미래 블록 밀지 않음)
             sqlx::query("UPDATE time_blocks SET status = 'DONE', review_memo = ?1 WHERE id = ?2")
                 .bind(input.review_memo)
                 .bind(input.block_id)
@@ -392,13 +425,8 @@ async fn process_task_transition(state: State<'_, DbState>, input: TaskTransitio
                 .await
                 .map_err(|e| e.to_string())?;
         },
-        "DELAY_15" | "DELAY_30" | "DELAY_CUSTOM" => {
-            let extra = match input.action.as_str() {
-                "DELAY_15" => 15,
-                "DELAY_30" => 30,
-                _ => input.extra_minutes.unwrap_or(0),
-            } as i64;
-
+        "DELAY" => {
+            let extra = input.extra_minutes.unwrap_or(0) as i64;
             let current_end = NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
             let new_end = current_end + Duration::minutes(extra);
 

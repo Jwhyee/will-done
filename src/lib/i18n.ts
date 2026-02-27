@@ -52,10 +52,10 @@ export const translations = {
       transition: {
         title: "태스크 종료 분기",
         description: "현재 태스크가 종료되었습니다. 다음 단계를 선택해주세요.",
-        complete: "완료 및 다음으로",
-        delay_15: "15분 연장",
-        delay_30: "30분 연장",
-        delay_custom: "직접 입력",
+        complete: "완료",
+        delay: "연장해서 계속하기",
+        forgot: "이미 완료함 (제때 끝남)",
+        delay_placeholder: "연장할 시간(분)",
         review_placeholder: "업무 결과나 소감을 간단히 기록해보세요. (회고에 사용됩니다)",
       },
       status: {
@@ -117,10 +117,10 @@ export const translations = {
       transition: {
         title: "Task Transition",
         description: "Task time is up. Select your next step.",
-        complete: "Complete & Next",
-        delay_15: "Delay 15m",
-        delay_30: "Delay 30m",
-        delay_custom: "Custom Delay",
+        complete: "Complete",
+        delay: "Continue with Extension",
+        forgot: "Already Completed (on time)",
+        delay_placeholder: "Minutes to extend",
         review_placeholder: "Briefly record your results or feelings. (Used for review)",
       },
       status: {

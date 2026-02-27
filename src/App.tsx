@@ -52,6 +52,7 @@ function App() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [transitionBlock, setTransitionBlock] = useState<TimeBlock | null>(null);
   const [reviewMemo, setReviewMemo] = useState("");
+  const [customDelay, setCustomDelay] = useState<number>(15);
 
   const lang = useMemo(() => getLang(), []);
   const t = translations[lang];
@@ -168,7 +169,7 @@ function App() {
   const fetchMainData = async () => {
     if (!activeWorkspaceId) return;
     try {
-      const g = await invoke<string>("get_greeting", { workspaceId: activeWorkspaceId });
+      const g = await invoke<string>("get_greeting", { workspaceId: activeWorkspaceId, lang });
       setGreeting(g);
       const list = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId });
       
@@ -405,53 +406,61 @@ function App() {
                   </div>
                 ) : (
                   <div className="space-y-6 relative pl-12 border-l border-zinc-800 ml-4 py-4">
-                    {timeline.map((block, idx) => (
-                      <div key={idx} className="relative group">
-                        {/* Time Indicator */}
-                        <div className="absolute -left-[3.5rem] top-0 w-10 text-right space-y-1">
-                          <p className="text-[10px] font-black font-mono text-zinc-500">{formatDisplayTime(block.start_time)}</p>
-                          <p className="text-[10px] font-bold font-mono text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity">{formatDisplayTime(block.end_time)}</p>
-                        </div>
-                        
-                        {/* Dot on Line */}
-                        <div className={`absolute -left-[3.4rem] top-1 w-3 h-3 rounded-full border-2 bg-[#09090b] z-10 transition-colors ${
-                          block.status === "DONE" ? "border-green-500 bg-green-500/20" :
-                          block.status === "NOW" ? "border-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.5)]" :
-                          block.status === "UNPLUGGED" ? "border-zinc-700 bg-zinc-800" : "border-zinc-600"
-                        }`} />
+                    {timeline.map((block, idx) => {
+                      const isSplitWithNext = block.task_id && timeline[idx + 1]?.task_id === block.task_id;
+                      const isSplitWithPrev = block.task_id && timeline[idx - 1]?.task_id === block.task_id;
 
-                        {/* Block Card */}
-                        <div className={`p-4 rounded-2xl border transition-all duration-300 transform hover:-translate-x-1 ${
-                          block.status === "DONE" ? "bg-green-500/5 border-green-500/20" :
-                          block.status === "NOW" ? (new Date(block.end_time) < currentTime ? "bg-red-500/10 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-red-500/5 border-red-500/50 shadow-lg") :
-                          block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#27272a] opacity-60 border-dashed" : "bg-[#18181b]/50 border-[#27272a] hover:bg-[#18181b]"
-                        }`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <h4 className={`font-black text-sm tracking-tight ${block.status === "UNPLUGGED" ? "text-zinc-500" : "text-white"}`}>{block.title}</h4>
-                              {block.status === "NOW" && new Date(block.end_time) < currentTime && (
-                                <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                  {t.main.status.overdue}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-3">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
-                              {block.status === "NOW" && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => setTransitionBlock(block)}
-                                  className="h-7 w-7 p-0 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white"
-                                >
-                                  <AlertCircle size={14} />
-                                </Button>
-                              )}
+                      return (
+                        <div key={idx} className="relative group">
+                          {/* Time Indicator - Moved further left to avoid overlap */}
+                          <div className="absolute -left-[5rem] top-0 w-14 text-right space-y-1">
+                            <p className="text-[10px] font-black font-mono text-zinc-500">{formatDisplayTime(block.start_time)}</p>
+                            <p className="text-[10px] font-bold font-mono text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity">{formatDisplayTime(block.end_time)}</p>
+                          </div>
+                          
+                          {/* Dot on Line */}
+                          <div className={`absolute -left-[3.4rem] top-1 w-3 h-3 rounded-full border-2 bg-[#09090b] z-10 transition-colors ${
+                            block.status === "DONE" ? "border-green-500 bg-green-500/20" :
+                            block.status === "NOW" ? "border-red-500 scale-125 shadow-[0_0_10px_rgba(239,68,68,0.5)]" :
+                            block.status === "UNPLUGGED" ? "border-zinc-700 bg-zinc-800" : "border-zinc-600"
+                          }`} />
+
+                          {/* Split Connection Line (Right Side) */}
+                          {isSplitWithNext && (
+                            <div className="absolute right-[-8px] top-8 bottom-[-24px] w-[2px] bg-zinc-800 rounded-full z-0" />
+                          )}
+
+                          {/* Block Card */}
+                          <div className={`p-4 rounded-2xl border transition-all duration-300 transform hover:-translate-x-1 ${
+                            block.status === "DONE" ? "bg-green-500/5 border-green-500/20" :
+                            block.status === "NOW" ? (new Date(block.end_time) < currentTime ? "bg-red-500/10 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-red-500/5 border-red-500/50 shadow-lg") :
+                            block.status === "UNPLUGGED" ? "bg-zinc-900/40 border-[#27272a] opacity-60 border-dashed" : "bg-[#18181b]/50 border-[#27272a] hover:bg-[#18181b]"
+                          } ${isSplitWithNext ? "rounded-b-none border-b-dashed border-b-zinc-800 pb-8" : ""} ${isSplitWithPrev ? "rounded-t-none border-t-dashed border-t-zinc-800 mt-[-1px]" : ""}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <h4 className={`font-black text-sm tracking-tight ${block.status === "UNPLUGGED" ? "text-zinc-500" : "text-white"}`}>{block.title}</h4>
+                                {block.status === "NOW" && new Date(block.end_time) < currentTime && (
+                                  <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                    {t.main.status.overdue}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{block.status}</span>
+                                {block.status === "NOW" && (
+                                  <button 
+                                    onClick={() => setTransitionBlock(block)}
+                                    className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                                  >
+                                    <AlertCircle size={14} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -482,30 +491,43 @@ function App() {
                       value={reviewMemo}
                       onChange={(e) => setReviewMemo(e.target.value)}
                       placeholder={t.main.transition.review_placeholder}
-                      className="w-full min-h-[100px] bg-[#09090b] border-[#27272a] rounded-2xl p-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-zinc-700 font-bold"
+                      className="w-full min-h-[80px] bg-[#09090b] border-[#27272a] rounded-2xl p-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-zinc-700 font-bold"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-4">
                     <Button 
                       onClick={() => handleTransition("COMPLETE")}
-                      className="col-span-2 bg-white text-black hover:bg-zinc-200 font-black h-14 rounded-2xl text-lg shadow-xl active:scale-95"
+                      className="w-full bg-white text-black hover:bg-zinc-200 font-black h-12 rounded-xl text-md shadow-xl active:scale-95"
                     >
                       {t.main.transition.complete}
                     </Button>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-1 flex items-center bg-[#09090b] border border-[#27272a] rounded-xl px-3">
+                        <Input 
+                          type="number" 
+                          value={customDelay} 
+                          onChange={(e) => setCustomDelay(parseInt(e.target.value) || 0)}
+                          className="w-full bg-transparent border-none text-center font-black focus-visible:ring-0 p-0 h-10"
+                        />
+                        <span className="text-[10px] font-black text-zinc-500 uppercase ml-1">min</span>
+                      </div>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleTransition("DELAY", customDelay)}
+                        className="col-span-1 border-[#27272a] bg-zinc-900/50 hover:bg-[#27272a] text-zinc-300 font-black h-10 rounded-xl active:scale-95 text-xs"
+                      >
+                        {t.main.transition.delay}
+                      </Button>
+                    </div>
+
                     <Button 
-                      variant="outline"
-                      onClick={() => handleTransition("DELAY_15")}
-                      className="border-[#27272a] bg-zinc-900/50 hover:bg-[#27272a] text-zinc-300 font-black h-12 rounded-2xl active:scale-95"
+                      variant="ghost"
+                      onClick={() => handleTransition("FORGOT")}
+                      className="w-full text-zinc-500 hover:text-zinc-300 font-bold h-10 rounded-xl text-xs"
                     >
-                      {t.main.transition.delay_15}
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleTransition("DELAY_30")}
-                      className="border-[#27272a] bg-zinc-900/50 hover:bg-[#27272a] text-zinc-300 font-black h-12 rounded-2xl active:scale-95"
-                    >
-                      {t.main.transition.delay_30}
+                      {t.main.transition.forgot}
                     </Button>
                   </div>
                 </div>
