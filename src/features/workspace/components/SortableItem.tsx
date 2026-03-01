@@ -63,7 +63,7 @@ export const SortableItem = ({
   const isDone = block.status === "DONE";
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group/item">
+    <div ref={setNodeRef} style={style} className="relative group/item" id={`block-${block.id}`}>
       <div className="absolute -left-[6.5rem] top-6 w-16 text-right space-y-1">
         <p className="text-[10px] font-black font-mono text-text-muted group-hover/item:text-text-secondary transition-colors">{formatDisplayTime(block.startTime)}</p>
       </div>
@@ -88,7 +88,7 @@ export const SortableItem = ({
         onMouseLeave={() => setHoverTaskId(null)}
         className={`p-5 rounded-2xl border-[1.5px] transition-all duration-300 transform ${
         block.status === "DONE" ? "bg-success/5 border-success/20 opacity-60" :
-        block.status === "NOW" ? (new Date(block.endTime) < currentTime ? "bg-danger/10 border-danger animate-breathing" : "bg-accent/5 border-accent shadow-[0_0_15px_rgba(59,130,246,0.1)]") :
+        block.status === "NOW" ? (new Date(block.endTime) < currentTime ? "bg-danger/10 border-danger animate-breathing" : "bg-accent/5 border-accent animate-breathing-accent shadow-[0_0_15px_rgba(59,130,246,0.1)]") :
         block.status === "PENDING" ? "bg-warning/5 border-warning/40 opacity-80" :
         block.status === "UNPLUGGED" ? "bg-surface/40 border-border opacity-40 cursor-default" : "bg-surface-elevated/50 border-border hover:bg-surface-elevated"
       } ${isHovered ? "border-text-primary/40 bg-surface-elevated/80 -translate-x-1 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.01] opacity-100" : ""} ${isSplit ? "shadow-sm" : ""} ${isFirstOfTask ? "mb-1" : ""} ${isLastOfTask ? "mt-1" : ""} ${isMiddleOfTask ? "my-1" : ""}`}
