@@ -31,27 +31,27 @@ const isStartTimeBeforeEnd = (start?: string, end?: string) => {
 export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }: WorkspaceSetupViewProps) => {
   const workspaceSchema = z.object({
     name: z.string().min(1, t.workspace_setup.name_required),
-    core_time_start: z.string().optional(),
-    core_time_end: z.string().optional(),
-    role_intro: z.string().optional(),
-    unplugged_times: z.array(z.object({
+    coreTimeStart: z.string().optional(),
+    coreTimeEnd: z.string().optional(),
+    roleIntro: z.string().optional(),
+    unpluggedTimes: z.array(z.object({
       label: z.string().min(1, t.workspace_setup.label_required),
-      start_time: z.string().min(1, "Required"),
-      end_time: z.string().min(1, "Required"),
+      startTime: z.string().min(1, "Required"),
+      endTime: z.string().min(1, "Required"),
     })).superRefine((items, ctx) => {
       items.forEach((item, index) => {
-        if (!isStartTimeBeforeEnd(item.start_time, item.end_time)) {
+        if (!isStartTimeBeforeEnd(item.startTime, item.endTime)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: t.workspace_setup.core_time_error,
-            path: [index, "end_time"],
+            path: [index, "endTime"],
           });
         }
       });
     }),
-  }).refine((data) => isStartTimeBeforeEnd(data.core_time_start || undefined, data.core_time_end || undefined), {
+  }).refine((data) => isStartTimeBeforeEnd(data.coreTimeStart || undefined, data.coreTimeEnd || undefined), {
     message: t.workspace_setup.core_time_error,
-    path: ["core_time_end"],
+    path: ["coreTimeEnd"],
   });
 
   type WorkspaceFormValues = z.infer<typeof workspaceSchema>;
@@ -60,25 +60,25 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
     resolver: zodResolver(workspaceSchema),
     defaultValues: { 
       name: "", 
-      core_time_start: "", 
-      core_time_end: "", 
-      role_intro: "",
-      unplugged_times: [] 
+      coreTimeStart: "", 
+      coreTimeEnd: "", 
+      roleIntro: "",
+      unpluggedTimes: [] 
     }
   });
 
   const { fields, append, remove } = useFieldArray({
     control: workspaceForm.control,
-    name: "unplugged_times",
+    name: "unpluggedTimes",
   });
 
   const onWorkspaceSubmit = async (data: WorkspaceFormValues) => {
     try {
       const sanitizedData = {
         ...data,
-        core_time_start: data.core_time_start || null,
-        core_time_end: data.core_time_end || null,
-        role_intro: data.role_intro || null,
+        coreTimeStart: data.coreTimeStart || null,
+        coreTimeEnd: data.coreTimeEnd || null,
+        roleIntro: data.roleIntro || null,
       };
       const id = await invoke<number>("create_workspace", { input: sanitizedData });
       onComplete(id);
@@ -127,8 +127,8 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
                     size="sm" 
                     onClick={(e) => {
                       e.preventDefault();
-                      workspaceForm.setValue("core_time_start", "");
-                      workspaceForm.setValue("core_time_end", "");
+                      workspaceForm.setValue("coreTimeStart", "");
+                      workspaceForm.setValue("coreTimeEnd", "");
                     }} 
                     className="h-8 text-[10px] font-black text-text-secondary hover:text-text-primary hover:bg-border transition-all rounded-lg uppercase tracking-wider"
                   >
@@ -136,11 +136,11 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-6">
-                  <Input type="time" {...workspaceForm.register("core_time_start")} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
-                  <Input type="time" {...workspaceForm.register("core_time_end")} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                  <Input type="time" {...workspaceForm.register("coreTimeStart")} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                  <Input type="time" {...workspaceForm.register("coreTimeEnd")} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
                 </div>
-                {workspaceForm.formState.errors.core_time_end && (
-                  <p className="text-[11px] text-danger font-bold flex items-center gap-1"><AlertCircle size={12}/> {workspaceForm.formState.errors.core_time_end.message}</p>
+                {workspaceForm.formState.errors.coreTimeEnd && (
+                  <p className="text-[11px] text-danger font-bold flex items-center gap-1"><AlertCircle size={12}/> {workspaceForm.formState.errors.coreTimeEnd.message}</p>
                 )}
               </div>
 
@@ -156,7 +156,7 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
                     size="sm" 
                     onClick={(e) => {
                       e.preventDefault();
-                      append({ label: "", start_time: "12:00", end_time: "13:00" });
+                      append({ label: "", startTime: "12:00", endTime: "13:00" });
                     }} 
                     className="border-border bg-background hover:bg-border text-text-secondary font-black rounded-lg h-9"
                   >
@@ -174,17 +174,17 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
                         </button>
                       </div>
                       <div className="space-y-2">
-                          <Input {...workspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-surface-elevated border-border h-11 rounded-xl px-4 font-bold" />
-                          {workspaceForm.formState.errors.unplugged_times?.[index]?.label && (
-                              <p className="text-[10px] text-danger font-bold pl-1">{workspaceForm.formState.errors.unplugged_times[index]?.label?.message}</p>
+                          <Input {...workspaceForm.register(`unpluggedTimes.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-surface-elevated border-border h-11 rounded-xl px-4 font-bold" />
+                          {workspaceForm.formState.errors.unpluggedTimes?.[index]?.label && (
+                              <p className="text-[10px] text-danger font-bold pl-1">{workspaceForm.formState.errors.unpluggedTimes[index]?.label?.message}</p>
                           )}
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.start_time` as const)} className="bg-surface-elevated border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
+                        <Input type="time" {...workspaceForm.register(`unpluggedTimes.${index}.startTime` as const)} className="bg-surface-elevated border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
                         <div className="space-y-1">
-                          <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.end_time` as const)} className="bg-surface-elevated border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
-                          {workspaceForm.formState.errors.unplugged_times?.[index]?.end_time && (
-                              <p className="text-[10px] text-danger font-bold pl-1">{workspaceForm.formState.errors.unplugged_times[index]?.end_time?.message}</p>
+                          <Input type="time" {...workspaceForm.register(`unpluggedTimes.${index}.endTime` as const)} className="bg-surface-elevated border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
+                          {workspaceForm.formState.errors.unpluggedTimes?.[index]?.endTime && (
+                              <p className="text-[10px] text-danger font-bold pl-1">{workspaceForm.formState.errors.unpluggedTimes[index]?.endTime?.message}</p>
                           )}
                         </div>
                       </div>
@@ -196,9 +196,9 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
               <Separator className="bg-border" />
 
               <div className="space-y-3">
-                <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.workspace_setup.role_intro}</Label>
+                <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.workspace_setup.roleIntro}</Label>
                 <textarea 
-                  {...workspaceForm.register("role_intro")}
+                  {...workspaceForm.register("roleIntro")}
                   placeholder={t.workspace_setup.role_placeholder}
                   className="w-full min-h-[140px] bg-background border-border rounded-2xl p-5 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-text-muted font-bold leading-relaxed shadow-inner"
                 />

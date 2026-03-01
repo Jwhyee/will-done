@@ -7,6 +7,7 @@ use chrono::{Local, NaiveDateTime, NaiveTime, Duration, Timelike, NaiveDate};
 // --- Entities ---
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i64,
     pub nickname: String,
@@ -15,6 +16,7 @@ pub struct User {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct Workspace {
     pub id: i64,
     pub name: String,
@@ -24,6 +26,7 @@ pub struct Workspace {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct UnpluggedTime {
     pub id: i64,
     pub workspace_id: i64,
@@ -33,6 +36,7 @@ pub struct UnpluggedTime {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct Task {
     pub id: i64,
     pub workspace_id: i64,
@@ -42,6 +46,7 @@ pub struct Task {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct TimeBlock {
     pub id: i64,
     pub task_id: Option<i64>,
@@ -55,6 +60,7 @@ pub struct TimeBlock {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct Retrospective {
     pub id: i64,
     pub workspace_id: i64,
@@ -65,6 +71,7 @@ pub struct Retrospective {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct AddTaskInput {
     pub workspace_id: i64,
     pub title: String,
@@ -76,6 +83,7 @@ pub struct AddTaskInput {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct TaskTransitionInput {
     pub block_id: i64,
     pub action: String, // COMPLETE, DELAY, FORGOT
@@ -323,8 +331,12 @@ async fn save_user_internal(
     lang: String,
 ) -> Result<(), String> {
     sqlx::query(
-        "INSERT OR REPLACE INTO users (id, nickname, gemini_api_key, lang) 
-         VALUES (1, ?, ?, ?)",
+        "INSERT INTO users (id, nickname, gemini_api_key, lang) 
+         VALUES (1, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+            nickname = excluded.nickname,
+            gemini_api_key = COALESCE(excluded.gemini_api_key, users.gemini_api_key),
+            lang = excluded.lang",
     )
     .bind(nickname)
     .bind(gemini_api_key)
@@ -345,6 +357,7 @@ async fn check_user_exists(state: State<'_, DbState>) -> Result<bool, String> {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateWorkspaceInput {
     pub name: String,
     pub core_time_start: Option<String>,
@@ -354,6 +367,7 @@ pub struct CreateWorkspaceInput {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct UnpluggedTimeInput {
     pub label: String,
     pub start_time: String,

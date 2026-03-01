@@ -24,20 +24,20 @@ interface OnboardingViewProps {
 export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
   const userSchema = z.object({
     nickname: z.string().min(1, t.onboarding.nickname_required).max(20),
-    gemini_api_key: z.string().optional(),
+    geminiApiKey: z.string().optional(),
   });
 
   type UserFormValues = z.infer<typeof userSchema>;
 
   const userForm = useForm<UserFormValues>({ 
     resolver: zodResolver(userSchema),
-    defaultValues: { nickname: "", gemini_api_key: "" }
+    defaultValues: { nickname: "", geminiApiKey: "" }
   });
 
   const onUserSubmit = async (data: UserFormValues) => {
     await invoke("save_user", { 
       nickname: data.nickname, 
-      gemini_api_key: data.gemini_api_key || null,
+      geminiApiKey: data.geminiApiKey || null,
       lang: getLang() 
     });
     const u = await invoke<User>("get_user");
@@ -62,7 +62,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
             </div>
             <div className="space-y-3">
               <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
-              <Input type="password" {...userForm.register("gemini_api_key")} placeholder={t.onboarding.api_key_placeholder} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold focus:ring-1 focus:ring-white/10" />
+              <Input type="password" {...userForm.register("geminiApiKey")} placeholder={t.onboarding.api_key_placeholder} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold focus:ring-1 focus:ring-white/10" />
               <p className="text-[10px] text-text-secondary font-bold leading-relaxed">{t.onboarding.api_key_guide}</p>
             </div>
             <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-black h-14 rounded-xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95">

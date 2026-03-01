@@ -32,7 +32,7 @@ export const SettingsView = ({
   const userForm = useForm({
     defaultValues: {
       nickname: user.nickname,
-      gemini_api_key: user.gemini_api_key || "",
+      geminiApiKey: user.geminiApiKey || "",
       lang: user.lang
     }
   });
@@ -41,26 +41,26 @@ export const SettingsView = ({
   const workspaceForm = useForm({
     defaultValues: async () => {
       const ws = await invoke<any>("get_workspace", { id: workspaceId });
-      const ut = await invoke<any[]>("get_unplugged_times", { workspaceId });
+      const ut = await invoke<any[]>("get_unpluggedTimes", { workspaceId });
       return {
         name: ws.name,
-        core_time_start: ws.core_time_start || "",
-        core_time_end: ws.core_time_end || "",
-        role_intro: ws.role_intro || "",
-        unplugged_times: ut.map(u => ({ label: u.label, start_time: u.start_time, end_time: u.end_time }))
+        coreTimeStart: ws.coreTimeStart || "",
+        coreTimeEnd: ws.coreTimeEnd || "",
+        roleIntro: ws.roleIntro || "",
+        unpluggedTimes: ut.map(u => ({ label: u.label, startTime: u.startTime, endTime: u.endTime }))
       };
     }
   });
 
   const { fields, append, remove } = useFieldArray({
     control: workspaceForm.control,
-    name: "unplugged_times"
+    name: "unpluggedTimes"
   });
 
   useEffect(() => {
     userForm.reset({
       nickname: user.nickname,
-      gemini_api_key: user.gemini_api_key || "",
+      geminiApiKey: user.geminiApiKey || "",
       lang: user.lang
     });
   }, [user, userForm]);
@@ -69,7 +69,7 @@ export const SettingsView = ({
     try {
       const updatedUser = await invoke<User>("save_user", { 
         nickname: data.nickname, 
-        gemini_api_key: data.gemini_api_key || null,
+        geminiApiKey: data.geminiApiKey || null,
         lang: data.lang
       });
       await onUserUpdate(updatedUser);
@@ -85,9 +85,10 @@ export const SettingsView = ({
         id: workspaceId,
         input: {
           ...data,
-          core_time_start: data.core_time_start || null,
-          core_time_end: data.core_time_end || null,
-          role_intro: data.role_intro || null,
+          coreTimeStart: data.coreTimeStart || null,
+          coreTimeEnd: data.coreTimeEnd || null,
+          roleIntro: data.roleIntro || null,
+          unpluggedTimes: data.unpluggedTimes || []
         }
       });
       await onWorkspaceUpdate();
@@ -147,7 +148,7 @@ export const SettingsView = ({
 
                 <div className="space-y-3">
                   <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
-                  <Input type="password" {...userForm.register("gemini_api_key")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold" />
+                  <Input type="password" {...userForm.register("geminiApiKey")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold" />
                 </div>
 
                 <div className="space-y-3">
@@ -182,8 +183,8 @@ export const SettingsView = ({
                 <div className="space-y-4">
                   <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
                   <div className="grid grid-cols-2 gap-6">
-                    <Input type="time" {...workspaceForm.register("core_time_start")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
-                    <Input type="time" {...workspaceForm.register("core_time_end")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                    <Input type="time" {...workspaceForm.register("coreTimeStart")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                    <Input type="time" {...workspaceForm.register("coreTimeEnd")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
                   </div>
                 </div>
 
@@ -194,7 +195,7 @@ export const SettingsView = ({
                       type="button" 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => append({ label: "", start_time: "12:00", end_time: "13:00" })} 
+                      onClick={() => append({ label: "", startTime: "12:00", endTime: "13:00" })} 
                       className="border-border bg-surface-elevated hover:bg-border text-text-secondary font-black rounded-lg h-9"
                     >
                       <Plus size={16} className="mr-2" /> {t.workspace_setup.add_unplugged}
@@ -206,10 +207,10 @@ export const SettingsView = ({
                         <button type="button" onClick={() => remove(index)} className="absolute top-4 right-4 text-text-muted hover:text-danger transition-colors">
                           <X size={16} />
                         </button>
-                        <Input {...workspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-surface border-border h-11 rounded-xl px-4 font-bold" />
+                        <Input {...workspaceForm.register(`unpluggedTimes.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-surface border-border h-11 rounded-xl px-4 font-bold" />
                         <div className="grid grid-cols-2 gap-4">
-                          <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.start_time` as const)} className="bg-surface border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
-                          <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.end_time` as const)} className="bg-surface border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
+                          <Input type="time" {...workspaceForm.register(`unpluggedTimes.${index}.startTime` as const)} className="bg-surface border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
+                          <Input type="time" {...workspaceForm.register(`unpluggedTimes.${index}.endTime` as const)} className="bg-surface border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
                         </div>
                       </div>
                     ))}
@@ -217,9 +218,9 @@ export const SettingsView = ({
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.workspace_setup.role_intro}</Label>
+                  <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.workspace_setup.roleIntro}</Label>
                   <textarea 
-                    {...workspaceForm.register("role_intro")}
+                    {...workspaceForm.register("roleIntro")}
                     placeholder={t.workspace_setup.role_placeholder}
                     className="w-full min-h-[120px] bg-surface-elevated border-border rounded-2xl p-5 text-sm text-text-primary focus:outline-none placeholder:text-text-muted font-bold leading-relaxed"
                   />

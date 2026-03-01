@@ -66,8 +66,8 @@ export const WorkspaceView = ({
     title: z.string().min(1, "Task title is required"),
     hours: z.number().min(0).max(23),
     minutes: z.number().min(0).max(59),
-    planning_memo: z.string().optional(),
-    is_urgent: z.boolean(),
+    planningMemo: z.string().optional(),
+    isUrgent: z.boolean(),
   }).refine((data) => data.hours > 0 || data.minutes > 0, {
     message: "Duration must be at least 1 minute",
     path: ["minutes"],
@@ -77,7 +77,7 @@ export const WorkspaceView = ({
 
   const taskForm = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: { title: "", hours: 0, minutes: 30, planning_memo: "", is_urgent: false }
+    defaultValues: { title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false }
   });
 
   const handleTaskSubmit = async (data: TaskFormValues) => {
@@ -110,7 +110,7 @@ export const WorkspaceView = ({
                 <div>
                   <Button 
                     onClick={onOpenRetrospective}
-                    disabled={!user?.gemini_api_key}
+                    disabled={!user?.geminiApiKey}
                     className="bg-surface-elevated hover:bg-border text-text-primary font-black rounded-xl gap-2 h-11 border border-border shadow-xl shadow-black/40 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Sparkles size={18} className="text-warning" />
@@ -118,7 +118,7 @@ export const WorkspaceView = ({
                   </Button>
                 </div>
               </TooltipTrigger>
-              {!user?.gemini_api_key && (
+              {!user?.geminiApiKey && (
                 <TooltipContent className="bg-surface-elevated border-border text-text-secondary font-bold text-xs p-3 rounded-xl shadow-2xl">
                   <p>설정에서 GOOGLE AI STUDIO API KEY를 입력해주세요.</p>
                 </TooltipContent>
@@ -153,9 +153,9 @@ export const WorkspaceView = ({
               </div>
               
               <label className="flex items-center space-x-2 bg-background border border-border rounded-xl h-10 px-4 cursor-pointer hover:bg-surface-elevated transition-colors">
-                <input type="checkbox" {...taskForm.register("is_urgent")} className="hidden" />
-                <Zap size={14} className={taskForm.watch("is_urgent") ? "text-danger fill-danger" : "text-text-muted"} />
-                <span className={`text-[10px] font-black uppercase ${taskForm.watch("is_urgent") ? "text-danger" : "text-text-muted"}`}>{t.main.urgent}</span>
+                <input type="checkbox" {...taskForm.register("isUrgent")} className="hidden" />
+                <Zap size={14} className={taskForm.watch("isUrgent") ? "text-danger fill-danger" : "text-text-muted"} />
+                <span className={`text-[10px] font-black uppercase ${taskForm.watch("isUrgent") ? "text-danger" : "text-text-muted"}`}>{t.main.urgent}</span>
               </label>
 
               <Button type="submit" className="h-10 px-6 bg-text-primary text-background hover:bg-zinc-200 font-black rounded-xl">
@@ -166,7 +166,7 @@ export const WorkspaceView = ({
             
             <div className="px-4 pb-2">
               <textarea 
-                {...taskForm.register("planning_memo")}
+                {...taskForm.register("planningMemo")}
                 placeholder={t.main.planning_placeholder}
                 className="w-full bg-transparent text-xs font-bold text-text-secondary placeholder:text-text-muted resize-none h-12 focus:outline-none focus:ring-0 py-2"
               />
@@ -203,7 +203,7 @@ export const WorkspaceView = ({
                 >
                   {timeline.map((block) => (
                     <SortableItem
-                      key={block.id === -1 ? `unplugged-${block.start_time}` : block.id}
+                      key={block.id === -1 ? `unplugged-${block.startTime}` : block.id}
                       block={block}
                       timeline={timeline}
                       currentTime={currentTime}

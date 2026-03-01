@@ -51,7 +51,7 @@
 ## 3. Implemented Features & API
 
 ### 👤 User & Settings
-- `get_user` / `save_user`: 유저 프로필(닉네임, API Key, 언어) 관리.
+- `get_user` / `save_user`: 유저 프로필(닉네임, geminiApiKey, 언어) 관리.
 - `get_greeting`: 현재 시간(새벽/아침/점심 등)과 업무 집중 여부에 따른 동적 메시지.
 
 ### 🏢 Workspace & Archive

@@ -134,12 +134,12 @@ function AppContent() {
 
       if (isToday) {
         const active = list.find(b => b.status === "NOW");
-        if (active && new Date(active.end_time) < now && !transitionBlock) {
+        if (active && new Date(active.endTime) < now && !transitionBlock) {
           setTransitionBlock(active);
         }
 
         if (!active) {
-          const next = list.find(b => b.status === "WILL" && new Date(b.start_time) <= now);
+          const next = list.find(b => b.status === "WILL" && new Date(b.startTime) <= now);
           if (next) {
             await invoke("update_block_status", { blockId: next.id, status: "NOW" });
             fetchMainData();
@@ -199,7 +199,7 @@ function AppContent() {
             showToast(t.main.toast.past_time_error);
             return;
           }
-          if (nowIndex === -1 && timeline.length > 0 && newIndex === 0 && new Date(timeline[0].start_time) < currentTime) {
+          if (nowIndex === -1 && timeline.length > 0 && newIndex === 0 && new Date(timeline[0].startTime) < currentTime) {
             showToast(t.main.toast.past_time_error);
             return;
           }
@@ -272,10 +272,10 @@ function AppContent() {
     try {
       await invoke("add_task", { 
         input: {
-          workspace_id: activeWorkspaceId,
+          workspaceId: activeWorkspaceId,
           ...data,
-          planning_memo: data.planning_memo || null,
-          is_inbox: false
+          planningMemo: data.planningMemo || null,
+          isInbox: false
         } 
       });
       fetchMainData();
@@ -288,10 +288,10 @@ function AppContent() {
     try {
       await invoke("process_task_transition", {
         input: {
-          block_id: block.id,
+          blockId: block.id,
           action,
-          extra_minutes: extraMinutes || null,
-          review_memo: reviewMemo || null
+          extraMinutes: extraMinutes || null,
+          reviewMemo: reviewMemo || null
         }
       });
       setTransitionBlock(null);
@@ -411,7 +411,7 @@ function AppContent() {
               }}
               onMoveAllToTimeline={async () => {
                 if (activeWorkspaceId) {
-                  await invoke("move_all_to_timeline", { workspace_id: activeWorkspaceId });
+                  await invoke("move_all_to_timeline", { workspaceId: activeWorkspaceId });
                   fetchMainData();
                 }
               }}
