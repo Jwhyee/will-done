@@ -48,25 +48,25 @@ const Stepper = ({
   nextDisabled: boolean;
   label: string;
 }) => (
-  <div className="flex items-center justify-between w-full bg-surface border border-border rounded-2xl p-2 h-16 shadow-inner">
+  <div className="flex items-center justify-between w-full bg-surface border border-border rounded-xl p-1.5 h-12 shadow-sm">
     <Button 
       variant="ghost" 
       size="icon" 
       onClick={onPrev} 
       disabled={prevDisabled}
-      className="rounded-xl w-12 h-12 hover:bg-primary/10 hover:text-primary transition-all active:scale-90 disabled:opacity-20"
+      className="rounded-lg w-9 h-9 hover:bg-primary/10 hover:text-primary transition-all active:scale-90 disabled:opacity-20"
     >
-      <ChevronLeft size={24} />
+      <ChevronLeft size={18} />
     </Button>
     
     <div className="flex flex-col items-center justify-center overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.span 
           key={label}
-          initial={{ y: 10, opacity: 0 }}
+          initial={{ y: 5, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -10, opacity: 0 }}
-          className="text-lg font-black tracking-tighter text-text-primary whitespace-nowrap"
+          exit={{ y: -5, opacity: 0 }}
+          className="text-sm font-bold tracking-tight text-text-primary whitespace-nowrap"
         >
           {label}
         </motion.span>
@@ -78,9 +78,9 @@ const Stepper = ({
       size="icon" 
       onClick={onNext} 
       disabled={nextDisabled}
-      className="rounded-xl w-12 h-12 hover:bg-primary/10 hover:text-primary transition-all active:scale-90 disabled:opacity-20"
+      className="rounded-lg w-9 h-9 hover:bg-primary/10 hover:text-primary transition-all active:scale-90 disabled:opacity-20"
     >
-      <ChevronRight size={24} />
+      <ChevronRight size={18} />
     </Button>
   </div>
 );
@@ -121,7 +121,7 @@ const DateSelector = ({
   // 2. Stepper Logic for MONTHLY
   if (type === "MONTHLY") {
     const currentIndex = availableMonths.indexOf(value);
-    const label = value ? `${value.split("-")[0]}${t.common.year} ${parseInt(value.split("-")[1])}${t.common.month}` : "---";
+    const label = value ? `${value.split("-")[0]}${t.common?.year || '년'} ${parseInt(value.split("-")[1])}${t.common?.month || '월'}` : "---";
     
     return (
       <Stepper 
@@ -140,7 +140,7 @@ const DateSelector = ({
     let label = "---";
     if (value.includes("|")) {
       const [y, m, w] = value.split("|");
-      label = `${y}${t.common.year} ${parseInt(m)}${t.common.month} ${w}${t.retrospective.week_unit || 'W'}`;
+      label = `${y}${t.common?.year || '년'} ${parseInt(m)}${t.common?.month || '월'} ${w}${t.retrospective?.week_unit || '주'}`;
     }
 
     return (
@@ -166,18 +166,18 @@ const DateSelector = ({
       <PopoverTrigger asChild>
         <Button 
           variant="outline" 
-          className="w-full h-16 bg-surface border-border rounded-2xl flex items-center justify-between px-6 hover:bg-surface-elevated transition-all group"
+          className="w-full h-12 bg-surface border-border rounded-xl flex items-center justify-between px-4 hover:bg-surface-elevated transition-all group"
         >
-          <div className="flex items-center gap-3">
-            <CalendarIcon size={20} className="text-text-muted group-hover:text-primary transition-colors" />
-            <span className="text-lg font-black tracking-tighter text-text-primary">
+          <div className="flex items-center gap-2">
+            <CalendarIcon size={16} className="text-text-muted group-hover:text-primary transition-colors" />
+            <span className="text-sm font-bold tracking-tight text-text-primary">
               {value.replace(/-/g, ". ")}
             </span>
           </div>
-          <ChevronRight size={20} className="text-text-muted group-hover:translate-x-1 transition-transform" />
+          <ChevronRight size={16} className="text-text-muted group-hover:translate-x-1 transition-transform" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 bg-surface border-border rounded-2xl shadow-2xl" align="center">
+      <PopoverContent className="w-auto p-0 bg-surface border-border rounded-xl shadow-2xl" align="center">
         <Calendar
           mode="single"
           selected={currentParsedDate}
@@ -280,21 +280,31 @@ export const RetrospectiveView = ({
   };
 
   const calculateRange = (val: string, type: "DAILY" | "WEEKLY" | "MONTHLY") => {
-    if (!val) return { start: "", end: "", label: "" };
+    if (!val || typeof val !== 'string') return { start: "", end: "", label: "" };
+    
     try {
-      if (type === "DAILY") return { start: val, end: val, label: val };
+      if (type === "DAILY") {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return { start: "", end: "", label: "" };
+        return { start: val, end: val, label: val };
+      }
+      
       if (type === "MONTHLY") {
+        if (!/^\d{4}-\d{2}$/.test(val)) return { start: "", end: "", label: "" };
         const date = parse(val, "yyyy-MM", new Date());
         if (!isValid(date)) return { start: "", end: "", label: "" };
-        const label = `${val.split("-")[0]}${t.common.year} ${parseInt(val.split("-")[1])}${t.common.month} ${t.retrospective.monthly}`;
+        const label = `${val.split("-")[0]}${t.common?.year || '년'} ${parseInt(val.split("-")[1])}${t.common?.month || '월'} ${t.retrospective?.monthly || '월간'}`;
         return { 
           start: format(startOfMonth(date), "yyyy-MM-dd"), 
           end: format(endOfMonth(date), "yyyy-MM-dd"), 
           label
         };
       }
+      
       if (type === "WEEKLY") {
+        if (!val.includes("|")) return { start: "", end: "", label: "" };
         const [y, m, w] = val.split("|");
+        if (!y || !m || !w) return { start: "", end: "", label: "" };
+        
         const firstDay = new Date(parseInt(y), parseInt(m) - 1, 1);
         const weeks = eachWeekOfInterval({ start: firstDay, end: endOfMonth(firstDay) }, { weekStartsOn: 1 });
         const weekStart = weeks[parseInt(w) - 1] || weeks[0];
@@ -305,7 +315,7 @@ export const RetrospectiveView = ({
         const endStr = format(e, "yyyy-MM-dd");
         return { 
           start: startStr, end: endStr, 
-          label: `${y}${t.common.year} ${parseInt(m)}${t.common.month} ${w}${t.retrospective.week_unit || 'W'} (${startStr} ~ ${endStr})` 
+          label: `${y}${t.common?.year || '년'} ${parseInt(m)}${t.common?.month || '월'} ${w}${t.retrospective?.week_unit || '주'} (${startStr} ~ ${endStr})` 
         };
       }
     } catch (e) { console.error(e); }
@@ -337,25 +347,27 @@ export const RetrospectiveView = ({
 
   const handleGenerate = async () => {
     if (retroType === "DAILY" && !activeDates.includes(startDate)) {
-      showToast(t.main.toast.no_data_for_date, "error");
+      showToast(t.main?.toast?.no_data_for_date || '해당 날짜에 데이터가 없습니다.', "error");
       return;
     }
     setIsGenerating(true);
-    setGenMessage(t.retrospective.gen_message);
+    setGenMessage(t.retrospective?.gen_message || '회고를 생성 중입니다...');
     try {
       const retro = await invoke<Retrospective>("generate_retrospective", { workspaceId, startDate, endDate, retroType, dateLabel });
       let permission = await isPermissionGranted();
       if (!permission) permission = await requestPermission() === 'granted';
       if (permission) {
         sendNotification({
-          title: t.retrospective.notification_title,
-          body: t.retrospective.notification_body.replace("{label}", dateLabel).replace("{type}", t.retrospective[retroType.toLowerCase()]),
+          title: t.retrospective?.notification_title || '회고 생성 완료!',
+          body: (t.retrospective?.notification_body || '{label} {type} 회고가 생성되었습니다.')
+            .replace("{label}", dateLabel)
+            .replace("{type}", t.retrospective?.[retroType.toLowerCase()] || ''),
         });
       }
       onShowSavedRetro(retro);
     } catch (error: any) {
-      if (error.toString().includes("already exists")) showToast(t.retrospective.duplicate_error, "error");
-      else if (error.toString().includes("No completed tasks")) showToast(t.retrospective.no_tasks_error, "error");
+      if (error.toString().includes("already exists")) showToast(t.retrospective?.duplicate_error || '이미 존재하는 회고입니다.', "error");
+      else if (error.toString().includes("No completed tasks")) showToast(t.retrospective?.no_tasks_error || '완료된 태스크가 없습니다.', "error");
       else showToast(`Error: ${error}`, "error");
     } finally {
       setIsGenerating(false); setGenMessage("");
@@ -370,32 +382,32 @@ export const RetrospectiveView = ({
 
   return (
     <div className="flex-1 flex h-screen overflow-hidden bg-background antialiased selection:bg-primary/30">
-      <aside className="w-72 border-r border-border bg-surface flex flex-col shrink-0 p-8 space-y-10">
+      <aside className="w-64 border-r border-border bg-surface flex flex-col shrink-0 p-6 space-y-8">
         <Button 
           variant="ghost" 
-          className="justify-start -ml-2 text-text-secondary hover:text-text-primary font-black h-12 px-3 group transition-all" 
+          className="justify-start -ml-2 text-text-secondary hover:text-text-primary font-bold h-10 px-3 group transition-all" 
           onClick={onClose}
         >
-          <ChevronLeft size={20} className="mr-2 group-hover:-translate-x-1 transition-transform" />
-          {t.sidebar.back}
+          <ChevronLeft size={18} className="mr-2 group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm">{t.sidebar?.back || '뒤로 가기'}</span>
         </Button>
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-2xl font-black tracking-tighter text-text-primary leading-tight">
-              {t.retrospective.title}
+            <h2 className="text-lg font-black tracking-tighter text-text-primary leading-tight">
+              {t.retrospective?.title || '회고'}
             </h2>
-            <div className="h-1 w-12 bg-primary rounded-full" />
+            <div className="h-0.5 w-8 bg-primary rounded-full" />
           </div>
-          <nav className="space-y-3">
+          <nav className="space-y-1.5">
             {[
-              { id: "create", label: t.retrospective.create_tab },
-              { id: "browse", label: t.retrospective.browse_tab }
+              { id: "create", label: t.retrospective?.create_tab || '회고 생성' },
+              { id: "browse", label: t.retrospective?.browse_tab || '회고 조회' }
             ].map((item) => (
               <Button 
                 key={item.id}
                 variant={tab === item.id ? "secondary" : "ghost"} 
                 className={cn(
-                  "w-full justify-start h-14 rounded-2xl font-bold text-lg px-6 transition-all duration-300",
+                  "w-full justify-start h-11 rounded-xl font-bold text-sm px-4 transition-all duration-300",
                   tab === item.id ? "bg-primary/10 text-primary shadow-sm" : "text-text-secondary hover:translate-x-1"
                 )}
                 onClick={() => setTab(item.id as any)}
@@ -408,24 +420,20 @@ export const RetrospectiveView = ({
       </aside>
 
       <main className="flex-1 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-y-auto p-12 max-w-4xl mx-auto w-full space-y-12 pb-32">
+        <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full space-y-8 pb-32">
           {tab === "create" ? (
-            <div className="space-y-10">
-              <div className="space-y-3">
-                <h1 className="text-5xl font-black tracking-tighter text-text-primary leading-none">
-                  {t.retrospective.create_title}
+            <div className="space-y-6">
+              <div className="space-y-1.5">
+                <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">
+                  {t.retrospective?.create_title || '새 회고 생성'}
                 </h1>
-                <p className="text-xl text-text-secondary font-bold tracking-tight">
-                  {t.retrospective.create_desc}
+                <p className="text-sm text-text-secondary font-medium tracking-tight">
+                  {t.retrospective?.create_desc || '업무를 돌아보고 더 나은 내일을 계획하세요.'}
                 </p>
               </div>
 
-              <div className="p-10 bg-surface border border-border rounded-[32px] space-y-10 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <Sparkles size={120} />
-                </div>
-
-                <div className="space-y-4">
+              <div className="p-6 bg-surface border border-border rounded-2xl space-y-6 shadow-xl relative overflow-hidden group">
+                <div className="space-y-3">
                   <div className="flex gap-2">
                     {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((type) => (
                       <Button 
@@ -433,17 +441,17 @@ export const RetrospectiveView = ({
                         variant={retroType === type ? "default" : "outline"} 
                         onClick={() => handleTypeChange(type)} 
                         className={cn(
-                          "flex-1 font-black h-14 rounded-2xl border-border text-base transition-all",
-                          retroType === type ? "shadow-lg scale-[1.02]" : "hover:bg-surface-elevated"
+                          "flex-1 font-bold h-10 rounded-xl border-border text-xs transition-all",
+                          retroType === type ? "shadow-md scale-[1.01]" : "hover:bg-surface-elevated"
                         )}
                       >
-                        {type === "DAILY" ? t.retrospective.daily : type === "WEEKLY" ? t.retrospective.weekly : t.retrospective.monthly}
+                        {type === "DAILY" ? t.retrospective?.daily : type === "WEEKLY" ? t.retrospective?.weekly : t.retrospective?.monthly}
                       </Button>
                     ))}
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <DateSelector 
                     type={retroType} 
                     value={inputValue} 
@@ -455,14 +463,14 @@ export const RetrospectiveView = ({
 
                 {genMessage && (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-6 bg-primary/5 border border-primary/20 rounded-2xl flex items-center gap-4"
+                    className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center gap-3"
                   >
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Sparkles size={20} className="text-primary animate-pulse" />
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Sparkles size={16} className="text-primary animate-pulse" />
                     </div>
-                    <p className="text-sm text-primary font-black tracking-tight">{genMessage}</p>
+                    <p className="text-xs text-primary font-bold tracking-tight">{genMessage}</p>
                   </motion.div>
                 )}
               </div>
@@ -470,33 +478,32 @@ export const RetrospectiveView = ({
               <Button 
                 onClick={handleGenerate} 
                 disabled={isGenerating} 
-                className="w-full bg-text-primary text-background hover:bg-zinc-200 h-20 rounded-[28px] font-black text-2xl shadow-2xl active:scale-95 disabled:opacity-50 transition-all duration-300 group"
+                className="w-full bg-text-primary text-background hover:bg-zinc-200 h-14 rounded-2xl font-black text-lg shadow-xl active:scale-95 disabled:opacity-50 transition-all duration-300 group"
               >
                 {isGenerating ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 border-4 border-background/30 border-t-background rounded-full animate-spin" />
-                    {t.retrospective.generating}
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-3 border-background/30 border-t-background rounded-full animate-spin" />
+                    {t.retrospective?.generating || '생성 중...'}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3">
-                    {t.retrospective.generate_btn}
-                    <Sparkles size={24} className="group-hover:rotate-12 transition-transform" />
+                  <div className="flex items-center gap-2">
+                    {t.retrospective?.generate_btn || '회고 생성하기'}
                   </div>
                 )}
               </Button>
             </div>
           ) : (
-            <div className="space-y-10">
-              <div className="space-y-3">
-                <h1 className="text-5xl font-black tracking-tighter text-text-primary leading-none">
-                  {t.retrospective.browse_title}
+            <div className="space-y-6">
+              <div className="space-y-1.5">
+                <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">
+                  {t.retrospective?.browse_title || '회고 조회'}
                 </h1>
-                <p className="text-xl text-text-secondary font-bold tracking-tight">
-                  {t.retrospective.browse_desc}
+                <p className="text-sm text-text-secondary font-medium tracking-tight">
+                  {t.retrospective?.browse_desc || '과거의 기록들을 톺아보며 성장을 확인하세요.'}
                 </p>
               </div>
 
-              <div className="p-10 bg-surface border border-border rounded-[32px] space-y-10 shadow-2xl relative">
+              <div className="p-6 bg-surface border border-border rounded-2xl space-y-6 shadow-xl relative">
                 <div className="flex gap-2">
                   {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((type) => (
                     <Button 
@@ -504,11 +511,11 @@ export const RetrospectiveView = ({
                       variant={browseType === type ? "default" : "outline"} 
                       onClick={() => handleBrowseTypeChange(type)} 
                       className={cn(
-                        "flex-1 font-black h-14 rounded-2xl border-border text-base transition-all",
-                        browseType === type ? "shadow-lg scale-[1.02]" : "hover:bg-surface-elevated"
+                        "flex-1 font-bold h-10 rounded-xl border-border text-xs transition-all",
+                        browseType === type ? "shadow-md scale-[1.01]" : "hover:bg-surface-elevated"
                       )}
                     >
-                      {type === "DAILY" ? t.retrospective.daily : type === "WEEKLY" ? t.retrospective.weekly : t.retrospective.monthly}
+                      {type === "DAILY" ? t.retrospective?.daily : type === "WEEKLY" ? t.retrospective?.weekly : t.retrospective?.monthly}
                     </Button>
                   ))}
                 </div>
@@ -525,36 +532,33 @@ export const RetrospectiveView = ({
                 {foundRetro ? (
                   <motion.div 
                     key={foundRetro.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="p-12 bg-surface rounded-[48px] border border-border shadow-2xl space-y-10"
+                    exit={{ opacity: 0, y: -10 }}
+                    className="p-8 bg-surface rounded-3xl border border-border shadow-xl space-y-6"
                   >
-                    <div className="flex justify-between items-start pb-8 border-b border-border/50">
-                      <div className="space-y-2">
-                        <h2 className="text-3xl font-black text-text-primary tracking-tighter flex items-center gap-4 leading-none">
-                          <div className="w-12 h-12 rounded-2xl bg-warning/10 flex items-center justify-center">
-                            <Sparkles size={28} className="text-warning" />
-                          </div>
+                    <div className="flex justify-between items-start pb-6 border-b border-border/50">
+                      <div className="space-y-1.5">
+                        <h2 className="text-lg font-bold text-text-primary tracking-tight leading-none">
                           {foundRetro.dateLabel}
                         </h2>
                         {foundRetro.usedModel && (
-                          <p className="text-[11px] font-black text-text-muted uppercase tracking-[0.2em] ml-16">
-                            AI Engine: {foundRetro.usedModel.replace('models/', '').toUpperCase()}
+                          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                            Engine: {foundRetro.usedModel.replace('models/', '').toUpperCase()}
                           </p>
                         )}
                       </div>
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        className="w-12 h-12 rounded-2xl hover:bg-primary/10 transition-all active:scale-90"
+                        className="w-10 h-10 rounded-xl hover:bg-primary/10 transition-all active:scale-90"
                         onClick={() => handleCopy(foundRetro.content)}
                       >
-                        {isCopied ? <Check size={20} className="text-green-400" /> : <Copy size={20} />}
+                        {isCopied ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
                       </Button>
                     </div>
 
-                    <div className="prose prose-invert max-w-none prose-p:text-lg prose-p:leading-relaxed prose-p:text-text-secondary prose-headings:font-black prose-headings:tracking-tighter prose-headings:text-text-primary prose-strong:text-primary prose-code:text-warning prose-code:bg-warning/5 prose-code:px-1 prose-code:rounded prose-ul:space-y-3 prose-li:text-text-secondary">
+                    <div className="prose prose-invert max-w-none prose-p:text-sm prose-p:leading-relaxed prose-p:text-text-secondary prose-headings:font-black prose-headings:tracking-tighter prose-headings:text-text-primary prose-strong:text-primary prose-code:text-warning prose-code:bg-warning/5 prose-code:px-1 prose-code:rounded prose-ul:space-y-2 prose-li:text-text-secondary prose-li:text-sm">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{foundRetro.content}</ReactMarkdown>
                     </div>
                   </motion.div>
@@ -562,17 +566,17 @@ export const RetrospectiveView = ({
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="p-20 border-2 border-dashed border-border rounded-[48px] flex flex-col items-center justify-center text-center space-y-6 bg-surface/30 backdrop-blur-sm"
+                    className="p-12 border-2 border-dashed border-border rounded-3xl flex flex-col items-center justify-center text-center space-y-4 bg-surface/30 backdrop-blur-sm"
                   >
-                    <div className="w-24 h-24 rounded-[32px] bg-border/20 flex items-center justify-center text-text-muted transition-transform hover:scale-105 duration-500">
-                      <CalendarIcon size={48} />
+                    <div className="w-16 h-16 rounded-2xl bg-border/20 flex items-center justify-center text-text-muted transition-transform hover:scale-105 duration-500">
+                      <CalendarIcon size={32} />
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-2xl text-text-secondary font-black tracking-tight">
-                        {t.retrospective.no_data_for_label}
+                    <div className="space-y-1">
+                      <p className="text-lg text-text-secondary font-bold tracking-tight">
+                        {t.retrospective?.no_data_for_label || '회고 데이터가 없습니다.'}
                       </p>
-                      <p className="text-text-muted font-bold tracking-tight">
-                        {t.retrospective.select_another_range || "다른 기간을 선택하거나 회고를 생성해 보세요."}
+                      <p className="text-xs text-text-muted font-medium tracking-tight">
+                        {t.retrospective?.select_another_range || "다른 기간을 선택하거나 회고를 생성해 보세요."}
                       </p>
                     </div>
                   </motion.div>
@@ -585,3 +589,4 @@ export const RetrospectiveView = ({
     </div>
   );
 };
+

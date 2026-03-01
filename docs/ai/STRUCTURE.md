@@ -50,12 +50,15 @@
         - **Weekly**: Sequential dropdowns for Year -> Month -> n-th Week. Automatically calculates precise start/end dates for the selected week.
         - **Monthly**: Sequential dropdowns for Year -> Month. Automatically calculates the full month range.
       - **Stability & Defense**: 
-        - **Dropdown-First UI**: Replaced text inputs and steppers with `Select` components to prevent formatting errors.
+        - **Optional Chaining & Fallbacks**: All translation (`t`) references are protected with `?.` and provide default values to prevent `TypeError` during initialization.
+        - **Input Validation**: `calculateRange` includes regex and type checks to prevent `date-fns` errors when switching tabs or types.
         - **Data-Driven Options**: Year/Month options are derived from `activeDates` to ensure users only select periods with actual data.
-        - **Internal Value Standard**: Uses simplified internal separators (`yyyy|MM|w`) to avoid ISO week parsing complexities.
+      - **Typography & UI Refinement**:
+        - **Compact Design**: Downsized font sizes (Main Title: `text-2xl`, Section Title: `text-lg`) and reduced padding for a more professional, "information-dense" look.
+        - **Minimalist Aesthetics**: Removed decorative emojis and simplified the layout. Steppers and selectors now use `surface` and `border` colors for seamless integration.
+        - **Markdown Optimization**: Fixed content font size to `text-sm` for better readability of long reports.
       - **Browse Tab**: Shares the same selection logic for consistency. Immediate DB query on period change.
-      - **Layout**: High-fidelity UI with simplified labels and a compact selection area to maximize markdown content visibility.
-      - **Header**: Standardized with a "Latest Retrospective" button for quick access.
+      - **Header**: Standardized with a back button and clear titles.
     - **Settings View**: 사이드바 기반 탭 전환 (프로필 / 워크스페이스).
 
     ---
