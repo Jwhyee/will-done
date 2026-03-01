@@ -101,7 +101,13 @@ export const translations = {
         no_data_for_date: "해당 날짜에 기록된 데이터가 없습니다.",
         profile_updated: "프로필이 성공적으로 업데이트되었습니다.",
         workspace_updated: "워크스페이스가 성공적으로 업데이트되었습니다.",
-      }
+      },
+      health_care_messages: [
+        "벌써 2시간째 몰입 중이시네요! 잠시 일어서서 스트레칭 어떠세요? 🧘",
+        "허리를 쭉 펴고 기지개를 한 번 켜보세요. 몸이 훨씬 가벼워질 거예요! ✨",
+        "오랫동안 앉아 계셨네요. 잠시 업무에서 눈을 떼고 먼 곳을 바라보며 눈을 쉬어주세요. 👀",
+        "일어서서 업무를 진행해보는 건 어떨까요? 집중력을 높이는 데 도움이 됩니다! 🚶",
+      ]
     },
     retrospective: {
       title: "회고",
@@ -245,7 +251,13 @@ export const translations = {
         no_data_for_date: "No data available for the selected date.",
         profile_updated: "Profile updated successfully.",
         workspace_updated: "Workspace updated successfully.",
-      }
+      },
+      health_care_messages: [
+        "You've been focused for 2 hours! How about standing up for a quick stretch? 🧘",
+        "Stretch your back and arms. Your body will feel much lighter! ✨",
+        "You've been sitting for a long time. Take a break and look far away to rest your eyes. 👀",
+        "How about trying to work standing up? it helps boost concentration! 🚶",
+      ]
     },
     retrospective: {
       title: "Retrospective",

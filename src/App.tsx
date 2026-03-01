@@ -63,6 +63,7 @@ function AppContent() {
   const [retrospectiveOpen, setRetrospectiveOpen] = useState(false);
   const [activeRetrospective, setActiveRetrospective] = useState<Retrospective | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [todayCompletedDuration, setTodayCompletedDuration] = useState<number>(0);
   
   const { showToast } = useToast();
 
@@ -123,6 +124,9 @@ function AppContent() {
       const list = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId, date: dateStr });
       const inbox = await invoke<Task[]>("get_inbox", { workspaceId: activeWorkspaceId });
       
+      const completedDuration = await invoke<number>("get_today_completed_duration", { workspaceId: activeWorkspaceId });
+      setTodayCompletedDuration(completedDuration);
+
       const now = new Date();
       const isToday = dateStr === format(now, "yyyy-MM-dd");
 
@@ -228,7 +232,9 @@ function AppContent() {
   };
 
   const onTransition = async (block: TimeBlock, action: string, extraMinutes?: number, reviewMemo?: string) => {
+    if (!activeWorkspaceId) return;
     try {
+      const prevDuration = todayCompletedDuration;
       await invoke("process_task_transition", {
         input: {
           blockId: block.id,
@@ -238,6 +244,17 @@ function AppContent() {
         }
       });
       setTransitionBlock(null);
+      
+      // Update duration and check threshold
+      const newDuration = await invoke<number>("get_today_completed_duration", { workspaceId: activeWorkspaceId });
+      setTodayCompletedDuration(newDuration);
+
+      if (Math.floor(prevDuration / 120) < Math.floor(newDuration / 120)) {
+        const messages = t.main.health_care_messages;
+        const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+        showToast(randomMsg, "success");
+      }
+
       fetchMainData();
     } catch (error) {
       console.error("Transition failed:", error);
