@@ -36,17 +36,21 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       {children}
       <AnimatePresence>
         {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] ${
-              toast.type === "success" ? "bg-emerald-600 border-emerald-500/50" : "bg-red-500 border-red-400/50"
-            } text-text-primary px-6 py-3 rounded-2xl shadow-2xl font-black text-sm flex items-center gap-3 border`}
-          >
-            {toast.type === "success" ? <Sparkles size={18} /> : <AlertCircle size={18} />}
-            {toast.message}
-          </motion.div>
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-max max-w-[90vw] md:max-w-md">
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              className={`${
+                toast.type === "success" ? "bg-emerald-600 border-emerald-500/50" : "bg-red-500 border-red-400/50"
+              } text-text-primary px-6 py-3 rounded-2xl shadow-2xl font-black text-sm flex items-center gap-3 border`}
+            >
+              <div className="shrink-0">
+                {toast.type === "success" ? <Sparkles size={18} /> : <AlertCircle size={18} />}
+              </div>
+              <span className="leading-tight">{toast.message}</span>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </ToastContext.Provider>
