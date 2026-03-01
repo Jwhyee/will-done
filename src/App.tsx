@@ -55,7 +55,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { translations, getLang } from "@/lib/i18n";
+import { translations, getLang, type Lang } from "@/lib/i18n";
 import { format } from "date-fns";
 
 // --- Types ---
@@ -82,6 +82,7 @@ interface User {
   id: number;
   nickname: string;
   gemini_api_key: string | null;
+  lang: string;
 }
 
 interface Retrospective {
@@ -528,8 +529,218 @@ const RetrospectiveView = ({
   );
 };
 
+const SettingsView = ({ 
+  user,
+  workspaceId,
+  t, 
+  onClose,
+  onUserUpdate,
+  onWorkspaceUpdate
+}: { 
+  user: User,
+  workspaceId: number,
+  t: any,
+  onClose: () => void,
+  onUserUpdate: () => void,
+  onWorkspaceUpdate: () => void
+}) => {
+  const [tab, setTab] = useState<"profile" | "workspace">("profile");
+
+  // User Form
+  const userForm = useForm({
+    defaultValues: {
+      nickname: user.nickname,
+      gemini_api_key: user.gemini_api_key || "",
+      lang: user.lang
+    }
+  });
+
+  // Workspace Form
+  const workspaceForm = useForm({
+    defaultValues: async () => {
+      const ws = await invoke<any>("get_workspace", { id: workspaceId });
+      const ut = await invoke<any[]>("get_unplugged_times", { workspaceId });
+      return {
+        name: ws.name,
+        core_time_start: ws.core_time_start || "",
+        core_time_end: ws.core_time_end || "",
+        role_intro: ws.role_intro || "",
+        unplugged_times: ut.map(u => ({ label: u.label, start_time: u.start_time, end_time: u.end_time }))
+      };
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: workspaceForm.control,
+    name: "unplugged_times"
+  });
+
+  const onUserSubmit = async (data: any) => {
+    try {
+      await invoke("save_user", { 
+        nickname: data.nickname, 
+        gemini_api_key: data.gemini_api_key || null,
+        lang: data.lang
+      });
+      onUserUpdate();
+      alert("Profile updated successfully!");
+    } catch (error) {
+      alert(error);
+    }
+  };
+
+  const onWorkspaceSubmit = async (data: any) => {
+    try {
+      await invoke("update_workspace", {
+        id: workspaceId,
+        input: {
+          ...data,
+          core_time_start: data.core_time_start || null,
+          core_time_end: data.core_time_end || null,
+          role_intro: data.role_intro || null,
+        }
+      });
+      onWorkspaceUpdate();
+      alert("Workspace updated successfully!");
+    } catch (error) {
+      alert(error);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex overflow-hidden bg-[#111114]">
+      <aside className="w-64 border-r border-[#2e2e33] flex flex-col shrink-0 p-6 space-y-8">
+        <div className="space-y-4">
+          <h2 className="text-xl font-black tracking-tighter text-white">Settings</h2>
+          <nav className="space-y-2">
+            <Button 
+              variant={tab === "profile" ? "secondary" : "ghost"} 
+              className="w-full justify-start font-bold"
+              onClick={() => setTab("profile")}
+            >
+              {t.sidebar.profile}
+            </Button>
+            <Button 
+              variant={tab === "workspace" ? "secondary" : "ghost"} 
+              className="w-full justify-start font-bold"
+              onClick={() => setTab("workspace")}
+            >
+              {t.sidebar.workspace}
+            </Button>
+          </nav>
+        </div>
+        <Button variant="outline" className="mt-auto border-[#2e2e33] font-bold" onClick={onClose}>
+          {t.main.delete_confirm.cancel}
+        </Button>
+      </aside>
+
+      <main className="flex-1 overflow-y-auto p-12 max-w-3xl mx-auto">
+        {tab === "profile" ? (
+          <form onSubmit={userForm.handleSubmit(onUserSubmit)} className="space-y-12">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-black tracking-tighter text-white">{t.sidebar.profile}</h1>
+              <p className="text-zinc-500 font-bold">{t.sidebar.settings_desc}</p>
+            </div>
+
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.onboarding.nickname_label}</Label>
+                <Input {...userForm.register("nickname")} className="bg-[#1c1c21] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold" />
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
+                <Input type="password" {...userForm.register("gemini_api_key")} className="bg-[#1c1c21] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold" />
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.sidebar.lang_label}</Label>
+                <select 
+                  {...userForm.register("lang")}
+                  className="w-full h-12 bg-[#1c1c21] border border-[#2e2e33] rounded-xl px-4 font-bold text-white outline-none focus:ring-1 focus:ring-white/10 appearance-none"
+                >
+                  <option value="ko">한국어 (Korean)</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+
+              <Button type="submit" className="w-full bg-white text-black hover:bg-zinc-200 font-black h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">
+                {t.sidebar.save_changes}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="space-y-12">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-black tracking-tighter text-white">{t.sidebar.workspace}</h1>
+              <p className="text-zinc-500 font-bold">{t.sidebar.settings_desc}</p>
+            </div>
+
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
+                <Input {...workspaceForm.register("name")} className="bg-[#1c1c21] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold" />
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
+                <div className="grid grid-cols-2 gap-6">
+                  <Input type="time" {...workspaceForm.register("core_time_start")} className="bg-[#1c1c21] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                  <Input type="time" {...workspaceForm.register("core_time_end")} className="bg-[#1c1c21] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => append({ label: "", start_time: "12:00", end_time: "13:00" })} 
+                    className="border-[#2e2e33] bg-[#1c1c21] hover:bg-[#2e2e33] text-zinc-200 font-black rounded-lg h-9"
+                  >
+                    <Plus size={16} className="mr-2" /> {t.workspace_setup.add_unplugged}
+                  </Button>
+                </div>
+                <div className="space-y-4 pb-2">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="p-5 bg-[#1c1c21]/60 border border-[#2e2e33] rounded-2xl space-y-4 relative">
+                      <button type="button" onClick={() => remove(index)} className="absolute top-4 right-4 text-zinc-600 hover:text-red-400 transition-colors">
+                        <X size={16} />
+                      </button>
+                      <Input {...workspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-[#111114] border-[#2e2e33] h-11 rounded-xl px-4 font-bold" />
+                      <div className="grid grid-cols-2 gap-4">
+                        <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.start_time` as const)} className="bg-[#111114] border-[#2e2e33] h-11 rounded-xl font-bold [color-scheme:dark]" />
+                        <Input type="time" {...workspaceForm.register(`unplugged_times.${index}.end_time` as const)} className="bg-[#111114] border-[#2e2e33] h-11 rounded-xl font-bold [color-scheme:dark]" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.role_intro}</Label>
+                <textarea 
+                  {...workspaceForm.register("role_intro")}
+                  placeholder={t.workspace_setup.role_placeholder}
+                  className="w-full min-h-[120px] bg-[#1c1c21] border-[#2e2e33] rounded-2xl p-5 text-sm text-white focus:outline-none placeholder:text-zinc-700 font-bold leading-relaxed"
+                />
+              </div>
+
+              <Button type="submit" className="w-full bg-white text-black hover:bg-zinc-200 font-black h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">
+                {t.sidebar.save_changes}
+              </Button>
+            </div>
+          </form>
+        )}
+      </main>
+    </div>
+  );
+};
+
 function App() {
-  const [view, setView] = useState<"loading" | "onboarding" | "workspace_setup" | "main" | "retrospective">("loading");
+  const [view, setView] = useState<"loading" | "onboarding" | "workspace_setup" | "main" | "retrospective" | "settings">("loading");
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -541,7 +752,6 @@ function App() {
   const [transitionBlock, setTransitionBlock] = useState<TimeBlock | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
   const [moveAllConfirm, setMoveAllConfirm] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [reviewMemo, setReviewMemo] = useState("");
   const [retrospectiveOpen, setRetrospectiveOpen] = useState(false);
   const [retrospectiveContent, setRetrospectiveContent] = useState("");
@@ -554,7 +764,7 @@ function App() {
   const [activeDates, setActiveDates] = useState<string[]>([]);
   const [manualDate, setManualDate] = useState("");
 
-  const lang = useMemo(() => getLang(), []);
+  const lang = useMemo(() => (user?.lang || getLang()) as Lang, [user]);
   const t = translations[lang];
 
   const showToast = (message: string, type: "error" | "success" = "error") => {
@@ -646,14 +856,6 @@ function App() {
     }
   });
 
-  const settingsUserForm = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
-  });
-
-  const settingsWorkspaceForm = useForm<WorkspaceFormValues>({
-    resolver: zodResolver(workspaceSchema),
-  });
-
   const taskForm = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: { title: "", hours: 0, minutes: 30, planning_memo: "", is_urgent: false }
@@ -661,11 +863,6 @@ function App() {
 
   const { fields, append, remove } = useFieldArray({
     control: workspaceForm.control,
-    name: "unplugged_times",
-  });
-
-  const { fields: sFields, append: sAppend, remove: sRemove } = useFieldArray({
-    control: settingsWorkspaceForm.control,
     name: "unplugged_times",
   });
 
@@ -813,49 +1010,6 @@ function App() {
     }
   };
 
-  const openSettings = async () => {
-    if (!activeWorkspaceId) return;
-    const user = await invoke<User>("get_user");
-    const ws = await invoke<any>("get_workspace", { id: activeWorkspaceId });
-    const ut = await invoke<any[]>("get_unplugged_times", { workspaceId: activeWorkspaceId });
-
-    settingsUserForm.reset({ nickname: user.nickname, gemini_api_key: user.gemini_api_key || "" });
-    settingsWorkspaceForm.reset({
-      name: ws.name,
-      core_time_start: ws.core_time_start || "",
-      core_time_end: ws.core_time_end || "",
-      role_intro: ws.role_intro || "",
-      unplugged_times: ut.map(u => ({ label: u.label, start_time: u.start_time, end_time: u.end_time }))
-    });
-    setSettingsOpen(true);
-  };
-
-  const onSettingsSubmit = async () => {
-    const userData = settingsUserForm.getValues();
-    const wsData = settingsWorkspaceForm.getValues();
-    
-    try {
-      await invoke("save_user", { nickname: userData.nickname, gemini_api_key: userData.gemini_api_key || null });
-      if (activeWorkspaceId) {
-        await invoke("update_workspace", { 
-          id: activeWorkspaceId, 
-          input: {
-            ...wsData,
-            core_time_start: wsData.core_time_start || null,
-            core_time_end: wsData.core_time_end || null,
-            role_intro: wsData.role_intro || null,
-          } 
-        });
-      }
-      setSettingsOpen(false);
-      fetchMainData();
-      const wsList = await invoke<any[]>("get_workspaces");
-      setWorkspaces(wsList);
-    } catch (error) {
-      console.error("Settings update failed:", error);
-    }
-  };
-
   const handleGenerateRetrospective = async (date: Date) => {
     if (!activeWorkspaceId) return;
     setRetrospectiveOpen(true);
@@ -888,7 +1042,13 @@ function App() {
   };
 
   const onUserSubmit = async (data: UserFormValues) => {
-    await invoke("save_user", { nickname: data.nickname, gemini_api_key: data.gemini_api_key || null });
+    await invoke("save_user", { 
+      nickname: data.nickname, 
+      gemini_api_key: data.gemini_api_key || null,
+      lang: getLang() 
+    });
+    const u = await invoke<User>("get_user");
+    setUser(u);
     setView("workspace_setup");
   };
 
@@ -990,10 +1150,9 @@ function App() {
       <TooltipProvider>
         <div className="h-screen bg-[#111114] text-white flex overflow-hidden font-sans antialiased select-none">
           
-          {/* 1차 사이드바 */}
-          {(view === "main" || view === "retrospective") && (
-          <aside className="w-16 border-r border-[#2e2e33] bg-[#111114] flex flex-col items-center py-4 space-y-4 shrink-0 shadow-2xl z-20">
-            {workspaces.map((ws) => (
+                  {/* 1차 사이드바 */}
+                  {(view === "main" || view === "retrospective" || view === "settings") && (
+                    <aside className="w-16 border-r border-[#2e2e33] bg-[#111114] flex flex-col items-center py-4 space-y-4 shrink-0 shadow-2xl z-20">            {workspaces.map((ws) => (
               <button
                 key={ws.id}
                 onClick={() => {
@@ -1028,6 +1187,24 @@ function App() {
             onShowSavedRetro={(retro) => {
               setRetrospectiveContent(retro.content);
               setRetrospectiveOpen(true);
+            }}
+          />
+        )}
+
+        {view === "settings" && activeWorkspaceId && user && (
+          <SettingsView 
+            user={user}
+            workspaceId={activeWorkspaceId} 
+            t={t} 
+            onClose={() => setView("main")} 
+            onUserUpdate={async () => {
+              const u = await invoke<User>("get_user");
+              setUser(u);
+            }}
+            onWorkspaceUpdate={async () => {
+              fetchMainData();
+              const wsList = await invoke<any[]>("get_workspaces");
+              setWorkspaces(wsList);
             }}
           />
         )}
@@ -1117,17 +1294,16 @@ function App() {
               </ScrollArea>
             </div>
 
-            <div className="p-5 border-t border-[#2e2e33]">
-              <Button 
-                onClick={openSettings}
-                variant="ghost" 
-                className="w-full justify-start text-zinc-400 hover:text-white hover:bg-[#2e2e33] space-x-4 h-12 px-4 rounded-xl transition-all"
-              >
-                <Settings size={20} />
-                <span className="font-bold text-sm">{t.sidebar.settings}</span>
-              </Button>
-            </div>
-          </aside>
+                        <div className="p-5 border-t border-[#2e2e33]">
+                          <Button
+                            onClick={() => setView("settings")}
+                            variant="ghost"
+                            className="w-full justify-start text-zinc-400 hover:text-white hover:bg-[#2e2e33] space-x-4 h-12 px-4 rounded-xl transition-all"
+                          >
+                            <Settings size={20} />
+                            <span className="font-bold text-sm">{t.sidebar.settings}</span>
+                          </Button>
+                        </div>          </aside>
         )}
 
         {/* 메인 영역 */}
@@ -1447,98 +1623,6 @@ function App() {
                       className="w-full bg-white text-black hover:bg-zinc-200 font-black h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95 disabled:opacity-50"
                     >
                       Copy to Clipboard
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              {/* Settings Modal */}
-              <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-                <DialogContent className="sm:max-w-[550px] h-[85vh] bg-[#1c1c21] border-[#2e2e33] text-white shadow-2xl flex flex-col rounded-2xl p-0 border-t-zinc-700/50 overflow-hidden antialiased">
-                  <DialogHeader className="p-8 pb-4 shrink-0 space-y-3">
-                    <DialogTitle className="text-2xl font-black tracking-tighter text-white leading-none">
-                      {t.sidebar.settings}
-                    </DialogTitle>
-                    <DialogDescription className="text-zinc-400 font-bold text-sm">{t.sidebar.settings_title}</DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="flex-1 overflow-y-auto px-8 scrollbar-hide">
-                    <div className="space-y-10 py-6">
-                      {/* User Settings */}
-                      <form className="space-y-6">
-                        <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">{t.sidebar.profile}</h3>
-                        <div className="space-y-3">
-                          <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.onboarding.nickname_label}</Label>
-                          <Input {...settingsUserForm.register("nickname")} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold" />
-                        </div>
-                        <div className="space-y-3">
-                          <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
-                          <Input type="password" {...settingsUserForm.register("gemini_api_key")} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold" />
-                        </div>
-                      </form>
-
-                      <Separator className="bg-[#2e2e33]" />
-
-                      {/* Workspace Settings */}
-                      <form className="space-y-8">
-                        <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">{t.sidebar.workspace}</h3>
-                        <div className="space-y-3">
-                          <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
-                          <Input {...settingsWorkspaceForm.register("name")} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold" />
-                        </div>
-
-                        <div className="space-y-4">
-                          <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
-                          <div className="grid grid-cols-2 gap-6">
-                            <Input type="time" {...settingsWorkspaceForm.register("core_time_start")} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
-                            <Input type="time" {...settingsWorkspaceForm.register("core_time_end")} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
-                          </div>
-                        </div>
-
-                        <div className="space-y-6">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => sAppend({ label: "", start_time: "12:00", end_time: "13:00" })} 
-                              className="border-[#2e2e33] bg-[#111114] hover:bg-[#2e2e33] text-zinc-200 font-black rounded-lg h-9"
-                            >
-                              <Plus size={16} className="mr-2" /> {t.workspace_setup.add_unplugged}
-                            </Button>
-                          </div>
-                          <div className="space-y-4 pb-2">
-                            {sFields.map((field, index) => (
-                              <div key={field.id} className="p-5 bg-[#111114]/60 border border-[#2e2e33] rounded-2xl space-y-4 relative">
-                                <button type="button" onClick={() => sRemove(index)} className="absolute top-4 right-4 text-zinc-600 hover:text-red-400">
-                                  <X size={16} />
-                                </button>
-                                <Input {...settingsWorkspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl px-4 font-bold" />
-                                <div className="grid grid-cols-2 gap-4">
-                                  <Input type="time" {...settingsWorkspaceForm.register(`unplugged_times.${index}.start_time` as const)} className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl font-bold [color-scheme:dark]" />
-                                  <Input type="time" {...settingsWorkspaceForm.register(`unplugged_times.${index}.end_time` as const)} className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl font-bold [color-scheme:dark]" />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.role_intro}</Label>
-                          <textarea 
-                            {...settingsWorkspaceForm.register("role_intro")}
-                            placeholder={t.workspace_setup.role_placeholder}
-                            className="w-full min-h-[120px] bg-[#111114] border-[#2e2e33] rounded-2xl p-5 text-sm text-white focus:outline-none placeholder:text-zinc-700 font-bold leading-relaxed"
-                          />
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-
-                  <DialogFooter className="p-8 pt-4 pb-8 border-t border-[#2e2e33] bg-[#1c1c21] shrink-0">
-                    <Button onClick={onSettingsSubmit} className="w-full bg-white text-black hover:bg-zinc-200 font-black h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95">
-                      {t.sidebar.save_changes}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

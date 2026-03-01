@@ -11,6 +11,7 @@ pub struct User {
     pub id: i64,
     pub nickname: String,
     pub gemini_api_key: Option<String>,
+    pub lang: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
@@ -308,14 +309,16 @@ async fn save_user(
     state: State<'_, DbState>,
     nickname: String,
     gemini_api_key: Option<String>,
+    lang: String,
 ) -> Result<(), String> {
     sqlx::query(
-        "INSERT INTO users (id, nickname, gemini_api_key) 
-         VALUES (1, ?1, ?2) 
-         ON CONFLICT(id) DO UPDATE SET nickname=?1, gemini_api_key=?2",
+        "INSERT INTO users (id, nickname, gemini_api_key, lang) 
+         VALUES (1, ?1, ?2, ?3) 
+         ON CONFLICT(id) DO UPDATE SET nickname=?1, gemini_api_key=?2, lang=?3",
     )
     .bind(nickname)
     .bind(gemini_api_key)
+    .bind(lang)
     .execute(&state.pool)
     .await
     .map_err(|e| e.to_string())?;
@@ -1037,7 +1040,10 @@ pub fn run() {
                     // sqlx::query("DROP TABLE IF EXISTS users").execute(&pool).await.ok();
                 }
 
-                sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT)").execute(&pool).await.ok();
+                sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en')").execute(&pool).await.ok();
+                // Migration: add lang column if exists (for existing DBs)
+                sqlx::query("ALTER TABLE users ADD COLUMN lang TEXT NOT NULL DEFAULT 'en'").execute(&pool).await.ok();
+                
                 sqlx::query("CREATE TABLE IF NOT EXISTS workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS unplugged_times (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, label TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, estimated_minutes INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
