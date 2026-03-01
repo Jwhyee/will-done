@@ -3,7 +3,7 @@ use crate::models::User;
 use crate::error::Result;
 
 pub async fn get_user(pool: &SqlitePool) -> Result<Option<User>> {
-    let user = sqlx::query_as::<_, User>("SELECT id, nickname, gemini_api_key, lang, last_successful_model FROM users WHERE id = 1")
+    let user = sqlx::query_as::<_, User>("SELECT id, nickname, gemini_api_key, lang, last_successful_model, is_notification_enabled FROM users WHERE id = 1")
         .fetch_optional(pool)
         .await?;
     Ok(user)
@@ -14,18 +14,21 @@ pub async fn save_user(
     nickname: &str,
     gemini_api_key: Option<&str>,
     lang: &str,
+    is_notification_enabled: bool,
 ) -> Result<()> {
     sqlx::query(
-        "INSERT INTO users (id, nickname, gemini_api_key, lang) 
-         VALUES (1, ?, ?, ?)
+        "INSERT INTO users (id, nickname, gemini_api_key, lang, is_notification_enabled) 
+         VALUES (1, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
             nickname = excluded.nickname,
             gemini_api_key = excluded.gemini_api_key,
-            lang = excluded.lang",
+            lang = excluded.lang,
+            is_notification_enabled = excluded.is_notification_enabled",
     )
     .bind(nickname)
     .bind(gemini_api_key)
     .bind(lang)
+    .bind(is_notification_enabled)
     .execute(pool)
     .await?;
     Ok(())
@@ -57,25 +60,27 @@ mod tests {
     #[tokio::test]
     async fn test_save_and_get_user() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query("CREATE TABLE users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT, is_notification_enabled BOOLEAN NOT NULL DEFAULT 0)").execute(&pool).await.unwrap();
 
         // First save
-        save_user(&pool, "Alice", Some("key1"), "en").await.unwrap();
+        save_user(&pool, "Alice", Some("key1"), "en", true).await.unwrap();
         
         let user = get_user(&pool).await.unwrap().unwrap();
         assert_eq!(user.nickname, "Alice");
         assert_eq!(user.gemini_api_key, Some("key1".to_string()));
+        assert_eq!(user.is_notification_enabled, true);
 
         // Update
-        save_user(&pool, "Alice Updated", Some("key2"), "ko").await.unwrap();
+        save_user(&pool, "Alice Updated", Some("key2"), "ko", false).await.unwrap();
         
         let user = get_user(&pool).await.unwrap().unwrap();
         assert_eq!(user.nickname, "Alice Updated");
         assert_eq!(user.gemini_api_key, Some("key2".to_string()));
         assert_eq!(user.lang, "ko");
+        assert_eq!(user.is_notification_enabled, false);
 
         // Clear API Key
-        save_user(&pool, "Alice Updated", None, "ko").await.unwrap();
+        save_user(&pool, "Alice Updated", None, "ko", false).await.unwrap();
         let user = get_user(&pool).await.unwrap().unwrap();
         assert_eq!(user.gemini_api_key, None);
     }

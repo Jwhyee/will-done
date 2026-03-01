@@ -8,6 +8,7 @@ pub struct User {
     pub gemini_api_key: Option<String>,
     pub lang: String,
     pub last_successful_model: Option<String>,
+    pub is_notification_enabled: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]

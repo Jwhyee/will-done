@@ -4,8 +4,9 @@ pub mod database;
 pub mod commands;
 
 use std::fs;
-use tauri::Manager;
+use tauri::{Manager, Emitter, Listener};
 use sqlx::sqlite::SqlitePool;
+use serde_json;
 use crate::models::DbState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -15,6 +16,33 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
+            let listener_handle = app_handle.clone();
+            
+            // Handle notification click via global event
+            app.listen("tauri://notification-action", move |event: tauri::Event| {
+                // The payload for tauri://notification-action is a JSON string
+                if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
+                    if let Some(notification) = payload.get("notification") {
+                        if let Some(id_val) = notification.get("id") {
+                            let block_id = if let Some(id_num) = id_val.as_i64() {
+                                Some(id_num)
+                            } else if let Some(id_str) = id_val.as_str() {
+                                id_str.parse::<i64>().ok()
+                            } else {
+                                None
+                            };
+
+                            if let Some(bid) = block_id {
+                                listener_handle.emit("open-transition-modal", bid).ok();
+                            }
+                        }
+                    }
+                }
+                if let Some(window) = listener_handle.get_webview_window("main") {
+                    let _ = window.set_focus();
+                }
+            });
+
             tauri::async_runtime::block_on(async move {
                 let app_dir = app_handle.path().app_data_dir().expect("failed to get app data dir");
                 if !app_dir.exists() {
@@ -28,9 +56,10 @@ pub fn run() {
                 let pool = SqlitePool::connect(&db_url).await.expect("failed to connect to database");
                 
                 // Migrations
-                sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT)").execute(&pool).await.ok();
+                sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT, is_notification_enabled BOOLEAN NOT NULL DEFAULT 0)").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE users ADD COLUMN lang TEXT NOT NULL DEFAULT 'en'").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE users ADD COLUMN last_successful_model TEXT").execute(&pool).await.ok();
+                sqlx::query("ALTER TABLE users ADD COLUMN is_notification_enabled BOOLEAN NOT NULL DEFAULT 0").execute(&pool).await.ok();
                 
                 sqlx::query("CREATE TABLE IF NOT EXISTS workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS unplugged_times (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, label TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
