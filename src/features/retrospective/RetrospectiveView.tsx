@@ -18,6 +18,7 @@ import {
   subWeeks,
   addMonths,
   subMonths,
+  isValid,
 } from "date-fns";
 import { Retrospective } from "@/types";
 import { useToast } from "@/providers/ToastProvider";
@@ -45,8 +46,13 @@ const DateSelector = ({
 }) => {
   const activeDateObjects = useMemo(() => 
     activeDates
-      .map(d => parse(d, "yyyy-MM-dd", new Date()))
-      .filter(d => !isNaN(d.getTime())), 
+      .map(d => {
+        try {
+          const p = parse(d, "yyyy-MM-dd", new Date());
+          return isValid(p) ? p : null;
+        } catch (e) { return null; }
+      })
+      .filter((d): d is Date => d !== null), 
     [activeDates]
   );
   
@@ -60,15 +66,15 @@ const DateSelector = ({
         if (!value.includes("-W")) return null;
         const [year, weekStr] = value.split("-W");
         const date = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
-        return isNaN(date.getTime()) ? null : date;
+        return isValid(date) ? date : null;
       } else if (type === "MONTHLY") {
         if (!/^\d{4}-\d{2}$/.test(value)) return null;
         const date = parse(value, "yyyy-MM", new Date());
-        return isNaN(date.getTime()) ? null : date;
+        return isValid(date) ? date : null;
       } else {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
         const date = parse(value, "yyyy-MM-dd", new Date());
-        return isNaN(date.getTime()) ? null : date;
+        return isValid(date) ? date : null;
       }
     } catch (e) {
       return null;
@@ -83,13 +89,23 @@ const DateSelector = ({
           mode="single"
           selected={selectedDate}
           onSelect={(date) => {
-            if (date && !isNaN(date.getTime())) {
-              onChange(format(date, "yyyy-MM-dd"));
+            if (date && isValid(date)) {
+              try {
+                onChange(format(date, "yyyy-MM-dd"));
+              } catch (e) { console.error(e); }
             }
           }}
-          disabled={(date) => !activeDates.includes(format(date, "yyyy-MM-dd"))}
+          disabled={(date) => {
+            try {
+              return !activeDates.includes(format(date, "yyyy-MM-dd"));
+            } catch (e) { return true; }
+          }}
           modifiers={{
-            active: (date) => activeDates.includes(format(date, "yyyy-MM-dd"))
+            active: (date) => {
+              try {
+                return activeDates.includes(format(date, "yyyy-MM-dd"));
+              } catch (e) { return false; }
+            }
           }}
           modifiersClassNames={{
             active: "bg-primary/20 text-primary font-bold border border-primary/50"
@@ -101,7 +117,7 @@ const DateSelector = ({
   }
 
   const handleStep = (direction: "prev" | "next") => {
-    if (!currentParsedDate || isNaN(currentParsedDate.getTime())) return;
+    if (!currentParsedDate || !isValid(currentParsedDate)) return;
     
     try {
       if (type === "WEEKLY") {
@@ -117,7 +133,7 @@ const DateSelector = ({
   };
 
   const isPrevDisabled = useMemo(() => {
-    if (!minDate || !currentParsedDate || isNaN(currentParsedDate.getTime()) || isNaN(minDate.getTime())) return true;
+    if (!minDate || !currentParsedDate || !isValid(currentParsedDate) || !isValid(minDate)) return true;
     try {
       if (type === "WEEKLY") {
         return startOfWeek(currentParsedDate, { weekStartsOn: 1 }) <= startOfWeek(minDate, { weekStartsOn: 1 });
@@ -128,7 +144,7 @@ const DateSelector = ({
   }, [currentParsedDate, type, minDate]);
 
   const isNextDisabled = useMemo(() => {
-    if (!maxDate || !currentParsedDate || isNaN(currentParsedDate.getTime()) || isNaN(maxDate.getTime())) return true;
+    if (!maxDate || !currentParsedDate || !isValid(currentParsedDate) || !isValid(maxDate)) return true;
     try {
       if (type === "WEEKLY") {
         return endOfWeek(currentParsedDate, { weekStartsOn: 1 }) >= endOfWeek(maxDate, { weekStartsOn: 1 });
@@ -193,19 +209,33 @@ export const RetrospectiveView = ({
   const { showToast } = useToast();
   
   // Create tab inputs
-  const [inputValue, setInputValue] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [dateLabel, setDateLabel] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [inputValue, setInputValue] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [dateLabel, setDateLabel] = useState("");
   
   // Browse tab inputs
-  const [browseInputValue, setBrowseInputValue] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [browseDateLabel, setBrowseDateLabel] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [browseInputValue, setBrowseInputValue] = useState("");
+  const [browseDateLabel, setBrowseDateLabel] = useState("");
   const [foundRetro, setFoundRetro] = useState<Retrospective | null>(null);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [genMessage, setGenMessage] = useState("");
   const [activeDates, setActiveDates] = useState<string[]>([]);
+
+  // Initial value setup
+  useEffect(() => {
+    const now = new Date();
+    try {
+      const formatted = format(now, "yyyy-MM-dd");
+      setInputValue(formatted);
+      setBrowseInputValue(formatted);
+      setStartDate(formatted);
+      setEndDate(formatted);
+      setDateLabel(formatted);
+      setBrowseDateLabel(formatted);
+    } catch (e) { console.error(e); }
+  }, []);
 
   useEffect(() => {
     const fetchActiveDates = async () => {
@@ -223,14 +253,18 @@ export const RetrospectiveView = ({
   const handleTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
     const now = new Date();
     const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
-    const refDate = parse(latestActive, "yyyy-MM-dd", new Date());
-    const safeRefDate = isNaN(refDate.getTime()) ? now : refDate;
+    
+    let refDate = now;
+    try {
+      const parsed = parse(latestActive, "yyyy-MM-dd", new Date());
+      if (isValid(parsed)) refDate = parsed;
+    } catch (e) { refDate = now; }
 
     setRetroType(newType);
     try {
       if (newType === "DAILY") setInputValue(latestActive);
-      else if (newType === "WEEKLY") setInputValue(format(safeRefDate, "RRRR-'W'II"));
-      else if (newType === "MONTHLY") setInputValue(format(safeRefDate, "yyyy-MM"));
+      else if (newType === "WEEKLY") setInputValue(format(refDate, "RRRR-'W'II"));
+      else if (newType === "MONTHLY") setInputValue(format(refDate, "yyyy-MM"));
     } catch (e) {
       setInputValue(latestActive);
     }
@@ -239,24 +273,28 @@ export const RetrospectiveView = ({
   const handleBrowseTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
     const now = new Date();
     const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
-    const refDate = parse(latestActive, "yyyy-MM-dd", new Date());
-    const safeRefDate = isNaN(refDate.getTime()) ? now : refDate;
+
+    let refDate = now;
+    try {
+      const parsed = parse(latestActive, "yyyy-MM-dd", new Date());
+      if (isValid(parsed)) refDate = parsed;
+    } catch (e) { refDate = now; }
 
     setBrowseType(newType);
     try {
       if (newType === "DAILY") setBrowseInputValue(latestActive);
-      else if (newType === "WEEKLY") setBrowseInputValue(format(safeRefDate, "RRRR-'W'II"));
-      else if (newType === "MONTHLY") setBrowseInputValue(format(safeRefDate, "yyyy-MM"));
+      else if (newType === "WEEKLY") setBrowseInputValue(format(refDate, "RRRR-'W'II"));
+      else if (newType === "MONTHLY") setBrowseInputValue(format(refDate, "yyyy-MM"));
     } catch (e) {
       setBrowseInputValue(latestActive);
     }
   };
 
   // Helper to calculate ranges (Unify logic)
-  const calculateRange = (val: string, type: "DAILY" | "WEEKLY" | "MONTHLY") => {
+  const calculateRange = (val: string | null | undefined, type: "DAILY" | "WEEKLY" | "MONTHLY") => {
     let start = "";
     let end = "";
-    let label = val;
+    let label = val || "";
 
     if (!val) return { start, end, label };
 
@@ -269,14 +307,14 @@ export const RetrospectiveView = ({
         if (!val.includes("-W")) return { start: "", end: "", label: "" };
         const [year, weekStr] = val.split("-W");
         const date = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
-        if (isNaN(date.getTime())) return { start: "", end: "", label: "" };
+        if (!isValid(date)) return { start: "", end: "", label: "" };
         start = format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
         end = format(endOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
         label = `${year} ${weekStr}W (${start} ~ ${end})`;
       } else if (type === "MONTHLY") {
         if (!/^\d{4}-\d{2}$/.test(val)) return { start: "", end: "", label: "" };
         const date = parse(val, "yyyy-MM", new Date());
-        if (isNaN(date.getTime())) return { start: "", end: "", label: "" };
+        if (!isValid(date)) return { start: "", end: "", label: "" };
         start = format(startOfMonth(date), "yyyy-MM-dd");
         end = format(endOfMonth(date), "yyyy-MM-dd");
         label = `${format(date, "yyyy-MM")} Retrospective`;
