@@ -107,40 +107,46 @@ export const WorkspaceView = ({
       {/* Header */}
       <header className="px-8 py-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border">
         <div className="flex items-center justify-between">
-          <div className="space-y-1.5 w-full max-w-2xl">
-            <div className="flex items-center space-x-4">
-              <div className="text-xs font-medium text-text-secondary bg-surface px-2.5 py-1 rounded-lg border border-border shadow-sm">
+          <div className="space-y-1 w-full max-w-2xl">
+            <div className="flex items-center space-x-3 mb-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted bg-surface/50 px-2 py-0.5 rounded border border-border">
                 {format(currentTime, "yyyy년 M월 d일 (EEE)", { locale: ko })}
               </div>
-              <div className="flex items-center space-x-2 text-xl font-bold font-mono tracking-tighter">
-                <Clock size={18} className="text-accent" />
+              <div className="flex items-center space-x-1.5 text-sm font-bold font-mono tracking-tight text-text-secondary">
+                <Clock size={14} className="text-accent" />
                 <span>{format(currentTime, "HH:mm:ss")}</span>
               </div>
-              <div className="flex-1 max-w-[200px] h-2.5 bg-surface rounded-full overflow-hidden border border-border relative group">
-                <div 
-                  className="h-full bg-accent transition-all duration-1000 ease-out"
-                  style={{ width: `${dailyProgress}%` }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                   <span className="text-[10px] font-black text-text-primary bg-background/90 px-1.5 py-0.5 rounded-md shadow-sm border border-border">
-                     {dailyProgress}%
-                   </span>
+            </div>
+            
+            <div className="space-y-3">
+              <p className="text-text-primary text-sm font-semibold leading-relaxed pl-1">{greeting}</p>
+              
+              <div className="flex items-center space-x-3 group">
+                <div className="flex-1 max-w-[280px] h-1.5 bg-surface rounded-full overflow-hidden border border-border/50 relative">
+                  <div 
+                    className="h-full bg-accent transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                    style={{ width: `${dailyProgress}%` }}
+                  />
                 </div>
+                <span className="text-[10px] font-black text-accent bg-accent/10 px-1.5 py-0.5 rounded-md border border-accent/20">
+                  {dailyProgress}% DONE
+                </span>
               </div>
             </div>
-            <p className="text-text-secondary text-sm leading-relaxed pl-1">{greeting}</p>
           </div>
         </div>
         
         {/* Task Input Form */}
-        <div className="p-1 bg-surface border border-border rounded-2xl shadow-xl overflow-hidden">
+        <div className="p-1 bg-surface border border-border rounded-2xl shadow-xl overflow-hidden group/form transition-all duration-300 hover:border-border/80">
           <form onSubmit={taskForm.handleSubmit(handleTaskSubmit)} className="flex flex-col">
             <div className="px-3 pt-2">
-              <Input 
-                {...taskForm.register("title")}
-                placeholder={t.main.task_placeholder} 
-                className="w-full bg-transparent border-none text-lg font-bold placeholder:text-text-muted focus-visible:ring-0 focus-visible:ring-offset-0 px-1 h-12"
-              />
+              <div className="bg-background/40 border border-border/50 rounded-xl transition-all duration-300 group-focus-within/form:bg-background/60 group-focus-within/form:border-accent/30">
+                <Input 
+                  {...taskForm.register("title")}
+                  placeholder={t.main.task_placeholder} 
+                  className="w-full bg-transparent border-none text-lg font-bold placeholder:text-text-muted focus-visible:ring-0 focus-visible:ring-offset-0 px-3 h-12"
+                />
+              </div>
             </div>
             
             <div className="px-4 mt-[-4px]">
