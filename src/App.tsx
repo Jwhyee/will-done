@@ -535,14 +535,16 @@ const SettingsView = ({
   t, 
   onClose,
   onUserUpdate,
-  onWorkspaceUpdate
+  onWorkspaceUpdate,
+  showToast
 }: { 
   user: User,
   workspaceId: number,
   t: any,
   onClose: () => void,
   onUserUpdate: () => void,
-  onWorkspaceUpdate: () => void
+  onWorkspaceUpdate: () => void,
+  showToast: (msg: string, type: "success" | "error") => void
 }) => {
   const [tab, setTab] = useState<"profile" | "workspace">("profile");
 
@@ -582,10 +584,10 @@ const SettingsView = ({
         gemini_api_key: data.gemini_api_key || null,
         lang: data.lang
       });
-      onUserUpdate();
-      alert("Profile updated successfully!");
-    } catch (error) {
-      alert(error);
+      await onUserUpdate();
+      showToast(t.main.toast.profile_updated, "success");
+    } catch (error: any) {
+      showToast(error.toString(), "error");
     }
   };
 
@@ -600,10 +602,10 @@ const SettingsView = ({
           role_intro: data.role_intro || null,
         }
       });
-      onWorkspaceUpdate();
-      alert("Workspace updated successfully!");
-    } catch (error) {
-      alert(error);
+      await onWorkspaceUpdate();
+      showToast(t.main.toast.workspace_updated, "success");
+    } catch (error: any) {
+      showToast(error.toString(), "error");
     }
   };
 
@@ -641,9 +643,9 @@ const SettingsView = ({
       </aside>
 
       <main className="flex-1 overflow-y-auto p-12">
-        <div className="max-w-5xl">
+        <div className="max-w-4xl">
           {tab === "profile" ? (
-            <form onSubmit={userForm.handleSubmit(onUserSubmit)} className="space-y-12">
+            <form key="profile-form" onSubmit={userForm.handleSubmit(onUserSubmit)} className="space-y-12">
               <div className="space-y-2">
                 <h1 className="text-4xl font-black tracking-tighter text-white">{t.sidebar.profile}</h1>
                 <p className="text-zinc-500 font-bold">{t.sidebar.settings_desc}</p>
@@ -677,7 +679,7 @@ const SettingsView = ({
               </div>
             </form>
           ) : (
-            <form onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="space-y-12">
+            <form key="workspace-form" onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="space-y-12">
               <div className="space-y-2">
                 <h1 className="text-4xl font-black tracking-tighter text-white">{t.sidebar.workspace}</h1>
                 <p className="text-zinc-500 font-bold">{t.sidebar.workspace_settings_desc}</p>
@@ -1214,6 +1216,7 @@ function App() {
               const wsList = await invoke<any[]>("get_workspaces");
               setWorkspaces(wsList);
             }}
+            showToast={showToast}
           />
         )}
 
@@ -1315,7 +1318,8 @@ function App() {
         )}
 
         {/* 메인 영역 */}
-        <main className="flex-1 flex flex-col relative overflow-hidden bg-[#111114] antialiased">
+        {(view === "main" || view === "onboarding" || view === "workspace_setup") && (
+          <main className="flex-1 flex flex-col relative overflow-hidden bg-[#111114] antialiased">
           {view === "main" ? (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               {/* Header */}
@@ -1793,8 +1797,9 @@ function App() {
             </div>
           )}
         </main>
-      </div>
-      <DragOverlay dropAnimation={{
+      )}
+    </div>
+    <DragOverlay dropAnimation={{
         sideEffects: defaultDropAnimationSideEffects({
           styles: {
             active: {

@@ -86,6 +86,8 @@ export const translations = {
       toast: {
         past_time_error: "현재 시간 이전으로 태스크를 이동할 수 없습니다.",
         no_data_for_date: "해당 날짜에 기록된 데이터가 없습니다.",
+        profile_updated: "프로필이 성공적으로 업데이트되었습니다.",
+        workspace_updated: "워크스페이스가 성공적으로 업데이트되었습니다.",
       }
     }
   },
@@ -176,6 +178,8 @@ export const translations = {
       toast: {
         past_time_error: "Cannot move task to before current time.",
         no_data_for_date: "No data available for the selected date.",
+        profile_updated: "Profile updated successfully.",
+        workspace_updated: "Workspace updated successfully.",
       }
     }
   }
