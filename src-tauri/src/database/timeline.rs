@@ -3,6 +3,25 @@ use chrono::{NaiveDateTime, Duration, NaiveTime, NaiveDate, Local};
 use crate::models::{Task, TimeBlock, UnpluggedTime, AddTaskInput, TaskTransitionInput};
 use crate::error::Result;
 
+pub async fn get_today_completed_duration(pool: &SqlitePool, workspace_id: i64) -> Result<i64> {
+    let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
+    let start_of_day = format!("{}T00:00:00", today);
+    let end_of_day = format!("{}T23:59:59", today);
+
+    let row: (Option<i64>,) = sqlx::query_as(
+        "SELECT SUM((strftime('%s', end_time) - strftime('%s', start_time)) / 60) 
+         FROM time_blocks 
+         WHERE workspace_id = ?1 AND status = 'DONE' AND start_time >= ?2 AND start_time <= ?3"
+    )
+    .bind(workspace_id)
+    .bind(start_of_day)
+    .bind(end_of_day)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(row.0.unwrap_or(0))
+}
+
 pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: NaiveDate) -> Result<Vec<TimeBlock>> {
     let start_of_day = target_date.and_hms_opt(0, 0, 0).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
     let end_of_day = target_date.and_hms_opt(23, 59, 59).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();

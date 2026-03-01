@@ -68,6 +68,7 @@ pub fn run() {
             commands::timeline::update_block_status,
             commands::timeline::reorder_blocks,
             commands::timeline::get_active_dates,
+            commands::timeline::get_today_completed_duration,
             commands::retrospective::generate_retrospective,
             commands::retrospective::get_saved_retrospectives,
             commands::retrospective::get_latest_saved_retrospective

@@ -5,6 +5,11 @@ use crate::database;
 use crate::error::{Result, AppError};
 
 #[tauri::command]
+pub async fn get_today_completed_duration(state: State<'_, DbState>, workspace_id: i64) -> Result<i64> {
+    database::timeline::get_today_completed_duration(&state.pool, workspace_id).await
+}
+
+#[tauri::command]
 pub async fn get_timeline(state: State<'_, DbState>, workspace_id: i64, date: Option<String>) -> Result<Vec<TimeBlock>> {
     let target_date = if let Some(d) = date {
         NaiveDate::parse_from_str(&d, "%Y-%m-%d").map_err(|e| AppError::DateParse(e.to_string()))?
