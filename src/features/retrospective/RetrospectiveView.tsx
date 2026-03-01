@@ -1,25 +1,21 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
-import { Sparkles, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Copy, Check } from "lucide-react";
+import { ChevronLeft, Calendar as CalendarIcon, Copy, Check, Loader2 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   format, 
-  startOfMonth, 
-  endOfMonth, 
   parse,
   isValid,
-  eachWeekOfInterval,
-  endOfISOWeek,
 } from "date-fns";
 import { Retrospective } from "@/types";
 import { useToast } from "@/providers/ToastProvider";
 import { cn } from "@/lib/utils";
+import { DateSelector } from "./components/DateSelector";
+import { getWeekKey, calculateRange } from "./utils";
 
 interface RetrospectiveViewProps {
   workspaceId: number;
@@ -27,178 +23,6 @@ interface RetrospectiveViewProps {
   onClose: () => void;
   onShowSavedRetro: (retro: Retrospective) => void;
 }
-
-// Helper to get consistent week key for WEEKLY view
-const getWeekKey = (date: Date) => {
-  const start = startOfMonth(date);
-  const weeks = eachWeekOfInterval({ start, end: date }, { weekStartsOn: 1 });
-  return `${format(date, "yyyy")}|${format(date, "MM")}|${weeks.length}`;
-};
-
-const Stepper = ({ 
-  onPrev, 
-  onNext, 
-  prevDisabled, 
-  nextDisabled,
-  label 
-}: { 
-  onPrev: () => void; 
-  onNext: () => void; 
-  prevDisabled: boolean; 
-  nextDisabled: boolean;
-  label: string;
-}) => (
-  <div className="flex items-center justify-between w-full bg-surface border border-border rounded-xl p-1.5 h-12 shadow-sm">
-    <Button 
-      variant="ghost" 
-      size="icon" 
-      onClick={onPrev} 
-      disabled={prevDisabled}
-      className="rounded-lg w-9 h-9 hover:bg-primary/10 hover:text-primary transition-all active:scale-90 disabled:opacity-20"
-    >
-      <ChevronLeft size={18} />
-    </Button>
-    
-    <div className="flex flex-col items-center justify-center overflow-hidden">
-      <AnimatePresence mode="wait">
-        <motion.span 
-          key={label}
-          initial={{ y: 5, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -5, opacity: 0 }}
-          className="text-sm font-bold tracking-tight text-text-primary whitespace-nowrap"
-        >
-          {label}
-        </motion.span>
-      </AnimatePresence>
-    </div>
-
-    <Button 
-      variant="ghost" 
-      size="icon" 
-      onClick={onNext} 
-      disabled={nextDisabled}
-      className="rounded-lg w-9 h-9 hover:bg-primary/10 hover:text-primary transition-all active:scale-90 disabled:opacity-20"
-    >
-      <ChevronRight size={18} />
-    </Button>
-  </div>
-);
-
-const DateSelector = ({ 
-  type, 
-  value, 
-  onChange, 
-  activeDates, 
-  t 
-}: { 
-  type: "DAILY" | "WEEKLY" | "MONTHLY"; 
-  value: string; 
-  onChange: (val: string) => void; 
-  activeDates: string[];
-  t: any;
-}) => {
-  // 1. Available Dates processing
-  const availableMonths = useMemo(() => {
-    return Array.from(new Set(activeDates.map(d => d.substring(0, 7)))).sort();
-  }, [activeDates]);
-
-  const availableWeeks = useMemo(() => {
-    const keys = new Set<string>();
-    activeDates.forEach(d => {
-      try {
-        const date = parse(d, "yyyy-MM-dd", new Date());
-        if (isValid(date)) keys.add(getWeekKey(date));
-      } catch (e) { /* skip */ }
-    });
-    return Array.from(keys).sort((a, b) => {
-      const [y1, m1, w1] = a.split("|").map(Number);
-      const [y2, m2, w2] = b.split("|").map(Number);
-      return y1 !== y2 ? y1 - y2 : m1 !== m2 ? m1 - m2 : w1 - w2;
-    });
-  }, [activeDates]);
-
-  // 2. Stepper Logic for MONTHLY
-  if (type === "MONTHLY") {
-    const currentIndex = availableMonths.indexOf(value);
-    const label = value ? `${value.split("-")[0]}${t.common?.year || '년'} ${parseInt(value.split("-")[1])}${t.common?.month || '월'}` : "---";
-    
-    return (
-      <Stepper 
-        label={label}
-        onPrev={() => onChange(availableMonths[currentIndex - 1])}
-        onNext={() => onChange(availableMonths[currentIndex + 1])}
-        prevDisabled={currentIndex <= 0}
-        nextDisabled={currentIndex === -1 || currentIndex >= availableMonths.length - 1}
-      />
-    );
-  }
-
-  // 3. Stepper Logic for WEEKLY
-  if (type === "WEEKLY") {
-    const currentIndex = availableWeeks.indexOf(value);
-    let label = "---";
-    if (value.includes("|")) {
-      const [y, m, w] = value.split("|");
-      label = `${y}${t.common?.year || '년'} ${parseInt(m)}${t.common?.month || '월'} ${w}${t.retrospective?.week_unit || '주'}`;
-    }
-
-    return (
-      <Stepper 
-        label={label}
-        onPrev={() => onChange(availableWeeks[currentIndex - 1])}
-        onNext={() => onChange(availableWeeks[currentIndex + 1])}
-        prevDisabled={currentIndex <= 0}
-        nextDisabled={currentIndex === -1 || currentIndex >= availableWeeks.length - 1}
-      />
-    );
-  }
-
-  // 4. Popover Logic for DAILY
-  let currentParsedDate = new Date();
-  try {
-    const p = parse(value, "yyyy-MM-dd", new Date());
-    if (isValid(p)) currentParsedDate = p;
-  } catch (e) { /* ignore */ }
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button 
-          variant="outline" 
-          className="w-full h-12 bg-surface border-border rounded-xl flex items-center justify-between px-4 hover:bg-surface-elevated transition-all group"
-        >
-          <div className="flex items-center gap-2">
-            <CalendarIcon size={16} className="text-text-muted group-hover:text-primary transition-colors" />
-            <span className="text-sm font-bold tracking-tight text-text-primary">
-              {value.replace(/-/g, ". ")}
-            </span>
-          </div>
-          <ChevronRight size={16} className="text-text-muted group-hover:translate-x-1 transition-transform" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 bg-surface border-border rounded-xl shadow-2xl" align="center">
-        <Calendar
-          mode="single"
-          selected={currentParsedDate}
-          onSelect={(date) => {
-            if (date && isValid(date)) {
-              onChange(format(date, "yyyy-MM-dd"));
-            }
-          }}
-          disabled={(date) => !activeDates.includes(format(date, "yyyy-MM-dd"))}
-          modifiers={{
-            active: (date) => activeDates.includes(format(date, "yyyy-MM-dd"))
-          }}
-          modifiersClassNames={{
-            active: "bg-primary/20 text-primary font-bold border border-primary/50"
-          }}
-          className="[color-scheme:dark]"
-        />
-      </PopoverContent>
-    </Popover>
-  );
-};
 
 export const RetrospectiveView = ({ 
   workspaceId, 
@@ -234,7 +58,6 @@ export const RetrospectiveView = ({
           setActiveDates(sorted);
           const latest = sorted.length > 0 ? sorted[sorted.length - 1] : format(new Date(), "yyyy-MM-dd");
           
-          // Initial safe defaults
           if (!inputValue) {
             setInputValue(latest);
             setBrowseInputValue(latest);
@@ -279,60 +102,17 @@ export const RetrospectiveView = ({
     setBrowseInputValue(newValue);
   };
 
-  const calculateRange = (val: string, type: "DAILY" | "WEEKLY" | "MONTHLY") => {
-    if (!val || typeof val !== 'string') return { start: "", end: "", label: "" };
-    
-    try {
-      if (type === "DAILY") {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return { start: "", end: "", label: "" };
-        return { start: val, end: val, label: val };
-      }
-      
-      if (type === "MONTHLY") {
-        if (!/^\d{4}-\d{2}$/.test(val)) return { start: "", end: "", label: "" };
-        const date = parse(val, "yyyy-MM", new Date());
-        if (!isValid(date)) return { start: "", end: "", label: "" };
-        const label = `${val.split("-")[0]}${t.common?.year || '년'} ${parseInt(val.split("-")[1])}${t.common?.month || '월'} ${t.retrospective?.monthly || '월간'}`;
-        return { 
-          start: format(startOfMonth(date), "yyyy-MM-dd"), 
-          end: format(endOfMonth(date), "yyyy-MM-dd"), 
-          label
-        };
-      }
-      
-      if (type === "WEEKLY") {
-        if (!val.includes("|")) return { start: "", end: "", label: "" };
-        const [y, m, w] = val.split("|");
-        if (!y || !m || !w) return { start: "", end: "", label: "" };
-        
-        const firstDay = new Date(parseInt(y), parseInt(m) - 1, 1);
-        const weeks = eachWeekOfInterval({ start: firstDay, end: endOfMonth(firstDay) }, { weekStartsOn: 1 });
-        const weekStart = weeks[parseInt(w) - 1] || weeks[0];
-        const s = weekStart > firstDay ? weekStart : firstDay;
-        const e_raw = endOfISOWeek(weekStart); 
-        const e = e_raw < endOfMonth(firstDay) ? e_raw : endOfMonth(firstDay);
-        const startStr = format(s, "yyyy-MM-dd");
-        const endStr = format(e, "yyyy-MM-dd");
-        return { 
-          start: startStr, end: endStr, 
-          label: `${y}${t.common?.year || '년'} ${parseInt(m)}${t.common?.month || '월'} ${w}${t.retrospective?.week_unit || '주'} (${startStr} ~ ${endStr})` 
-        };
-      }
-    } catch (e) { console.error(e); }
-    return { start: "", end: "", label: "" };
-  };
-
   useEffect(() => {
     if (!inputValue) return;
-    const { start, end, label } = calculateRange(inputValue, retroType);
+    const { start, end, label } = calculateRange(inputValue, retroType, t);
     setStartDate(start); setEndDate(end); setDateLabel(label);
-  }, [inputValue, retroType]);
+  }, [inputValue, retroType, t]);
 
   useEffect(() => {
     if (!browseInputValue) return;
-    const { label } = calculateRange(browseInputValue, browseType);
+    const { label } = calculateRange(browseInputValue, browseType, t);
     setBrowseDateLabel(label);
-  }, [browseInputValue, browseType]);
+  }, [browseInputValue, browseType, t]);
 
   useEffect(() => {
     const fetchSavedRetro = async () => {
@@ -393,10 +173,9 @@ export const RetrospectiveView = ({
         </Button>
         <div className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-black tracking-tighter text-text-primary leading-tight">
+            <h2 className="text-lg font-bold tracking-tight text-text-primary leading-tight">
               {t.retrospective?.title || '회고'}
             </h2>
-            <div className="h-0.5 w-8 bg-primary rounded-full" />
           </div>
           <nav className="space-y-1.5">
             {[
@@ -427,7 +206,7 @@ export const RetrospectiveView = ({
                 <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">
                   {t.retrospective?.create_title || '새 회고 생성'}
                 </h1>
-                <p className="text-sm text-text-secondary font-medium tracking-tight">
+                <p className="text-sm text-text-secondary leading-relaxed">
                   {t.retrospective?.create_desc || '업무를 돌아보고 더 나은 내일을 계획하세요.'}
                 </p>
               </div>
@@ -467,9 +246,7 @@ export const RetrospectiveView = ({
                     animate={{ opacity: 1, y: 0 }}
                     className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center gap-3"
                   >
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Sparkles size={16} className="text-primary animate-pulse" />
-                    </div>
+                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
                     <p className="text-xs text-primary font-bold tracking-tight">{genMessage}</p>
                   </motion.div>
                 )}
@@ -482,7 +259,7 @@ export const RetrospectiveView = ({
               >
                 {isGenerating ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 border-3 border-background/30 border-t-background rounded-full animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     {t.retrospective?.generating || '생성 중...'}
                   </div>
                 ) : (
@@ -498,7 +275,7 @@ export const RetrospectiveView = ({
                 <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">
                   {t.retrospective?.browse_title || '회고 조회'}
                 </h1>
-                <p className="text-sm text-text-secondary font-medium tracking-tight">
+                <p className="text-sm text-text-secondary leading-relaxed">
                   {t.retrospective?.browse_desc || '과거의 기록들을 톺아보며 성장을 확인하세요.'}
                 </p>
               </div>
@@ -543,7 +320,7 @@ export const RetrospectiveView = ({
                           {foundRetro.dateLabel}
                         </h2>
                         {foundRetro.usedModel && (
-                          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                          <p className="text-xs font-medium text-text-secondary uppercase tracking-widest">
                             Engine: {foundRetro.usedModel.replace('models/', '').toUpperCase()}
                           </p>
                         )}
@@ -568,14 +345,14 @@ export const RetrospectiveView = ({
                     animate={{ opacity: 1 }}
                     className="p-12 border-2 border-dashed border-border rounded-3xl flex flex-col items-center justify-center text-center space-y-4 bg-surface/30 backdrop-blur-sm"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-border/20 flex items-center justify-center text-text-muted transition-transform hover:scale-105 duration-500">
+                    <div className="w-16 h-16 rounded-2xl bg-border/20 flex items-center justify-center text-text-secondary transition-transform hover:scale-105 duration-500">
                       <CalendarIcon size={32} />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-lg text-text-secondary font-bold tracking-tight">
+                      <p className="text-lg text-text-primary font-bold tracking-tight">
                         {t.retrospective?.no_data_for_label || '회고 데이터가 없습니다.'}
                       </p>
-                      <p className="text-xs text-text-muted font-medium tracking-tight">
+                      <p className="text-sm text-text-secondary leading-relaxed">
                         {t.retrospective?.select_another_range || "다른 기간을 선택하거나 회고를 생성해 보세요."}
                       </p>
                     </div>
@@ -589,4 +366,3 @@ export const RetrospectiveView = ({
     </div>
   );
 };
-
