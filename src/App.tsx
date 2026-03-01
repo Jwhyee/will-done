@@ -59,14 +59,11 @@ function AppContent() {
   const [timeline, setTimeline] = useState<TimeBlock[]>([]);
   const [inboxTasks, setInboxTasks] = useState<Task[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate] = useState<Date>(new Date());
   const [transitionBlock, setTransitionBlock] = useState<TimeBlock | null>(null);
   const [retrospectiveOpen, setRetrospectiveOpen] = useState(false);
   const [retrospectiveContent, setRetrospectiveContent] = useState("");
-  const [isGeneratingRetro, setIsGeneratingRetro] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeDates, setActiveDates] = useState<string[]>([]);
-  const [manualDate, setManualDate] = useState("");
   
   const { showToast } = useToast();
 
@@ -126,9 +123,7 @@ function AppContent() {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
       const list = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId, date: dateStr });
       const inbox = await invoke<Task[]>("get_inbox", { workspaceId: activeWorkspaceId });
-      const activeD = await invoke<string[]>("get_active_dates", { workspaceId: activeWorkspaceId });
       
-      setActiveDates(activeD);
       const now = new Date();
       const isToday = dateStr === format(now, "yyyy-MM-dd");
 
@@ -213,57 +208,6 @@ function AppContent() {
           fetchMainData();
         }
       }
-    }
-  };
-
-  const handleManualDateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeWorkspaceId) return;
-
-    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-    if (!datePattern.test(manualDate)) {
-      showToast("Invalid format (YYYY-MM-DD)");
-      return;
-    }
-
-    const hasData = activeDates.includes(manualDate);
-    if (!hasData) {
-      showToast(t.main.toast.no_data_for_date);
-      return;
-    }
-
-    setSelectedDate(new Date(manualDate));
-    setManualDate("");
-  };
-
-  const handleGenerateRetrospective = async (date: Date) => {
-    if (!activeWorkspaceId) return;
-    setRetrospectiveOpen(true);
-    setIsGeneratingRetro(true);
-    setRetrospectiveContent("");
-    try {
-      const dateStr = format(date, "yyyy-MM-dd");
-      const content = await invoke<string>("generate_retrospective", { 
-        workspaceId: activeWorkspaceId, 
-        date: dateStr 
-      });
-      setRetrospectiveContent(content);
-    } catch (error: any) {
-      setRetrospectiveContent(`Error generating retrospective:\n\n${error}`);
-    } finally {
-      setIsGeneratingRetro(false);
-    }
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-    const dateStr = format(date, "yyyy-MM-dd");
-    const isToday = format(new Date(), "yyyy-MM-dd") === dateStr;
-    
-    if (!isToday && activeDates.includes(dateStr)) {
-      handleGenerateRetrospective(date);
-    } else {
-      setSelectedDate(date);
     }
   };
 
@@ -359,24 +303,19 @@ function AppContent() {
       case "main":
       default:
         return (
-          <MainLayout 
+          <MainLayout
             sidebar1={
-              <PrimarySidebar 
-                workspaces={workspaces} 
-                activeWorkspaceId={activeWorkspaceId} 
+              <PrimarySidebar
+                workspaces={workspaces}
+                activeWorkspaceId={activeWorkspaceId}
                 onSelectWorkspace={(id) => { setActiveWorkspaceId(id); setView("main"); }}
                 onAddWorkspace={() => setView("workspace_setup")}
               />
             }
-            sidebar2={
-              <SecondarySidebar 
+            sidebar2={(isCollapsed, setIsCollapsed) => (
+              <SecondarySidebar
                 t={t}
-                selectedDate={selectedDate}
-                onDateSelect={handleDateSelect}
-                activeDates={activeDates}
-                manualDate={manualDate}
-                onManualDateChange={setManualDate}
-                onManualDateSubmit={handleManualDateSubmit}
+                user={user}
                 inboxTasks={inboxTasks}
                 onMoveToTimeline={async (taskId) => {
                   if (activeWorkspaceId) {
@@ -389,12 +328,14 @@ function AppContent() {
                   fetchMainData();
                 }}
                 onOpenSettings={() => setView("settings")}
+                onOpenRetrospective={() => setView("retrospective")}
+                isCollapsed={isCollapsed}
+                setIsCollapsed={setIsCollapsed}
               />
-            }
+            )}
           >
-            <WorkspaceView 
+            <WorkspaceView
               t={t}
-              user={user}
               greeting={greeting}
               currentTime={currentTime}
               timeline={timeline}
@@ -415,7 +356,6 @@ function AppContent() {
                   fetchMainData();
                 }
               }}
-              onOpenRetrospective={() => setView("retrospective")}
               transitionBlock={transitionBlock}
               setTransitionBlock={setTransitionBlock}
             />
@@ -474,29 +414,22 @@ function AppContent() {
               Work Retrospective
             </DialogTitle>
             <DialogDescription className="text-text-secondary font-bold text-sm">
-              {isGeneratingRetro ? "AI is generating your professional retrospective..." : "Your professional Brag Document."}
+              Your professional Brag Document.
             </DialogDescription>
           </DialogHeader>
           
           <div className="flex-1 overflow-y-auto px-8 scrollbar-hide bg-background">
             <div className="py-8 text-sm leading-relaxed prose prose-invert max-w-none">
-              {isGeneratingRetro ? (
-                <div className="flex flex-col items-center justify-center space-y-4 py-20">
-                  <div className="w-10 h-10 border-4 border-border border-t-warning rounded-full animate-spin" />
-                  <p className="text-text-muted font-bold animate-pulse">Analyzing completed tasks and memos...</p>
-                </div>
-              ) : (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {retrospectiveContent || "No retrospective generated yet."}
-                </ReactMarkdown>
-              )}
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {retrospectiveContent || "No retrospective generated yet."}
+              </ReactMarkdown>
             </div>
           </div>
 
           <DialogFooter className="p-6 border-t border-border bg-surface-elevated shrink-0">
             <Button 
               onClick={() => navigator.clipboard.writeText(retrospectiveContent)}
-              disabled={isGeneratingRetro || !retrospectiveContent}
+              disabled={!retrospectiveContent}
               className="w-full bg-text-primary text-background hover:bg-zinc-200 font-black h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95 disabled:opacity-50"
             >
               Copy to Clipboard

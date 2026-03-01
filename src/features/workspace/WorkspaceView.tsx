@@ -2,13 +2,15 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Clock, Sparkles, Send, Zap, AlertCircle } from "lucide-react";
+import { Clock, Send, Zap, AlertCircle, ChevronDown, Sparkles } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -18,13 +20,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { TimeBlock, Task, User } from "@/types";
+import { TimeBlock, Task } from "@/types";
 import { SortableItem } from "./components/SortableItem";
 import { DroppableArea } from "./components/DroppableArea";
 
 interface WorkspaceViewProps {
   t: any;
-  user: User | null;
   greeting: string;
   currentTime: Date;
   timeline: TimeBlock[];
@@ -34,14 +35,88 @@ interface WorkspaceViewProps {
   onMoveToInbox: (blockId: number) => Promise<void>;
   onDeleteTask: (taskId: number) => Promise<void>;
   onMoveAllToTimeline: () => Promise<void>;
-  onOpenRetrospective: () => void;
   transitionBlock: TimeBlock | null;
   setTransitionBlock: (block: TimeBlock | null) => void;
 }
 
+const TimePicker = ({ 
+  hours, 
+  minutes, 
+  onChange, 
+  t 
+}: { 
+  hours: number; 
+  minutes: number; 
+  onChange: (h: number, m: number) => void;
+  t: any;
+}) => {
+  const [open, setOpen] = useState(false);
+  const hourOptions = Array.from({ length: 24 }, (_, i) => i);
+  const minuteOptions = Array.from({ length: 12 }, (_, i) => i * 5);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button 
+          variant="outline" 
+          className="flex items-center bg-background border border-border rounded-xl h-10 px-3 space-x-2 hover:bg-surface-elevated transition-colors"
+        >
+          <div className="flex items-center space-x-1">
+            <span className="font-black text-sm">{hours}</span>
+            <span className="text-[10px] font-black text-text-muted uppercase">{t.main.hours}</span>
+          </div>
+          <Separator orientation="vertical" className="h-4 bg-border" />
+          <div className="flex items-center space-x-1">
+            <span className="font-black text-sm">{minutes}</span>
+            <span className="text-[10px] font-black text-text-muted uppercase">{t.main.mins}</span>
+          </div>
+          <ChevronDown size={14} className="text-text-muted ml-1" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-0 bg-surface-elevated border-border shadow-2xl rounded-2xl overflow-hidden" align="center">
+        <div className="flex h-64">
+          <ScrollArea className="flex-1 border-r border-border">
+            <div className="p-2 space-y-1">
+              <div className="px-2 py-1 mb-1 border-b border-border/50">
+                <span className="text-[10px] font-black text-text-muted uppercase">{t.main.hours}</span>
+              </div>
+              {hourOptions.map((h) => (
+                <Button
+                  key={h}
+                  variant="ghost"
+                  className={`w-full justify-center font-bold text-sm h-9 rounded-lg ${hours === h ? "bg-accent text-text-primary" : "text-text-secondary hover:bg-border"}`}
+                  onClick={() => onChange(h, minutes)}
+                >
+                  {h}
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              <div className="px-2 py-1 mb-1 border-b border-border/50">
+                <span className="text-[10px] font-black text-text-muted uppercase">{t.main.mins}</span>
+              </div>
+              {minuteOptions.map((m) => (
+                <Button
+                  key={m}
+                  variant="ghost"
+                  className={`w-full justify-center font-bold text-sm h-9 rounded-lg ${minutes === m ? "bg-accent text-text-primary" : "text-text-secondary hover:bg-border"}`}
+                  onClick={() => onChange(hours, m)}
+                >
+                  {m}
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 export const WorkspaceView = ({
   t,
-  user,
   greeting,
   currentTime,
   timeline,
@@ -51,7 +126,6 @@ export const WorkspaceView = ({
   onMoveToInbox,
   onDeleteTask,
   onMoveAllToTimeline,
-  onOpenRetrospective,
   transitionBlock,
   setTransitionBlock,
 }: WorkspaceViewProps) => {
@@ -82,7 +156,7 @@ export const WorkspaceView = ({
 
   const handleTaskSubmit = async (data: TaskFormValues) => {
     await onTaskSubmit(data);
-    taskForm.reset();
+    taskForm.reset({ title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false });
   };
 
   const handleTransition = async (action: string, extraMinutes?: number) => {
@@ -94,37 +168,20 @@ export const WorkspaceView = ({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <header className="px-8 py-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10">
+      <header className="px-8 py-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border/50">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <div className="flex items-center space-x-3 text-2xl font-black font-mono tracking-tighter">
-              <Clock size={20} className="text-text-primary" />
-              <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+            <div className="flex items-center space-x-4">
+              <div className="text-xs font-black text-text-muted bg-surface-elevated px-3 py-1.5 rounded-xl border border-border shadow-sm">
+                {format(currentTime, "yyyy년 M월 d일 (EEE)", { locale: ko })}
+              </div>
+              <div className="flex items-center space-x-3 text-2xl font-black font-mono tracking-tighter">
+                <Clock size={22} className="text-accent" />
+                <span>{format(currentTime, "HH시 mm분 ss초")}</span>
+              </div>
             </div>
-            <p className="text-text-secondary font-bold text-sm tracking-tight">{greeting}</p>
+            <p className="text-text-secondary font-bold text-sm tracking-tight pl-1">{greeting}</p>
           </div>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Button 
-                    onClick={onOpenRetrospective}
-                    disabled={!user?.geminiApiKey}
-                    className="bg-surface-elevated hover:bg-border text-text-primary font-black rounded-xl gap-2 h-11 border border-border shadow-xl shadow-black/40 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Sparkles size={18} className="text-warning" />
-                    {t.main.retrospective_btn}
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              {!user?.geminiApiKey && (
-                <TooltipContent className="bg-surface-elevated border-border text-text-secondary font-bold text-xs p-3 rounded-xl shadow-2xl">
-                  <p>설정에서 GOOGLE AI STUDIO API KEY를 입력해주세요.</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
         </div>
         
         {/* Task Input Form */}
@@ -136,21 +193,16 @@ export const WorkspaceView = ({
                 placeholder={t.main.task_placeholder} 
                 className="flex-1 bg-transparent border-none text-lg font-bold placeholder:text-text-muted focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-12"
               />
-              <div className="flex items-center bg-background border border-border rounded-xl h-10 px-3 space-x-2">
-                <Input 
-                  type="number" 
-                  {...taskForm.register("hours", { valueAsNumber: true })}
-                  className="w-8 bg-transparent border-none text-center font-black p-0 focus-visible:ring-0"
-                />
-                <span className="text-[10px] font-black text-text-muted uppercase">{t.main.hours}</span>
-                <Separator orientation="vertical" className="h-4 bg-border" />
-                <Input 
-                  type="number" 
-                  {...taskForm.register("minutes", { valueAsNumber: true })}
-                  className="w-8 bg-transparent border-none text-center font-black p-0 focus-visible:ring-0"
-                />
-                <span className="text-[10px] font-black text-text-muted uppercase">{t.main.mins}</span>
-              </div>
+              
+              <TimePicker 
+                hours={taskForm.watch("hours")}
+                minutes={taskForm.watch("minutes")}
+                onChange={(h, m) => {
+                  taskForm.setValue("hours", h);
+                  taskForm.setValue("minutes", m);
+                }}
+                t={t}
+              />
               
               <label className="flex items-center space-x-2 bg-background border border-border rounded-xl h-10 px-4 cursor-pointer hover:bg-surface-elevated transition-colors">
                 <input type="checkbox" {...taskForm.register("isUrgent")} className="hidden" />
@@ -158,7 +210,7 @@ export const WorkspaceView = ({
                 <span className={`text-[10px] font-black uppercase ${taskForm.watch("isUrgent") ? "text-danger" : "text-text-muted"}`}>{t.main.urgent}</span>
               </label>
 
-              <Button type="submit" className="h-10 px-6 bg-text-primary text-background hover:bg-zinc-200 font-black rounded-xl">
+              <Button type="submit" className="h-10 px-6 bg-text-primary text-background hover:bg-zinc-200 font-black rounded-xl transition-all active:scale-95 shadow-lg shadow-black/20">
                 <Send size={16} className="mr-2" />
                 {t.main.add_task}
               </Button>
