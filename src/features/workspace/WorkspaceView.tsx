@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -60,6 +60,19 @@ export const WorkspaceView = ({
   const [isSplitDelete, setIsSplitDelete] = useState(false);
   const [moveAllConfirm, setMoveAllConfirm] = useState(false);
   const { showToast } = useToast();
+
+  useEffect(() => {
+    // Auto-focus the current task (NOW) on mount
+    const nowBlock = timeline.find(b => b.status === "NOW");
+    if (nowBlock) {
+      setTimeout(() => {
+        const element = document.getElementById(`block-${nowBlock.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300); // Small delay to ensure render is complete
+    }
+  }, [timeline.length > 0]);
 
   const taskSchema = z.object({
     title: z.string().min(1, "Task title is required"),
