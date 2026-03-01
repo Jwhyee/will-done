@@ -45,16 +45,16 @@
       - `Timeline`: `SortableContext` 내부의 `SortableItem` 리스트. 드래그 가능.
       - `Modals`: 업무 종료 분기 처리(`TransitionModal`), 삭제 확인, 인박스 전체 이동 확인.
     - **Retrospective View**: 
-      - **Create Tab**: Generate daily/weekly/monthly AI retrospectives. Uses a high-fidelity `DateSelector`:
-        - **Daily**: Integrated `Calendar` view that highlights and enables only dates with actual task data (`activeDates`).
-        - **Weekly/Monthly**: Intelligent 'Stepper' UI with `prev`/`next` buttons to navigate periods within the available data range.
+      - **Create Tab**: Generate daily/weekly/monthly AI retrospectives. Uses an intuitive "Step-by-Step" selection architecture:
+        - **Daily**: Integrated `Calendar` view that highlights dates with task data (`activeDates`).
+        - **Weekly**: Sequential dropdowns for Year -> Month -> n-th Week. Automatically calculates precise start/end dates for the selected week.
+        - **Monthly**: Sequential dropdowns for Year -> Month. Automatically calculates the full month range.
       - **Stability & Defense**: 
-        - **Defensive Date Handling**: All date operations (`parse`, `format`) are wrapped in `try-catch` and verified with `isValid` to prevent "Invalid Date" runtime crashes.
-        - **Atomic State Transitions**: `type` and `value` are updated simultaneously in handlers to ensure consistent rendering during tab transitions.
-        - **Strict RegEx Validation**: Inputs are strictly validated (Daily: `yyyy-MM-dd`, Weekly: `RRRR-WII`, Monthly: `yyyy-MM`) before parsing.
-        - **ISO Week Standard**: Uses `RRRR-II-i` for parsing and `RRRR-'W'II` for formatting to handle year-boundary week numbering accurately.
-      - **Browse Tab**: Shares the same `DateSelector` logic for consistency. Immediate DB query on period change and high-fidelity markdown rendering.
-      - **Layout**: Optimized for content visibility by removing redundant labels (Final Label, Selected Range) and compacting the selection area.
+        - **Dropdown-First UI**: Replaced text inputs and steppers with `Select` components to prevent formatting errors.
+        - **Data-Driven Options**: Year/Month options are derived from `activeDates` to ensure users only select periods with actual data.
+        - **Internal Value Standard**: Uses simplified internal separators (`yyyy|MM|w`) to avoid ISO week parsing complexities.
+      - **Browse Tab**: Shares the same selection logic for consistency. Immediate DB query on period change.
+      - **Layout**: High-fidelity UI with simplified labels and a compact selection area to maximize markdown content visibility.
       - **Header**: Standardized with a "Latest Retrospective" button for quick access.
     - **Settings View**: 사이드바 기반 탭 전환 (프로필 / 워크스페이스).
 
