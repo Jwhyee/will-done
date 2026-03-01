@@ -57,7 +57,12 @@
       - **종료 임박 강조**: 마감 시간이 지난 태스크는 `animate-breathing`(2.8s 주기) 효과를 적용하여 부드러운 글로우 피드백 제공.
       - **스타일 통일**: 분절된 블록(Past/Future)의 테두리를 모두 **실선(Solid)**으로 통일하고, 투명도(DONE: 60%, UNPLUGGED: 40%)를 통해 상태 구분.
       - **완전한 테두리**: 모든 조각난 블록이 독립된 사각형 형태의 4면 테두리를 유지하도록 수정.
-    - `Modals`: 업무 종료 분기 처리(`TransitionModal`), 삭제 확인, 인박스 전체 이동 확인.
+    - `Modals`: 
+      - **TransitionModal**: '완료 처리'와 '연장 처리'를 분리하는 **탭(Tab) 기반 인터페이스** 도입. 
+        - **완료 탭**: 회고 메모(2-3줄 고정, autoFocus)와 3컬럼 완료 시점 선택기(`목표 시점`, `현재 시점`, `직접 입력`) 제공. '직접 입력' 선택 시 `[N]시간 [M]분 전` 입력창이 **점진적 공개(Progressive Disclosure)** 방식으로 노출.
+        - **연장 탭**: 연장 시간 입력과 연장 버튼만 포함된 압축된 UI 제공.
+        - 불필요한 장식용 아이콘 및 구분선(OR)을 제거하여 스크롤 없는 정보 밀집형 레이아웃 구현.
+      - 삭제 확인, 인박스 전체 이동 확인.
     - **Retrospective View**: 
       - **Create Tab**: Generate daily/weekly/monthly AI retrospectives. Uses an intuitive "Step-by-Step" selection architecture:
         - **Daily**: Integrated `Calendar` view that highlights dates with task data (`activeDates`).
