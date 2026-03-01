@@ -297,7 +297,7 @@ fn build_task_summary(blocks: Vec<(String, Option<String>, Option<String>, Strin
 
 #[tauri::command]
 async fn get_user(state: State<'_, DbState>) -> Result<Option<User>, String> {
-    let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = 1")
+    let user = sqlx::query_as::<_, User>("SELECT id, nickname, gemini_api_key, lang FROM users WHERE id = 1")
         .fetch_optional(&state.pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -310,16 +310,26 @@ async fn save_user(
     nickname: String,
     gemini_api_key: Option<String>,
     lang: String,
+) -> Result<User, String> {
+    save_user_internal(&state.pool, nickname, gemini_api_key, lang).await?;
+    let user = get_user(state).await?.ok_or("User not found after save")?;
+    Ok(user)
+}
+
+async fn save_user_internal(
+    pool: &Pool<Sqlite>,
+    nickname: String,
+    gemini_api_key: Option<String>,
+    lang: String,
 ) -> Result<(), String> {
     sqlx::query(
-        "INSERT INTO users (id, nickname, gemini_api_key, lang) 
-         VALUES (1, ?1, ?2, ?3) 
-         ON CONFLICT(id) DO UPDATE SET nickname=?1, gemini_api_key=?2, lang=?3",
+        "INSERT OR REPLACE INTO users (id, nickname, gemini_api_key, lang) 
+         VALUES (1, ?, ?, ?)",
     )
     .bind(nickname)
     .bind(gemini_api_key)
     .bind(lang)
-    .execute(&state.pool)
+    .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
     Ok(())
@@ -1092,6 +1102,32 @@ pub fn run() {
 mod tests {
     use super::*;
     use sqlx::sqlite::SqlitePool;
+
+    #[tokio::test]
+    async fn test_save_and_get_user() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en')").execute(&pool).await.unwrap();
+
+        // First save
+        save_user_internal(&pool, "Alice".to_string(), Some("key1".to_string()), "en".to_string()).await.unwrap();
+        
+        let user: User = sqlx::query_as("SELECT id, nickname, gemini_api_key, lang FROM users WHERE id = 1").fetch_one(&pool).await.unwrap();
+        assert_eq!(user.nickname, "Alice");
+        assert_eq!(user.gemini_api_key, Some("key1".to_string()));
+
+        // Update
+        save_user_internal(&pool, "Alice Updated".to_string(), Some("key2".to_string()), "ko".to_string()).await.unwrap();
+        
+        let user: User = sqlx::query_as("SELECT id, nickname, gemini_api_key, lang FROM users WHERE id = 1").fetch_one(&pool).await.unwrap();
+        assert_eq!(user.nickname, "Alice Updated");
+        assert_eq!(user.gemini_api_key, Some("key2".to_string()));
+        assert_eq!(user.lang, "ko");
+
+        // Clear API Key
+        save_user_internal(&pool, "Alice Updated".to_string(), None, "ko".to_string()).await.unwrap();
+        let user: User = sqlx::query_as("SELECT id, nickname, gemini_api_key, lang FROM users WHERE id = 1").fetch_one(&pool).await.unwrap();
+        assert_eq!(user.gemini_api_key, None);
+    }
 
     #[tokio::test]
     async fn test_create_workspace_transaction() {

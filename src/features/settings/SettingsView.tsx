@@ -13,7 +13,7 @@ interface SettingsViewProps {
   workspaceId: number;
   t: any;
   onClose: () => void;
-  onUserUpdate: () => void;
+  onUserUpdate: (updatedUser?: User) => Promise<void>;
   onWorkspaceUpdate: () => void;
 }
 
@@ -67,12 +67,12 @@ export const SettingsView = ({
 
   const onUserSubmit = async (data: any) => {
     try {
-      await invoke("save_user", { 
+      const updatedUser = await invoke<User>("save_user", { 
         nickname: data.nickname, 
         gemini_api_key: data.gemini_api_key || null,
         lang: data.lang
       });
-      await onUserUpdate();
+      await onUserUpdate(updatedUser);
       showToast(t.main.toast.profile_updated, "success");
     } catch (error: any) {
       showToast(error.toString(), "error");

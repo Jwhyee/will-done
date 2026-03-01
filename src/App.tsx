@@ -345,8 +345,8 @@ function AppContent() {
             workspaceId={activeWorkspaceId} 
             t={t} 
             onClose={() => setView("main")} 
-            onUserUpdate={async () => {
-              const u = await invoke<User>("get_user");
+            onUserUpdate={async (updatedUser?: User) => {
+              const u = updatedUser || await invoke<User>("get_user");
               setUser(u);
             }}
             onWorkspaceUpdate={async () => {
