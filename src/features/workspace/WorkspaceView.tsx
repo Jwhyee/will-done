@@ -103,7 +103,7 @@ export const WorkspaceView = ({
     }, 0);
     
     const doneMinutes = activeBlocks
-      .filter(b => b.status === "DONE")
+      .filter(b => b.status === "DONE" || b.status === "PENDING")
       .reduce((acc, b) => {
         const start = new Date(b.startTime).getTime();
         const end = new Date(b.endTime).getTime();
