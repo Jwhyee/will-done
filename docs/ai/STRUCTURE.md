@@ -21,6 +21,7 @@
     - `utils.ts`: 기간 계산 및 포맷팅 유틸리티.
   - `settings/`: 프로필 및 워크스페이스 수정 화면 (`SettingsView`).
 - `providers/`: 전역 상태 관리를 위한 Context Providers (`AppProvider`, `ToastProvider`).
+- `hooks/`: 비즈니스 로직 캡슐화를 위한 커스텀 훅 (`useApp`).
 - `lib/`: 유틸리티 (`utils.ts`) 및 다국어 처리 (`i18n.ts`).
 - `types/`: TypeScript 인터페이스 정의 (`index.ts`).
 
