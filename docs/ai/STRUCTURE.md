@@ -49,10 +49,10 @@
   - `PrimarySidebar` (L1): 워크스페이스 아이콘 리스트 (56px/w-14) 및 추가 버튼.
   - `SecondarySidebar` (L2): 인박스/설정/회고 (200px). 접기/펼치기 지원.
   - `WorkspaceView` (Content):
-    - `Header`: 실시간 시계(HH:mm:ss, text-xl), **태스크 완료율 진행바(Daily Progress Bar)** (상시 노출, h-2.5), 지능형 인사말(#D1D5DB), 태스크 입력 폼.
+    - `Header`: 실시간 시계(HH:mm:ss, text-xl), **태스크 완료율 진행바(Daily Progress Bar)** (상시 노출, h-2.5, 시간 기준 계산), 지능형 인사말(#D1D5DB), 태스크 입력 폼.
     - `Task Input Form`: 입력창 하단 좌측에 Time Picker와 긴급 토글, 우측에 등록 버튼 배치. 안내 문구 마진 최적화(8px).
-    - `Timeline`: 각 태스크 왼쪽의 타임라인 점(Dot)들을 잇는 **수직 실선(Solid Line)** 추가. 원형 인디케이터(Dot)는 연결선의 정중앙(`-translate-x-1/2`)에 위치.
-    - `SortableItem`: 태스크 제목(15px SemiBold), 상태/시간 범위(12px), 액션 아이콘 간격(12px) 및 Opacity(80% -> 100%) 조정. '인박스로 이동' 버튼 화이트 테마 적용. 삭제 버튼 가시성 상향.
+    - `Timeline`: 각 태스크 왼쪽의 타임라인 점(Dot)들을 잇는 **수직 실선(Solid Line)** 추가. 원형 인디케이터(Dot)는 연결선의 정중앙(`-translate-x-1/2`)에 위치하며 `-left-16`으로 정렬.
+    - `SortableItem`: 태스크 제목(15px SemiBold), 상태/시간 범위(12px), 액션 아이콘 간격(12px). 버튼 불투명도 100% 원복 및 호버 시 `surface-elevated` 스타일로 통일. 삭제 버튼 가시성 상향.
     - `Modals`: 업무 종료 분기 처리(`TransitionModal`), 삭제 확인, 인박스 전체 이동 확인.    - **Retrospective View**: 
       - **Create Tab**: Generate daily/weekly/monthly AI retrospectives. Uses an intuitive "Step-by-Step" selection architecture:
         - **Daily**: Integrated `Calendar` view that highlights dates with task data (`activeDates`).
