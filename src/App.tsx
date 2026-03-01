@@ -350,6 +350,10 @@ function AppContent() {
                 await invoke("delete_task", { id: taskId });
                 fetchMainData();
               }}
+              onHandleSplitTaskDeletion={async (taskId, keepPast) => {
+                await invoke("handle_split_task_deletion", { taskId, keepPast });
+                fetchMainData();
+              }}
               onMoveAllToTimeline={async () => {
                 if (activeWorkspaceId) {
                   await invoke("move_all_to_timeline", { workspaceId: activeWorkspaceId });

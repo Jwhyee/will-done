@@ -34,6 +34,7 @@ interface WorkspaceViewProps {
   onTransition: (block: TimeBlock, action: string, extraMinutes?: number, reviewMemo?: string) => Promise<void>;
   onMoveToInbox: (blockId: number) => Promise<void>;
   onDeleteTask: (taskId: number) => Promise<void>;
+  onHandleSplitTaskDeletion: (taskId: number, keepPast: boolean) => Promise<void>;
   onMoveAllToTimeline: () => Promise<void>;
   transitionBlock: TimeBlock | null;
   setTransitionBlock: (block: TimeBlock | null) => void;
@@ -49,12 +50,14 @@ export const WorkspaceView = ({
   onTransition,
   onMoveToInbox,
   onDeleteTask,
+  onHandleSplitTaskDeletion,
   onMoveAllToTimeline,
   transitionBlock,
   setTransitionBlock,
 }: WorkspaceViewProps) => {
   const [hoverTaskId, setHoverTaskId] = useState<number | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
+  const [isSplitDelete, setIsSplitDelete] = useState(false);
   const [moveAllConfirm, setMoveAllConfirm] = useState(false);
   const { showToast } = useToast();
 
@@ -230,7 +233,11 @@ export const WorkspaceView = ({
                       t={t}
                       onTransition={setTransitionBlock}
                       onMoveToInbox={onMoveToInbox}
-                      onDelete={(id: number) => setDeleteTaskId(id)}
+                      onDelete={(id: number) => {
+                        const isSplit = timeline.filter(b => b.taskId === id).length > 1;
+                        setDeleteTaskId(id);
+                        setIsSplitDelete(isSplit);
+                      }}
                       hoverTaskId={hoverTaskId}
                       setHoverTaskId={setHoverTaskId}
                     />
@@ -242,37 +249,95 @@ export const WorkspaceView = ({
       </ScrollArea>
 
       {/* Deletion Confirmation */}
-      <Dialog open={!!deleteTaskId} onOpenChange={(open) => !open && setDeleteTaskId(null)}>
-        <DialogContent className="sm:max-w-[400px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-8 antialiased">
-          <DialogHeader className="space-y-4">
-            <DialogTitle className="text-lg font-bold tracking-tight text-text-primary flex items-center gap-3">
-              <AlertCircle className="text-danger" size={20} />
-              {t.main.delete_confirm.title}
-            </DialogTitle>
-            <DialogDescription className="text-text-secondary text-sm leading-relaxed">
-              {t.main.delete_confirm.description}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-6 flex gap-3">
-            <Button 
-              variant="ghost" 
-              onClick={() => setDeleteTaskId(null)}
-              className="flex-1 bg-surface text-text-secondary hover:bg-border hover:text-text-primary font-bold rounded-xl"
-            >
-              {t.main.delete_confirm.cancel}
-            </Button>
-            <Button 
-              onClick={async () => {
-                if (deleteTaskId) {
-                  await onDeleteTask(deleteTaskId);
-                  setDeleteTaskId(null);
-                }
-              }}
-              className="flex-1 bg-danger text-text-primary hover:bg-danger/80 font-bold rounded-xl"
-            >
-              {t.main.delete_confirm.btn}
-            </Button>
-          </DialogFooter>
+      <Dialog open={!!deleteTaskId} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteTaskId(null);
+          setIsSplitDelete(false);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[420px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-8 antialiased">
+          {isSplitDelete ? (
+            <>
+              <DialogHeader className="space-y-4">
+                <DialogTitle className="text-lg font-bold tracking-tight text-text-primary flex items-center gap-3">
+                  <AlertCircle className="text-warning" size={20} />
+                  {t.main.delete_split_confirm.title}
+                </DialogTitle>
+                <DialogDescription className="text-text-secondary text-sm leading-relaxed">
+                  {t.main.delete_split_confirm.description}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-6 flex flex-col gap-3">
+                <Button 
+                  onClick={async () => {
+                    if (deleteTaskId) {
+                      await onHandleSplitTaskDeletion(deleteTaskId, false);
+                      setDeleteTaskId(null);
+                      setIsSplitDelete(false);
+                    }
+                  }}
+                  className="w-full bg-danger text-text-primary hover:bg-danger/80 font-bold h-12 rounded-xl transition-all active:scale-95"
+                >
+                  {t.main.delete_split_confirm.delete_all}
+                </Button>
+                <Button 
+                  variant="ghost"
+                  onClick={async () => {
+                    if (deleteTaskId) {
+                      await onHandleSplitTaskDeletion(deleteTaskId, true);
+                      setDeleteTaskId(null);
+                      setIsSplitDelete(false);
+                    }
+                  }}
+                  className="w-full bg-surface text-text-secondary hover:bg-border hover:text-text-primary font-bold h-12 rounded-xl transition-all"
+                >
+                  {t.main.delete_split_confirm.keep_past}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setDeleteTaskId(null);
+                    setIsSplitDelete(false);
+                  }}
+                  className="w-full text-text-muted hover:text-text-secondary font-medium h-10"
+                >
+                  {t.main.delete_split_confirm.cancel}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader className="space-y-4">
+                <DialogTitle className="text-lg font-bold tracking-tight text-text-primary flex items-center gap-3">
+                  <AlertCircle className="text-danger" size={20} />
+                  {t.main.delete_confirm.title}
+                </DialogTitle>
+                <DialogDescription className="text-text-secondary text-sm leading-relaxed">
+                  {t.main.delete_confirm.description}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="mt-6 flex gap-3">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setDeleteTaskId(null)}
+                  className="flex-1 bg-surface text-text-secondary hover:bg-border hover:text-text-primary font-bold rounded-xl h-12"
+                >
+                  {t.main.delete_confirm.cancel}
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    if (deleteTaskId) {
+                      await onDeleteTask(deleteTaskId);
+                      setDeleteTaskId(null);
+                    }
+                  }}
+                  className="flex-1 bg-danger text-text-primary hover:bg-danger/80 font-bold rounded-xl h-12 transition-all active:scale-95"
+                >
+                  {t.main.delete_confirm.btn}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

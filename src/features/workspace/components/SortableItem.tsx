@@ -147,20 +147,23 @@ export const SortableItem = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTransition(block);
-                    }}
-                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered ? "bg-surface-elevated text-text-primary border-border shadow-lg scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-border/80"}`}
-                  >
-                    <Pencil size={16} />
-                  </Button>
+                  <span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      disabled={isSplit && !isLastOfTask}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTransition(block);
+                      }}
+                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered && !(isSplit && !isLastOfTask) ? "bg-surface-elevated text-text-primary border-border shadow-lg scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-border/80"} disabled:opacity-30 disabled:cursor-not-allowed`}
+                    >
+                      <Pencil size={16} />
+                    </Button>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                  {t.main.tooltip?.edit || "수정"}
+                  {isSplit && !isLastOfTask ? (t.main.tooltip?.edit_disabled || "분할된 이전 블록은 수정할 수 없습니다.") : (t.main.tooltip?.edit || "수정")}
                 </TooltipContent>
               </Tooltip>
 
