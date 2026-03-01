@@ -65,6 +65,7 @@
 - `reorder_blocks`: Dnd-kit의 `arrayMove` 결과를 DB에 반영하고 시간 재계산.
 - `process_task_transition`: 업무 종료 시나리오 처리 (`COMPLETE_NOW`, `DELAY` 등).
 - `move_to_inbox` / `move_to_timeline`: 타임라인과 인박스 간의 데이터 상태 전환.
+- `move_all_to_timeline`: 인박스의 모든 태스크를 현재 타임라인 마지막 시점 이후로 일괄 스케줄링.
 
 ### ✨ AI Retrospective (Gemini 1.5 Flash)
 - `generate_retrospective`: `DONE` 상태의 블록들을 수집하여 AI 브래그 도큐먼트 생성.
@@ -123,4 +124,44 @@
   2. Gemini API 호출하여 마크다운 텍스트 수신.
   3. `retrospectives` 테이블에 결과 저장.
 - **[UI Feedback]**: 생성 완료 후 데스크탑 알림(`tauri-plugin-notification`) 발송. 마크다운 결과가 담긴 `Dialog` 모달 오픈. `ReactMarkdown`을 통해 렌더링.
+
+### H. 워크스페이스 전환 (Workspace Switching Flow)
+- **[Trigger]**: `PrimarySidebar`에서 다른 워크스페이스 아이콘 클릭.
+- **[Frontend State]**: `activeWorkspaceId` 상태 업데이트. `view`를 `"main"`으로 고정.
+- **[Backend Command]**: `get_greeting`, `get_timeline`, `get_inbox`, `get_active_dates`를 새로운 `workspaceId`로 재호출.
+- **[UI Feedback]**: 해당 워크스페이스의 타임라인과 인박스 데이터로 화면 리렌더링.
+
+### I. 과거 기록 조회 및 날짜 이동 (Archive Navigation Flow)
+- **[Trigger]**: `SecondarySidebar`의 달력에서 특정 날짜 클릭 또는 텍스트 입력창(`YYYY-MM-DD`)에 날짜 입력 후 전송.
+- **[Frontend State]**: `selectedDate` 상태 업데이트.
+- **[Backend Command]**: `get_timeline` 호출 시 해당 날짜 문자열을 인자로 전달.
+- **[UI Feedback]**: 해당 날짜의 과거 타임라인 블록들이 표시됨. (과거 날짜의 경우 업무 추가/수정이 제한될 수 있음).
+
+### J. 인박스 및 드래그 앤 드롭 (Inbox & Dnd Flow)
+- **[Trigger]**:
+  - 타임라인 블록을 인박스 영역으로 드래그하거나 `Inbox` 아이콘 클릭.
+  - 인박스 아이템을 타임라인 영역으로 드래그하거나 `Send` 아이콘 클릭.
+  - 타임라인 내에서 블록 간 순서 변경.
+- **[Frontend State]**: `DndContext` 내 `handleDragEnd` 이벤트 발생. `arrayMove`로 로컬 상태 선반영.
+- **[Backend Command]**:
+  - `move_to_inbox`: 타임라인 블록 삭제 및 원본 태스크를 인박스 상태로 전환.
+  - `move_to_timeline`: 인박스 태스크를 타임라인 마지막 시점에 스케줄링.
+  - `reorder_blocks`: 변경된 순서 리스트를 전달하여 전체 시간 재계산 및 저장.
+- **[UI Feedback]**: 데이터 정합성 유지를 위해 `fetchMainData` 재실행 및 타임라인 정렬.
+
+### K. 태스크 삭제 (Task Deletion Flow)
+- **[Trigger]**: 타임라인 블록 또는 인박스 아이템의 `X` 버튼 클릭 후 확인 모달에서 승인.
+- **[Frontend State]**: `deleteTaskId` 상태에 ID 저장 및 확인 `Dialog` 오픈.
+- **[Backend Command]**: `delete_task` 호출. `ON DELETE CASCADE` 설정에 의해 연결된 `time_blocks`도 자동 삭제됨.
+- **[UI Feedback]**: 목록에서 해당 항목 제거. 삭제 완료 토스트 알림(구현 시).
+
+### L. 자동 업무 상태 전환 및 마감 알림 (Auto-Transition Flow)
+- **[Trigger]**: `App.tsx`의 1초 주기 타이머에 의해 `fetchMainData`가 실행됨.
+- **[Frontend State]**: 
+  - `NOW` 블록이 없고 다음 `WILL` 블록의 `start_time`이 현재 시간을 지난 경우 -> `update_block_status` 호출.
+  - 현재 `NOW` 블록의 `end_time`이 현재 시간을 지난 경우 -> `transitionBlock` 상태 업데이트 및 `Transition Modal` 자동 오픈.
+- **[Backend Command]**: `update_block_status`를 통해 `WILL` 블록을 `NOW`로 변경.
+- **[UI Feedback]**: 
+  - 타임라인의 해당 블록 색상이 강조(`accent`) 컬러로 변경되고 애니메이션 활성화.
+  - 마감 시간이 지난 경우 붉은색 강조 및 `Overdue` 뱃지 노출, 상태 전환 모달 팝업.
 
