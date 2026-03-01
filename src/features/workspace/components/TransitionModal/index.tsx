@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -7,11 +6,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { TimeBlock } from "@/types";
 import { CompletionSection } from "./CompletionSection";
 import { ExtensionSection } from "./ExtensionSection";
+import { cn } from "@/lib/utils";
 
 interface TransitionModalProps {
   t: any;
@@ -20,6 +18,7 @@ interface TransitionModalProps {
   onTransition: (action: string, extraMinutes?: number, reviewMemo?: string) => Promise<void>;
 }
 
+type TabType = "COMPLETION" | "EXTENSION";
 type CompletionType = "COMPLETE_ON_TIME" | "COMPLETE_NOW" | "COMPLETE_AGO";
 
 export const TransitionModal = ({
@@ -28,21 +27,37 @@ export const TransitionModal = ({
   onClose,
   onTransition,
 }: TransitionModalProps) => {
+  const [activeTab, setActiveTab] = useState<TabType>("COMPLETION");
   const [reviewMemo, setReviewMemo] = useState("");
   const [completionType, setCompletionType] = useState<CompletionType>("COMPLETE_NOW");
+  const [agoHours, setAgoHours] = useState<number>(0);
   const [agoMinutes, setAgoMinutes] = useState<number>(5);
   const [customDelay, setCustomDelay] = useState<number>(15);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (transitionBlock) {
+      setActiveTab("COMPLETION");
       setCompletionType("COMPLETE_NOW");
+      setReviewMemo("");
     }
   }, [transitionBlock]);
 
+  // Focus textarea when switching to COMPLETION tab
+  useEffect(() => {
+    if (activeTab === "COMPLETION") {
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    }
+  }, [activeTab]);
+
   const handleComplete = async () => {
     if (!transitionBlock) return;
-    await onTransition(completionType, completionType === "COMPLETE_AGO" ? agoMinutes : undefined, reviewMemo);
+    const totalAgoMinutes = (agoHours * 60) + agoMinutes;
+    await onTransition(
+      completionType, 
+      completionType === "COMPLETE_AGO" ? totalAgoMinutes : undefined, 
+      reviewMemo
+    );
     resetAndClose();
   };
 
@@ -61,69 +76,78 @@ export const TransitionModal = ({
 
   return (
     <Dialog open={!!transitionBlock} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-8 antialiased [&>button]:hidden">
-        <DialogHeader className="space-y-4">
-          <DialogTitle className="text-2xl font-black tracking-tighter text-text-primary leading-none flex items-center gap-3">
-            <Sparkles className="text-warning" size={24} />
+      <DialogContent className="sm:max-w-[440px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-6 antialiased [&>button]:hidden overflow-hidden">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-xl font-black tracking-tighter text-text-primary">
             {t.main.transition.title}
           </DialogTitle>
-          <DialogDescription className="text-text-secondary text-sm leading-relaxed">
-            {t.main.transition.description}
+          <DialogDescription className="text-text-secondary text-[11px] font-medium">
+            <span className="text-accent font-bold">[{transitionBlock.title}]</span> {t.main.transition.description}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-6 space-y-8">
-          {/* 1. Task Info Area */}
-          <div className="p-4 bg-background border border-border rounded-2xl flex items-center justify-between">
-            <span className="text-xs font-medium text-text-secondary uppercase tracking-tight">
-              {t.main.transition.current_task}
-            </span>
-            <span className="font-bold text-sm truncate max-w-[240px]">
-              {transitionBlock.title}
-            </span>
-          </div>
+        {/* Tab Selection */}
+        <div className="flex p-1 bg-background border border-border rounded-xl mt-4">
+          <button
+            onClick={() => setActiveTab("COMPLETION")}
+            className={cn(
+              "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
+              activeTab === "COMPLETION" 
+                ? "bg-surface-elevated text-text-primary shadow-sm border border-border" 
+                : "text-text-muted hover:text-text-secondary"
+            )}
+          >
+            {t.main.transition.section_complete}
+          </button>
+          <button
+            onClick={() => setActiveTab("EXTENSION")}
+            className={cn(
+              "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
+              activeTab === "EXTENSION" 
+                ? "bg-surface-elevated text-text-primary shadow-sm border border-border" 
+                : "text-text-muted hover:text-text-secondary"
+            )}
+          >
+            {t.main.transition.section_delay}
+          </button>
+        </div>
 
-          {/* 2. Review Memo Area */}
-          <div className="space-y-3">
-            <Label className="text-xs font-bold text-text-secondary ml-1">
-              {t.main.transition.review_label}
-            </Label>
-            <textarea
-              ref={textareaRef}
-              autoFocus
-              value={reviewMemo}
-              onChange={(e) => setReviewMemo(e.target.value)}
-              placeholder={t.main.transition.review_placeholder}
-              className="w-full min-h-[100px] bg-background border border-border rounded-2xl p-4 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-text-muted font-medium leading-relaxed resize-none"
-            />
-          </div>
+        <div className="mt-5">
+          {activeTab === "COMPLETION" ? (
+            <div className="space-y-5 animate-in fade-in duration-300">
+              {/* Review Memo */}
+              <div className="space-y-2">
+                <textarea
+                  ref={textareaRef}
+                  autoFocus
+                  value={reviewMemo}
+                  onChange={(e) => setReviewMemo(e.target.value)}
+                  placeholder={t.main.transition.review_placeholder}
+                  className="w-full h-20 bg-background border border-border rounded-xl p-3 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-text-muted font-medium leading-relaxed resize-none"
+                />
+              </div>
 
-          <div className="space-y-6">
-            {/* 3. Completion Section */}
-            <CompletionSection
-              t={t}
-              completionType={completionType}
-              setCompletionType={setCompletionType}
-              agoMinutes={agoMinutes}
-              setAgoMinutes={setAgoMinutes}
-              handleComplete={handleComplete}
-            />
-
-            <div className="relative">
-              <Separator className="bg-border" />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface-elevated px-4 text-[10px] font-bold text-text-muted uppercase tracking-widest">
-                OR
-              </span>
+              <CompletionSection
+                t={t}
+                completionType={completionType}
+                setCompletionType={setCompletionType}
+                agoHours={agoHours}
+                setAgoHours={setAgoHours}
+                agoMinutes={agoMinutes}
+                setAgoMinutes={setAgoMinutes}
+                handleComplete={handleComplete}
+              />
             </div>
-
-            {/* 4. Extension Section */}
-            <ExtensionSection
-              t={t}
-              customDelay={customDelay}
-              setCustomDelay={setCustomDelay}
-              handleDelay={handleDelay}
-            />
-          </div>
+          ) : (
+            <div className="space-y-5 animate-in fade-in duration-300 py-2">
+              <ExtensionSection
+                t={t}
+                customDelay={customDelay}
+                setCustomDelay={setCustomDelay}
+                handleDelay={handleDelay}
+              />
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
