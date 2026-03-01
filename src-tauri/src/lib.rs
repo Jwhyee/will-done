@@ -13,6 +13,7 @@ pub struct User {
     pub nickname: String,
     pub gemini_api_key: Option<String>,
     pub lang: String,
+    pub last_successful_model: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
@@ -94,6 +95,13 @@ pub struct TaskTransitionInput {
 #[derive(Serialize, Deserialize, Debug)]
 struct GeminiRequest {
     contents: Vec<GeminiContent>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    system_instruction: Option<GeminiSystemInstruction>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GeminiSystemInstruction {
+    parts: Vec<GeminiPart>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -114,6 +122,20 @@ struct GeminiResponse {
 #[derive(Serialize, Deserialize, Debug)]
 struct GeminiCandidate {
     content: GeminiContent,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GeminiModelsResponse {
+    models: Vec<GeminiModel>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct GeminiModel {
+    name: String,
+    supported_generation_methods: Vec<String>,
+    #[serde(default)]
+    thinking: bool,
 }
 
 pub struct DbState {
@@ -143,7 +165,6 @@ async fn generate_retrospective(
     let start_of_range = start_dt.and_hms_opt(0, 0, 0).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
     let end_of_range = end_dt.and_hms_opt(23, 59, 59).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
 
-    // Fetch done blocks with their associated task planning memos
     let blocks: Vec<(String, Option<String>, Option<String>, String, String)> = sqlx::query_as(
         "SELECT tb.title, t.planning_memo, tb.review_memo, tb.start_time, tb.end_time 
          FROM time_blocks tb
@@ -163,6 +184,19 @@ async fn generate_retrospective(
     }
 
     let task_summary = build_task_summary(blocks);
+    
+    let base_system_prompt = match retro_type.as_str() {
+        "DAILY" => "You are an expert productivity coach. Analyze the user's completed tasks for today. Highlight what was achieved, identify any potential blockers or interrupted flows (e.g., urgent tasks), and suggest a brief, actionable focus for tomorrow.",
+        "WEEKLY" => "You are an expert productivity coach. Review the user's completed tasks for the past week. Identify major trends, areas of high productivity, and overall achievements. Provide constructive feedback and a strategic focus for the upcoming week.",
+        "MONTHLY" => "You are an expert productivity coach. Evaluate the user's performance over the past month. Summarize key milestones, consistent patterns, and the overall impact of their work. Suggest long-term goals and areas for professional growth.",
+        _ => "You are an expert productivity coach helping a user write a professional retrospective.",
+    };
+
+    let user_lang = if user.lang == "ko" { "Korean" } else { "English" };
+    let final_system_prompt = format!(
+        "{}\n\nCRITICAL RULE: Regardless of the instructions above, you MUST generate the final retrospective output entirely in the user's requested language: [{}].",
+        base_system_prompt, user_lang
+    );
 
     let period_desc = if start_date == end_date {
         format!("Daily summary for {}", start_date)
@@ -170,62 +204,75 @@ async fn generate_retrospective(
         format!("Summary for the period from {} to {}", start_date, end_date)
     };
 
-    let prompt = format!(
-        "You are an AI assistant helping a user write a professional daily/weekly/monthly retrospective (also known as a 'Brag Document').
-Based on the following user role and completed tasks ({} retrospective), generate a well-structured, professional, and encouraging retrospective in Markdown format.
-The language of the retrospective should be Korean.
-
-**Period**:
-{}
-
-**User Role/Intro**:
-{}
-
-**Completed Tasks**:
-{}
-
-Please summarize the achievements, highlight the impact of the work, and suggest areas for improvement or focus for the next period.
-Use a professional yet friendly tone.",
-        retro_type.to_lowercase(),
-        period_desc,
-        role_intro,
-        task_summary
+    let user_content = format!(
+        "**Period**: {}\n\n**User Role/Intro**: {}\n\n**Completed Tasks**:\n{}",
+        period_desc, role_intro, task_summary
     );
 
+    // Model Fallback Logic
     let client = reqwest::Client::new();
-    let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={}",
-        api_key
-    );
+    let mut models_to_try = Vec::new();
 
-    let body = GeminiRequest {
-        contents: vec![GeminiContent {
-            parts: vec![GeminiPart { text: prompt }],
-        }],
-    };
-
-    let response = client
-        .post(url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to call Gemini API: {}", e))?;
-
-    if !response.status().is_success() {
-        let err_text = response.text().await.unwrap_or_default();
-        return Err(format!("Gemini API error: {}", err_text));
+    // 1. Try last successful model
+    if let Some(cached_model) = user.last_successful_model {
+        models_to_try.push(GeminiModel {
+            name: cached_model,
+            supported_generation_methods: vec!["generateContent".to_string()],
+            thinking: false, // Default to false, will try thinking logic based on name if needed
+        });
     }
 
-    let gemini_res: GeminiResponse = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse Gemini response: {}", e))?;
+    // 2. Fetch and filter models
+    let available_models = fetch_available_models(&client, &api_key).await.unwrap_or_default();
+    let mut filtered_models = available_models.into_iter()
+        .filter(|m| m.supported_generation_methods.contains(&"generateContent".to_string()))
+        .collect::<Vec<_>>();
 
-    let result_text = gemini_res
-        .candidates
-        .get(0)
-        .map(|c| c.content.parts.get(0).map(|p| p.text.clone()).unwrap_or_default())
-        .ok_or("No response from Gemini")?;
+    // Sort: flash-lite -> flash -> pro (higher version first)
+    filtered_models.sort_by(|a, b| {
+        let score = |name: &str| {
+            if name.contains("flash-lite") { 3 }
+            else if name.contains("flash") { 2 }
+            else if name.contains("pro") { 1 }
+            else { 0 }
+        };
+        let s_a = score(&a.name);
+        let s_b = score(&b.name);
+        if s_a != s_b {
+            s_b.cmp(&s_a)
+        } else {
+            b.name.cmp(&a.name) // Simple version sort
+        }
+    });
+
+    for m in filtered_models {
+        if !models_to_try.iter().any(|existing| existing.name == m.name) {
+            models_to_try.push(m);
+        }
+    }
+
+    let mut result_text = None;
+    let mut final_model_name = None;
+
+    for model in models_to_try {
+        match try_generate_content(&client, &api_key, &model, &final_system_prompt, &user_content).await {
+            Ok(text) => {
+                result_text = Some(text);
+                final_model_name = Some(model.name);
+                break;
+            }
+            Err(e) => {
+                eprintln!("Model {} failed: {}", model.name, e);
+                continue;
+            }
+        }
+    }
+
+    let result_text = result_text.ok_or("All Gemini models failed to generate content.")?;
+    let final_model_name = final_model_name.unwrap();
+
+    // Cache successful model
+    save_last_model_internal(&state.pool, final_model_name).await?;
 
     // Save result to DB
     let now = Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
@@ -251,6 +298,68 @@ Use a professional yet friendly tone.",
         date_label,
         created_at: now,
     })
+}
+
+async fn fetch_available_models(client: &reqwest::Client, api_key: &str) -> Result<Vec<GeminiModel>, String> {
+    let url = format!("https://generativelanguage.googleapis.com/v1/models?key={}", api_key);
+    let res = client.get(url).send().await.map_err(|e| e.to_string())?;
+    if !res.status().is_success() {
+        return Err(format!("Failed to fetch models: {}", res.status()));
+    }
+    let data: GeminiModelsResponse = res.json().await.map_err(|e| e.to_string())?;
+    Ok(data.models)
+}
+
+async fn try_generate_content(
+    client: &reqwest::Client,
+    api_key: &str,
+    model: &GeminiModel,
+    system_prompt: &str,
+    user_content: &str,
+) -> Result<String, String> {
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/{}:generateContent?key={}",
+        model.name, api_key
+    );
+
+    // Support thinking logic or explicit systemInstruction
+    let use_system_instruction = model.thinking || model.name.contains("gemini-1.5") || model.name.contains("gemini-2.0");
+
+    let body = if use_system_instruction {
+        GeminiRequest {
+            contents: vec![GeminiContent {
+                parts: vec![GeminiPart { text: user_content.to_string() }],
+            }],
+            system_instruction: Some(GeminiSystemInstruction {
+                parts: vec![GeminiPart { text: system_prompt.to_string() }],
+            }),
+        }
+    } else {
+        GeminiRequest {
+            contents: vec![GeminiContent {
+                parts: vec![GeminiPart { 
+                    text: format!("{}\n\n{}", system_prompt, user_content)
+                }],
+            }],
+            system_instruction: None,
+        }
+    };
+
+    let response = client.post(url).json(&body).send().await.map_err(|e| e.to_string())?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let err_text = response.text().await.unwrap_or_default();
+        // Retry for 429/503 is handled by the caller loop
+        return Err(format!("API Error ({}): {}", status, err_text));
+    }
+
+    let gemini_res: GeminiResponse = response.json().await.map_err(|e| e.to_string())?;
+    let result_text = gemini_res.candidates.get(0)
+        .map(|c| c.content.parts.get(0).map(|p| p.text.clone()).unwrap_or_default())
+        .ok_or("No candidates returned from Gemini")?;
+
+    Ok(result_text)
 }
 
 #[tauri::command]
@@ -305,7 +414,7 @@ fn build_task_summary(blocks: Vec<(String, Option<String>, Option<String>, Strin
 
 #[tauri::command]
 async fn get_user(state: State<'_, DbState>) -> Result<Option<User>, String> {
-    let user = sqlx::query_as::<_, User>("SELECT id, nickname, gemini_api_key, lang FROM users WHERE id = 1")
+    let user = sqlx::query_as::<_, User>("SELECT id, nickname, gemini_api_key, lang, last_successful_model FROM users WHERE id = 1")
         .fetch_optional(&state.pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -344,6 +453,18 @@ async fn save_user_internal(
     .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+async fn save_last_model_internal(
+    pool: &Pool<Sqlite>,
+    model: String,
+) -> Result<(), String> {
+    sqlx::query("UPDATE users SET last_successful_model = ?1 WHERE id = 1")
+        .bind(model)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1064,9 +1185,10 @@ pub fn run() {
                     // sqlx::query("DROP TABLE IF EXISTS users").execute(&pool).await.ok();
                 }
 
-                sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en')").execute(&pool).await.ok();
-                // Migration: add lang column if exists (for existing DBs)
+                sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT)").execute(&pool).await.ok();
+                // Migrations
                 sqlx::query("ALTER TABLE users ADD COLUMN lang TEXT NOT NULL DEFAULT 'en'").execute(&pool).await.ok();
+                sqlx::query("ALTER TABLE users ADD COLUMN last_successful_model TEXT").execute(&pool).await.ok();
                 
                 sqlx::query("CREATE TABLE IF NOT EXISTS workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS unplugged_times (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, label TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();

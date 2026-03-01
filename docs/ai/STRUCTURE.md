@@ -68,8 +68,19 @@
     - `move_to_inbox` / `move_to_timeline`: 타임라인과 인박스 간의 데이터 상태 전환.
     - `move_all_to_timeline`: 인박스의 모든 태스크를 현재 타임라인 마지막 시점 이후로 일괄 스케줄링.
 
-    ### ✨ AI Retrospective (Gemini 1.5 Flash)
-    - `generate_retrospective`: `DONE` 상태의 블록들을 수집하여 AI 브래그 도큐먼트 생성.
+    ### ✨ AI Retrospective (Gemini Multi-Model Fallback)
+    - `generate_retrospective`: 
+      1. 기간 선택(`DAILY`, `WEEKLY`, `MONTHLY`)에 따른 동적 입력 폼(`type="date/week/month"`) 제공.
+      2. 선택된 기간의 모든 `DONE` 블록과 `planning_memo`, `review_memo`를 수집.
+      3. **모델 Fallback 엔진**: 
+         - 로컬 DB에 캐싱된 `last_successful_model` 우선 시도.
+         - 실패 시 `/v1/models`에서 가용 모델 목록 호출 및 필터링(`generateContent` 지원 여부).
+         - 우선순위(`flash-lite` -> `flash` -> `pro`) 및 버전별 재시도 체인 가동.
+         - 429(Quota Exceeded) 또는 503 에러 발생 시 즉시 다음 모델로 전환.
+      4. **프롬프트 엔지니어링**:
+         - 기간별 영문 System Prompt 분기 및 유저 설정 언어(`ko/en`) 강제 규칙 적용.
+         - 모델 스펙에 따라 `system_instruction` 필드 또는 프롬프트 결합(Concatenation) 방식 자동 선택.
+      5. 성공 시 해당 모델명을 캐싱하고 결과를 DB에 저장.
     - `get_saved_retrospectives` / `get_latest_saved_retrospective`: 과거 생성 내역 조회.
 
     ---
@@ -118,13 +129,15 @@
     - **[UI Feedback]**: 모달 닫힘. 타임라인 리렌더링. 상태가 `DONE`으로 변경되며 리뷰 메모 저장 완료.
 
     ### G. AI 회고 생성 (AI Retrospective Flow)
-    - **[Trigger]**: `SecondarySidebar` 내 `회고` 버튼 클릭 후 타입(일간/주간/월간) 및 날짜 선택 후 `회고 생성하기` 클릭.
-    - **[Frontend State]**: `isGenerating` 상태 `true` 변경 (로딩 스피너 및 안내 문구 노출).
+    - **[Trigger]**: `SecondarySidebar` 내 `회고` 버튼 클릭 후 타입(일간/주간/월간) 선택.
+    - **[Frontend State]**: 
+      - 선택한 타입에 따라 `<input>`의 `type`이 `date`, `week`, `month`로 자동 전환.
+      - `date-fns`를 통해 선택된 기간의 실제 `startDate`, `endDate` 및 `dateLabel` 계산.
+      - `isGenerating` 상태 `true` 변경 (로딩 스피너 및 안내 문구 노출).
     - **[Backend Command]**: `generate_retrospective` 호출. 
-    1. DB에서 해당 기간의 모든 `DONE` 블록과 `planning_memo`, `review_memo` 수집.
-    2. Gemini API 호출하여 마크다운 텍스트 수신.
-    3. `retrospectives` 테이블에 결과 저장.
-    - **[UI Feedback]**: 생성 완료 후 데스크탑 알림(`tauri-plugin-notification`) 발송. 마크다운 결과가 담긴 `Dialog` 모달 오픈. `ReactMarkdown`을 통해 렌더링.
+      - 앞서 설명한 **모델 Fallback 엔진**을 통해 최적의 Gemini 모델로 회고 생성.
+      - 유저의 `role_intro`와 태스크 리스트(`planning/review memo` 포함)를 기반으로 고품질 마크다운 생성.
+    - **[UI Feedback]**: 생성 완료 후 데스크탑 알림 발송. 마크다운 결과가 담긴 `Dialog` 모달 오픈.
 
     ### H. 워크스페이스 전환 (Workspace Switching Flow)
     - **[Trigger]**: `PrimarySidebar`에서 다른 워크스페이스 아이콘 클릭.

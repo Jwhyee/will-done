@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import { Sparkles, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parse } from "date-fns";
 import { Retrospective } from "@/types";
 
 interface RetrospectiveViewProps {
@@ -21,12 +21,65 @@ export const RetrospectiveView = ({
 }: RetrospectiveViewProps) => {
   const [tab, setTab] = useState<"create" | "browse">("create");
   const [retroType, setRetroType] = useState<"DAILY" | "WEEKLY" | "MONTHLY">("DAILY");
+  
+  // input value state (what the user sees/types in the input)
+  const [inputValue, setInputValue] = useState(format(new Date(), "yyyy-MM-dd"));
+  
+  // actual date range for backend
   const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [dateLabel, setDateLabel] = useState(format(new Date(), "yyyy-MM-dd"));
+  
   const [browseDate, setBrowseDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isGenerating, setIsGenerating] = useState(false);
   const [genMessage, setGenMessage] = useState("");
+
+  // Handle input change and update start/end dates
+  useEffect(() => {
+    if (!inputValue) return;
+
+    let start = "";
+    let end = "";
+    let label = inputValue;
+
+    try {
+      if (retroType === "DAILY") {
+        start = inputValue;
+        end = inputValue;
+      } else if (retroType === "WEEKLY") {
+        // HTML week input format: YYYY-Www
+        const [year, weekStr] = inputValue.split("-W");
+        const date = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
+        start = format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
+        end = format(endOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
+        label = `${year}년 ${weekStr}주차 (${start} ~ ${end})`;
+      } else if (retroType === "MONTHLY") {
+        // HTML month input format: YYYY-MM
+        const date = parse(inputValue, "yyyy-MM", new Date());
+        start = format(startOfMonth(date), "yyyy-MM-dd");
+        end = format(endOfMonth(date), "yyyy-MM-dd");
+        label = `${format(date, "yyyy년 M월")} 회고`;
+      }
+
+      setStartDate(start);
+      setEndDate(end);
+      setDateLabel(label);
+    } catch (e) {
+      console.error("Date parsing error:", e);
+    }
+  }, [inputValue, retroType]);
+
+  // Reset input value when type changes to match the expected format
+  useEffect(() => {
+    const now = new Date();
+    if (retroType === "DAILY") {
+      setInputValue(format(now, "yyyy-MM-dd"));
+    } else if (retroType === "WEEKLY") {
+      setInputValue(format(now, "yyyy-'W'II"));
+    } else if (retroType === "MONTHLY") {
+      setInputValue(format(now, "yyyy-MM"));
+    }
+  }, [retroType]);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -139,35 +192,29 @@ export const RetrospectiveView = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 gap-8">
                 <div className="space-y-4">
-                  <Label className="text-xs font-black text-text-secondary uppercase tracking-widest">Start Date</Label>
+                  <Label className="text-xs font-black text-text-secondary uppercase tracking-widest">
+                    {retroType === "DAILY" ? "날짜 선택" : retroType === "WEEKLY" ? "주차 선택" : "월 선택"}
+                  </Label>
                   <Input 
-                    type="date" 
-                    value={startDate} 
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="bg-surface border-border h-12 rounded-xl px-4 font-bold [color-scheme:dark]"
-                  />
-                </div>
-                <div className="space-y-4">
-                  <Label className="text-xs font-black text-text-secondary uppercase tracking-widest">End Date</Label>
-                  <Input 
-                    type="date" 
-                    value={endDate} 
-                    onChange={(e) => setEndDate(e.target.value)}
+                    type={retroType === "DAILY" ? "date" : retroType === "WEEKLY" ? "week" : "month"} 
+                    value={inputValue} 
+                    onChange={(e) => setInputValue(e.target.value)}
                     className="bg-surface border-border h-12 rounded-xl px-4 font-bold [color-scheme:dark]"
                   />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Label className="text-xs font-black text-text-secondary uppercase tracking-widest">Date Label (Title)</Label>
-                <Input 
-                  value={dateLabel} 
-                  onChange={(e) => setDateLabel(e.target.value)}
-                  placeholder="예: 2026-03-01 또는 2026년 3월 1주차"
-                  className="bg-surface border-border h-12 rounded-xl px-4 font-bold"
-                />
+              <div className="p-4 bg-surface rounded-2xl border border-border space-y-2">
+                <div className="flex justify-between items-center text-xs font-bold">
+                  <span className="text-text-secondary uppercase tracking-tighter">Selected Range</span>
+                  <span className="text-text-primary">{startDate} ~ {endDate}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs font-bold">
+                  <span className="text-text-secondary uppercase tracking-tighter">Final Label</span>
+                  <span className="text-text-primary">{dateLabel}</span>
+                </div>
               </div>
 
               {genMessage && (
