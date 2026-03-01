@@ -75,7 +75,7 @@ export const RetrospectiveView = ({
     if (retroType === "DAILY") {
       setInputValue(format(now, "yyyy-MM-dd"));
     } else if (retroType === "WEEKLY") {
-      setInputValue(format(now, "yyyy-'W'II"));
+      setInputValue(format(now, "RRRR-'W'II"));
     } else if (retroType === "MONTHLY") {
       setInputValue(format(now, "yyyy-MM"));
     }

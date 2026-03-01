@@ -69,6 +69,7 @@ pub struct Retrospective {
     pub content: String,
     pub date_label: String, // e.g., "2026-03-01", "2026-W09", "2026-03"
     pub created_at: String,
+    pub used_model: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -93,25 +94,25 @@ pub struct TaskTransitionInput {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct GeminiRequest {
-    contents: Vec<GeminiContent>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    system_instruction: Option<GeminiSystemInstruction>,
+pub struct GeminiRequest {
+    pub contents: Vec<GeminiContent>,
+    #[serde(rename = "systemInstruction", skip_serializing_if = "Option::is_none")]
+    pub system_instruction: Option<GeminiSystemInstruction>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct GeminiSystemInstruction {
-    parts: Vec<GeminiPart>,
+pub struct GeminiSystemInstruction {
+    pub parts: Vec<GeminiPart>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct GeminiContent {
-    parts: Vec<GeminiPart>,
+pub struct GeminiContent {
+    pub parts: Vec<GeminiPart>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct GeminiPart {
-    text: String,
+pub struct GeminiPart {
+    pub text: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -209,26 +210,25 @@ async fn generate_retrospective(
         period_desc, role_intro, task_summary
     );
 
-    // Model Fallback Logic
     let client = reqwest::Client::new();
     let mut models_to_try = Vec::new();
 
-    // 1. Try last successful model
-    if let Some(cached_model) = user.last_successful_model {
+    // 1. Try last successful model if exists
+    if let Some(ref cached_model) = user.last_successful_model {
         models_to_try.push(GeminiModel {
-            name: cached_model,
+            name: cached_model.clone(),
             supported_generation_methods: vec!["generateContent".to_string()],
-            thinking: false, // Default to false, will try thinking logic based on name if needed
+            thinking: false,
         });
     }
 
-    // 2. Fetch and filter models
+    // 2. Fetch available models and filter/sort
     let available_models = fetch_available_models(&client, &api_key).await.unwrap_or_default();
     let mut filtered_models = available_models.into_iter()
         .filter(|m| m.supported_generation_methods.contains(&"generateContent".to_string()))
         .collect::<Vec<_>>();
 
-    // Sort: flash-lite -> flash -> pro (higher version first)
+    // Priority score: flash-lite (3) > flash (2) > pro (1)
     filtered_models.sort_by(|a, b| {
         let score = |name: &str| {
             if name.contains("flash-lite") { 3 }
@@ -239,9 +239,9 @@ async fn generate_retrospective(
         let s_a = score(&a.name);
         let s_b = score(&b.name);
         if s_a != s_b {
-            s_b.cmp(&s_a)
+            s_b.cmp(&s_a) // Higher score first
         } else {
-            b.name.cmp(&a.name) // Simple version sort
+            b.name.cmp(&a.name) // Higher version (descending string) first
         }
     });
 
@@ -262,6 +262,7 @@ async fn generate_retrospective(
                 break;
             }
             Err(e) => {
+                // Retry for 429/503 is implicit by continuing to the next model
                 eprintln!("Model {} failed: {}", model.name, e);
                 continue;
             }
@@ -272,18 +273,19 @@ async fn generate_retrospective(
     let final_model_name = final_model_name.unwrap();
 
     // Cache successful model
-    save_last_model_internal(&state.pool, final_model_name).await?;
+    save_last_model_internal(&state.pool, final_model_name.clone()).await?;
 
     // Save result to DB
     let now = Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
     let result = sqlx::query(
-        "INSERT INTO retrospectives (workspace_id, retro_type, content, date_label, created_at) VALUES (?1, ?2, ?3, ?4, ?5)"
+        "INSERT INTO retrospectives (workspace_id, retro_type, content, date_label, created_at, used_model) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
     )
     .bind(workspace_id)
     .bind(&retro_type)
     .bind(&result_text)
     .bind(&date_label)
     .bind(&now)
+    .bind(&final_model_name)
     .execute(&state.pool)
     .await
     .map_err(|e| e.to_string())?;
@@ -297,6 +299,7 @@ async fn generate_retrospective(
         content: result_text,
         date_label,
         created_at: now,
+        used_model: Some(final_model_name),
     })
 }
 
@@ -318,14 +321,16 @@ async fn try_generate_content(
     user_content: &str,
 ) -> Result<String, String> {
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/{}:generateContent?key={}",
-        model.name, api_key
+        "https://generativelanguage.googleapis.com/v1beta/{}:generateContent",
+        model.name
     );
 
-    // Support thinking logic or explicit systemInstruction
-    let use_system_instruction = model.thinking || model.name.contains("gemini-1.5") || model.name.contains("gemini-2.0");
+    // Support systemInstruction for 1.5, 2.0, 2.5 series
+    let supports_system_instruction = model.name.contains("gemini-1.5") || 
+                                     model.name.contains("gemini-2.0") || 
+                                     model.name.contains("gemini-2.5");
 
-    let body = if use_system_instruction {
+    let body = if supports_system_instruction {
         GeminiRequest {
             contents: vec![GeminiContent {
                 parts: vec![GeminiPart { text: user_content.to_string() }],
@@ -345,18 +350,24 @@ async fn try_generate_content(
         }
     };
 
-    let response = client.post(url).json(&body).send().await.map_err(|e| e.to_string())?;
+    let response = client.post(&url)
+        .header("x-goog-api-key", api_key)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Network Error: {}", e))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let err_text = response.text().await.unwrap_or_default();
-        // Retry for 429/503 is handled by the caller loop
         return Err(format!("API Error ({}): {}", status, err_text));
     }
 
-    let gemini_res: GeminiResponse = response.json().await.map_err(|e| e.to_string())?;
+    let gemini_res: GeminiResponse = response.json().await.map_err(|e| format!("JSON Parse Error: {}", e))?;
     let result_text = gemini_res.candidates.get(0)
-        .map(|c| c.content.parts.get(0).map(|p| p.text.clone()).unwrap_or_default())
+        .and_then(|c| c.content.parts.get(0))
+        .map(|p| p.text.clone())
         .ok_or("No candidates returned from Gemini")?;
 
     Ok(result_text)
@@ -1199,7 +1210,9 @@ pub fn run() {
                 // Migration: add column if exists (for existing DBs)
                 sqlx::query("ALTER TABLE time_blocks ADD COLUMN is_urgent BOOLEAN NOT NULL DEFAULT 0").execute(&pool).await.ok();
 
-                sqlx::query("CREATE TABLE IF NOT EXISTS retrospectives (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, retro_type TEXT NOT NULL, content TEXT NOT NULL, date_label TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+                sqlx::query("CREATE TABLE IF NOT EXISTS retrospectives (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, retro_type TEXT NOT NULL, content TEXT NOT NULL, date_label TEXT NOT NULL, created_at TEXT NOT NULL, used_model TEXT, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+                // Migration: add used_model column if not exists
+                sqlx::query("ALTER TABLE retrospectives ADD COLUMN used_model TEXT").execute(&pool).await.ok();
 
                 app_handle.manage(DbState { pool });
             });
