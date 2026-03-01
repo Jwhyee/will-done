@@ -45,6 +45,11 @@ pub async fn delete_task(state: State<'_, DbState>, id: i64) -> Result<()> {
 }
 
 #[tauri::command]
+pub async fn handle_split_task_deletion(state: State<'_, DbState>, task_id: i64, keep_past: bool) -> Result<()> {
+    database::timeline::handle_split_task_deletion(&state.pool, task_id, keep_past).await
+}
+
+#[tauri::command]
 pub async fn process_task_transition(state: State<'_, DbState>, input: TaskTransitionInput) -> Result<()> {
     database::timeline::process_task_transition(&state.pool, input).await
 }

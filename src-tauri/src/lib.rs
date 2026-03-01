@@ -63,6 +63,7 @@ pub fn run() {
             commands::timeline::move_to_timeline,
             commands::timeline::move_all_to_timeline,
             commands::timeline::delete_task,
+            commands::timeline::handle_split_task_deletion,
             commands::timeline::process_task_transition,
             commands::timeline::update_block_status,
             commands::timeline::reorder_blocks,
