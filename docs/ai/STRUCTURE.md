@@ -80,7 +80,7 @@
     ## 3. Implemented Features & API
 
     ### 👤 User & Settings
-    - `get_user` / `save_user`: 유저 프로필(닉네임, geminiApiKey, 언어) 관리.
+    - `get_user` / `save_user`: 유저 프로필(닉네임, geminiApiKey, 언어, 알림 활성화 여부) 관리.
     - `get_greeting`: 현재 시간(새벽/아침/점심 등)과 업무 집중 여부에 따른 동적 메시지.
 
     ### 🏢 Workspace & Archive
@@ -204,6 +204,7 @@
 - **[Frontend State]**: 
   - `NOW` 블록이 없고 다음 `WILL` 블록의 `start_time`이 현재 시간을 지난 경우 -> `update_block_status` 호출.
   - 현재 `NOW` 블록의 `end_time`이 현재 시간을 지난 경우 -> `transitionBlock` 상태 업데이트 및 `Transition Modal` 자동 오픈.
+  - **네이티브 알림**: 유저 설정 및 권한이 있는 경우, 마감 알림 발송. 알림 클릭 시 `tauri://notification-action` 이벤트를 통해 앱 포커스 및 `open-transition-modal` 수행.
 - **[Backend Command]**: `update_block_status`를 통해 `WILL` 블록을 `NOW`로 변경.
 - **[UI Feedback]**: 
   - 타임라인의 해당 블록 색상이 강조(`accent`) 컬러로 변경되고 애니메이션 활성화.
