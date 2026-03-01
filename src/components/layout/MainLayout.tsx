@@ -17,7 +17,7 @@ export const MainLayout = ({ children, sidebar1, sidebar2 }: MainLayoutProps) =>
       {sidebar2 && (
         <motion.div
           initial={false}
-          animate={{ width: isCollapsed ? 80 : 256 }}
+          animate={{ width: isCollapsed ? 64 : 200 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className="border-r border-border bg-surface flex flex-col shrink-0 z-10 relative"
         >

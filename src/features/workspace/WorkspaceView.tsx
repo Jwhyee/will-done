@@ -170,58 +170,73 @@ export const WorkspaceView = ({
       {/* Header */}
       <header className="px-8 py-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border/50">
         <div className="flex items-center justify-between">
-          <div className="space-y-1">
+          <div className="space-y-1.5 w-full max-w-2xl">
             <div className="flex items-center space-x-4">
-              <div className="text-xs font-black text-text-muted bg-surface-elevated px-3 py-1.5 rounded-xl border border-border shadow-sm">
+              <div className="text-[10px] font-black text-text-muted bg-surface-elevated px-2.5 py-1 rounded-lg border border-border shadow-sm">
                 {format(currentTime, "yyyy년 M월 d일 (EEE)", { locale: ko })}
               </div>
-              <div className="flex items-center space-x-3 text-2xl font-black font-mono tracking-tighter">
-                <Clock size={22} className="text-accent" />
-                <span>{format(currentTime, "HH시 mm분 ss초")}</span>
+              <div className="flex items-center space-x-2 text-xl font-black font-mono tracking-tighter">
+                <Clock size={18} className="text-accent" />
+                <span>{format(currentTime, "HH:mm:ss")}</span>
+              </div>
+              <div className="flex-1 max-w-[200px] h-1.5 bg-surface-elevated rounded-full overflow-hidden border border-border/50 relative group">
+                <div 
+                  className="h-full bg-accent transition-all duration-1000 ease-out"
+                  style={{ width: `${((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100}%` }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                   <span className="text-[8px] font-black text-text-primary bg-background/80 px-1 rounded">
+                     {Math.round(((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100)}%
+                   </span>
+                </div>
               </div>
             </div>
-            <p className="text-text-secondary font-bold text-sm tracking-tight pl-1">{greeting}</p>
+            <p className="text-[#D1D5DB] font-bold text-sm tracking-tight pl-1">{greeting}</p>
           </div>
         </div>
         
         {/* Task Input Form */}
-        <div className="p-2 bg-surface border border-border rounded-2xl shadow-2xl">
-          <form onSubmit={taskForm.handleSubmit(handleTaskSubmit)} className="flex flex-col space-y-2">
-            <div className="flex items-center space-x-2 px-2 pt-2">
+        <div className="p-1 bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden">
+          <form onSubmit={taskForm.handleSubmit(handleTaskSubmit)} className="flex flex-col">
+            <div className="px-3 pt-2">
               <Input 
                 {...taskForm.register("title")}
                 placeholder={t.main.task_placeholder} 
-                className="flex-1 bg-transparent border-none text-lg font-bold placeholder:text-text-muted focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-12"
+                className="w-full bg-transparent border-none text-lg font-bold placeholder:text-text-muted focus-visible:ring-0 focus-visible:ring-offset-0 px-1 h-12"
               />
-              
-              <TimePicker 
-                hours={taskForm.watch("hours")}
-                minutes={taskForm.watch("minutes")}
-                onChange={(h, m) => {
-                  taskForm.setValue("hours", h);
-                  taskForm.setValue("minutes", m);
-                }}
-                t={t}
-              />
-              
-              <label className="flex items-center space-x-2 bg-background border border-border rounded-xl h-10 px-4 cursor-pointer hover:bg-surface-elevated transition-colors">
-                <input type="checkbox" {...taskForm.register("isUrgent")} className="hidden" />
-                <Zap size={14} className={taskForm.watch("isUrgent") ? "text-danger fill-danger" : "text-text-muted"} />
-                <span className={`text-[10px] font-black uppercase ${taskForm.watch("isUrgent") ? "text-danger" : "text-text-muted"}`}>{t.main.urgent}</span>
-              </label>
-
-              <Button type="submit" className="h-10 px-6 bg-text-primary text-background hover:bg-zinc-200 font-black rounded-xl transition-all active:scale-95 shadow-lg shadow-black/20">
-                <Send size={16} className="mr-2" />
-                {t.main.add_task}
-              </Button>
             </div>
             
-            <div className="px-4 pb-2">
+            <div className="px-4 mt-[-4px]">
               <textarea 
                 {...taskForm.register("planningMemo")}
                 placeholder={t.main.planning_placeholder}
-                className="w-full bg-transparent text-xs font-bold text-text-secondary placeholder:text-text-muted resize-none h-12 focus:outline-none focus:ring-0 py-2"
+                className="w-full bg-transparent text-xs font-bold text-text-secondary placeholder:text-text-muted resize-none h-12 focus:outline-none focus:ring-0 py-1"
               />
+            </div>
+
+            <div className="flex items-center justify-between px-3 pb-3 pt-2 border-t border-border/30 bg-surface-elevated/30">
+              <div className="flex items-center space-x-2">
+                <TimePicker 
+                  hours={taskForm.watch("hours")}
+                  minutes={taskForm.watch("minutes")}
+                  onChange={(h, m) => {
+                    taskForm.setValue("hours", h);
+                    taskForm.setValue("minutes", m);
+                  }}
+                  t={t}
+                />
+                
+                <label className="flex items-center space-x-2 bg-background border border-border rounded-xl h-10 px-4 cursor-pointer hover:bg-surface-elevated transition-colors">
+                  <input type="checkbox" {...taskForm.register("isUrgent")} className="hidden" />
+                  <Zap size={14} className={taskForm.watch("isUrgent") ? "text-danger fill-danger" : "text-text-muted"} />
+                  <span className={`text-[10px] font-black uppercase ${taskForm.watch("isUrgent") ? "text-danger" : "text-text-muted"}`}>{t.main.urgent}</span>
+                </label>
+              </div>
+
+              <Button type="submit" className="h-10 px-5 bg-text-primary text-background hover:bg-zinc-200 font-black rounded-xl transition-all active:scale-95 shadow-lg shadow-black/20">
+                <Send size={16} className="mr-[4px]" />
+                {t.main.add_task}
+              </Button>
             </div>
           </form>
         </div>

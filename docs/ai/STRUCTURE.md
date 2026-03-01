@@ -43,14 +43,14 @@
   - **Onboarding**: 유저 정보가 없을 때 강제 진입. 닉네임/언어 설정 모달.
   - **WorkspaceSetup**: 워크스페이스가 없을 때 진입. 워크스페이스 이름, 집중 시간, 역할 설정.
   - **Main View** (`MainLayout` 기반):
-    - `PrimarySidebar` (L1): 워크스페이스 아이콘 리스트 및 추가 버튼.
-    - `SecondarySidebar` (L2): `Calendar` (데이터 있는 날짜 표시), `Inbox` (미배정 태스크), `Settings` 버튼.
-    - `WorkspaceView` (Content):
-      - `Header`: 실시간 시계(HH시 mm분 ss초), 오늘 날짜 표시, 지능형 인사말, 태스크 입력 폼.
-      - `Task Input Form`: 커스텀 Time Picker(Popover), 긴급 여부, 메모 입력.
-      - `Timeline`: `SortableContext` 내부의 `SortableItem` 리스트. 드래그 가능.
-      - `Modals`: 업무 종료 분기 처리(`TransitionModal`), 삭제 확인, 인박스 전체 이동 확인.
-    - **Retrospective View**: 
+  - `PrimarySidebar` (L1): 워크스페이스 아이콘 리스트 (56px/w-14) 및 추가 버튼.
+  - `SecondarySidebar` (L2): 인박스/설정/회고 (200px). 접기/펼치기 지원.
+  - `WorkspaceView` (Content):
+    - `Header`: 실시간 시계(HH:mm:ss, text-xl), **오늘의 가용 시간 진행바(Daily Progress Bar)**, 지능형 인사말(#D1D5DB), 태스크 입력 폼.
+    - `Task Input Form`: 입력창 하단 좌측에 Time Picker와 긴급 토글, 우측에 등록 버튼 배치. 안내 문구 마진 최적화(8px).
+    - `Timeline`: 각 태스크 왼쪽의 타임라인 점(Dot)들을 잇는 **수직 실선(Solid Line)** 추가. `SortableContext` 내부의 `SortableItem` 리스트.
+    - `SortableItem`: 태스크 제목(15px SemiBold), 상태/시간 범위(12px), 액션 아이콘 간격(12px) 및 호버 시 Opacity(40% -> 100%) 조정.
+    - `Modals`: 업무 종료 분기 처리(`TransitionModal`), 삭제 확인, 인박스 전체 이동 확인.    - **Retrospective View**: 
       - **Create Tab**: Generate daily/weekly/monthly AI retrospectives. Uses an intuitive "Step-by-Step" selection architecture:
         - **Daily**: Integrated `Calendar` view that highlights dates with task data (`activeDates`).
         - **Weekly**: Sequential dropdowns for Year -> Month -> n-th Week. Automatically calculates precise start/end dates for the selected week.

@@ -36,13 +36,13 @@ export const SecondarySidebar = ({
       <div className="flex flex-col h-full">
         {/* Toggle Button */}
         <div className={cn(
-          "p-4 flex items-center border-b border-border/50",
+          "py-3 px-4 flex items-center border-b border-border/50",
           isCollapsed ? "justify-center" : "justify-between"
         )}>
           {!isCollapsed && (
             <div className="flex items-center space-x-2">
-              <Inbox size={16} className="text-accent" />
-              <h3 className="text-xs font-black text-text-primary uppercase tracking-widest">
+              <Inbox size={14} className="text-accent" />
+              <h3 className="text-[10px] font-black text-text-primary uppercase tracking-widest">
                 {t.sidebar.inbox}
               </h3>
             </div>
@@ -51,24 +51,24 @@ export const SecondarySidebar = ({
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8 rounded-lg hover:bg-surface-elevated text-text-muted hover:text-text-primary transition-all"
+            className="h-7 w-7 rounded-lg hover:bg-surface-elevated text-text-muted hover:text-text-primary transition-all"
           >
-            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </Button>
         </div>
 
         {/* Inbox Section */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {!isCollapsed ? (
-            <ScrollArea className="flex-1 px-4 py-4">
-              <DroppableArea id="inbox" className="space-y-3 min-h-[100px]">
+            <ScrollArea className="flex-1 px-3 py-2">
+              <DroppableArea id="inbox" className="space-y-2 min-h-[100px]">
                 <SortableContext 
                   items={inboxTasks.map(t => `inbox-${t.id}`)}
                   strategy={verticalListSortingStrategy}
                 >
                   {inboxTasks.length === 0 ? (
-                    <div className="p-8 border-2 border-dashed border-border/40 bg-background/20 rounded-2xl text-center">
-                      <p className="text-[11px] text-text-muted font-bold italic">{t.sidebar.no_tasks}</p>
+                    <div className="p-6 border-2 border-dashed border-border/40 bg-background/20 rounded-2xl text-center">
+                      <p className="text-[10px] text-text-muted font-bold italic">{t.sidebar.no_tasks}</p>
                     </div>
                   ) : (
                     inboxTasks.map((task) => (
@@ -106,7 +106,7 @@ export const SecondarySidebar = ({
 
         {/* Bottom Actions */}
         <div className={cn(
-          "p-4 border-t border-border/50 space-y-2",
+          "p-3 border-t border-border/50 space-y-1.5",
           isCollapsed && "flex flex-col items-center"
         )}>
           {/* Retrospective Button */}

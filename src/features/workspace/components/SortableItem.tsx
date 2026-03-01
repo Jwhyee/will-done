@@ -72,7 +72,9 @@ export const SortableItem = ({
         <p className="text-[10px] font-black font-mono text-text-secondary">{formatDisplayTime(block.startTime)}</p>
       </div>
       
-      <div className={`absolute -left-[70px] top-1 w-3 h-3 rounded-full border-2 bg-surface z-10 transition-all duration-300 ${
+      <div className={`absolute -left-[70px] top-4 w-[2px] bottom-[-24px] bg-border/50 z-0 group-last/item:hidden`} />
+
+      <div className={`absolute -left-[75px] top-1 w-3.5 h-3.5 rounded-full border-2 bg-surface z-10 transition-all duration-300 ${
         block.status === "DONE" ? "border-success bg-success/20" :
         block.status === "NOW" ? "border-accent scale-125 shadow-[0_0_10px_rgba(59,130,246,0.5)] bg-accent/20" :
         block.status === "PENDING" ? "border-warning bg-warning/20" :
@@ -113,11 +115,11 @@ export const SortableItem = ({
             <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   {block.isUrgent && <AlertTriangle size={14} className="text-danger fill-danger/20" />}
-                  <h4 className={`font-black text-sm tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-text-muted" : (isHovered ? "text-text-primary" : "text-text-secondary")}`}>{block.title}</h4>
+                  <h4 className={`text-[15px] font-semibold tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-text-muted" : (isHovered ? "text-text-primary" : "text-text-secondary")}`}>{block.title}</h4>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${block.status === "NOW" ? "text-accent" : (isDone ? "text-success" : "text-text-muted")}`}>{block.status}</span>
-                    <span className="text-[10px] font-mono font-bold text-text-muted bg-background/50 px-2 py-0.5 rounded-md">
+                    <span className={`text-[12px] font-black uppercase tracking-widest ${block.status === "NOW" ? "text-accent" : (isDone ? "text-success" : "text-text-muted")}`}>{block.status}</span>
+                    <span className="text-[12px] font-mono font-bold text-text-muted bg-background/50 px-2 py-0.5 rounded-md">
                       {formatDisplayTime(block.startTime)} - {formatDisplayTime(block.endTime)}
                     </span>
                     {block.status === "NOW" && new Date(block.endTime) < currentTime && (
@@ -133,7 +135,7 @@ export const SortableItem = ({
                 </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -144,7 +146,7 @@ export const SortableItem = ({
                       e.stopPropagation();
                       onMoveToInbox(block.id);
                     }}
-                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 ${isHovered ? "bg-surface-elevated text-text-primary hover:bg-border" : "bg-surface text-text-muted hover:text-text-primary"}`}
+                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 opacity-40 hover:opacity-100 ${isHovered ? "bg-surface-elevated text-text-primary hover:bg-border" : "bg-surface text-text-muted hover:text-text-primary"}`}
                   >
                     <Inbox size={16} />
                   </Button>
@@ -163,7 +165,7 @@ export const SortableItem = ({
                       e.stopPropagation();
                       onTransition(block);
                     }}
-                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 ${isHovered ? "bg-text-primary text-background hover:bg-text-secondary" : "bg-surface text-text-muted hover:text-text-primary"}`}
+                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 opacity-40 hover:opacity-100 ${isHovered ? "bg-text-primary text-background hover:bg-text-secondary" : "bg-surface text-text-muted hover:text-text-primary"}`}
                   >
                     <Pencil size={16} />
                   </Button>
@@ -183,7 +185,7 @@ export const SortableItem = ({
                         e.stopPropagation();
                         onDelete(block.taskId!);
                       }}
-                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 ${isHovered ? "bg-danger/20 text-danger hover:bg-danger hover:text-text-primary" : "bg-surface text-text-muted hover:text-text-primary"}`}
+                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 opacity-40 hover:opacity-100 ${isHovered ? "bg-danger/20 text-danger hover:bg-danger hover:text-text-primary" : "bg-surface text-text-muted hover:text-text-primary"}`}
                     >
                       <X size={16} />
                     </Button>
