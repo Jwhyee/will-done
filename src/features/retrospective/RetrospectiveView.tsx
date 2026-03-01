@@ -43,7 +43,12 @@ const DateSelector = ({
   activeDates: string[];
   t: any;
 }) => {
-  const activeDateObjects = useMemo(() => activeDates.map(d => parse(d, "yyyy-MM-dd", new Date())), [activeDates]);
+  const activeDateObjects = useMemo(() => 
+    activeDates
+      .map(d => parse(d, "yyyy-MM-dd", new Date()))
+      .filter(d => !isNaN(d.getTime())), 
+    [activeDates]
+  );
   
   const minDate = activeDateObjects.length > 0 ? activeDateObjects[0] : null;
   const maxDate = activeDateObjects.length > 0 ? activeDateObjects[activeDateObjects.length - 1] : null;
@@ -61,6 +66,7 @@ const DateSelector = ({
         const date = parse(value, "yyyy-MM", new Date());
         return isNaN(date.getTime()) ? null : date;
       } else {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
         const date = parse(value, "yyyy-MM-dd", new Date());
         return isNaN(date.getTime()) ? null : date;
       }
@@ -76,7 +82,11 @@ const DateSelector = ({
         <Calendar
           mode="single"
           selected={selectedDate}
-          onSelect={(date) => date && onChange(format(date, "yyyy-MM-dd"))}
+          onSelect={(date) => {
+            if (date && !isNaN(date.getTime())) {
+              onChange(format(date, "yyyy-MM-dd"));
+            }
+          }}
           disabled={(date) => !activeDates.includes(format(date, "yyyy-MM-dd"))}
           modifiers={{
             active: (date) => activeDates.includes(format(date, "yyyy-MM-dd"))
@@ -91,33 +101,41 @@ const DateSelector = ({
   }
 
   const handleStep = (direction: "prev" | "next") => {
-    if (!currentParsedDate) return;
+    if (!currentParsedDate || isNaN(currentParsedDate.getTime())) return;
     
-    if (type === "WEEKLY") {
-      const next = direction === "prev" ? subWeeks(currentParsedDate, 1) : addWeeks(currentParsedDate, 1);
-      onChange(format(next, "RRRR-'W'II"));
-    } else {
-      const next = direction === "prev" ? subMonths(currentParsedDate, 1) : addMonths(currentParsedDate, 1);
-      onChange(format(next, "yyyy-MM"));
+    try {
+      if (type === "WEEKLY") {
+        const next = direction === "prev" ? subWeeks(currentParsedDate, 1) : addWeeks(currentParsedDate, 1);
+        onChange(format(next, "RRRR-'W'II"));
+      } else {
+        const next = direction === "prev" ? subMonths(currentParsedDate, 1) : addMonths(currentParsedDate, 1);
+        onChange(format(next, "yyyy-MM"));
+      }
+    } catch (e) {
+      console.error("Stepper move failed:", e);
     }
   };
 
   const isPrevDisabled = useMemo(() => {
-    if (!minDate || !currentParsedDate) return true;
-    if (type === "WEEKLY") {
-      return startOfWeek(currentParsedDate, { weekStartsOn: 1 }) <= startOfWeek(minDate, { weekStartsOn: 1 });
-    } else {
-      return startOfMonth(currentParsedDate) <= startOfMonth(minDate);
-    }
+    if (!minDate || !currentParsedDate || isNaN(currentParsedDate.getTime()) || isNaN(minDate.getTime())) return true;
+    try {
+      if (type === "WEEKLY") {
+        return startOfWeek(currentParsedDate, { weekStartsOn: 1 }) <= startOfWeek(minDate, { weekStartsOn: 1 });
+      } else {
+        return startOfMonth(currentParsedDate) <= startOfMonth(minDate);
+      }
+    } catch (e) { return true; }
   }, [currentParsedDate, type, minDate]);
 
   const isNextDisabled = useMemo(() => {
-    if (!maxDate || !currentParsedDate) return true;
-    if (type === "WEEKLY") {
-      return endOfWeek(currentParsedDate, { weekStartsOn: 1 }) >= endOfWeek(maxDate, { weekStartsOn: 1 });
-    } else {
-      return endOfMonth(currentParsedDate) >= endOfMonth(maxDate);
-    }
+    if (!maxDate || !currentParsedDate || isNaN(currentParsedDate.getTime()) || isNaN(maxDate.getTime())) return true;
+    try {
+      if (type === "WEEKLY") {
+        return endOfWeek(currentParsedDate, { weekStartsOn: 1 }) >= endOfWeek(maxDate, { weekStartsOn: 1 });
+      } else {
+        return endOfMonth(currentParsedDate) >= endOfMonth(maxDate);
+      }
+    } catch (e) { return true; }
   }, [currentParsedDate, type, maxDate]);
 
   return (
@@ -201,6 +219,39 @@ export const RetrospectiveView = ({
     fetchActiveDates();
   }, [workspaceId]);
 
+  // Unified type/value change handler
+  const handleTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
+    const now = new Date();
+    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
+    const refDate = parse(latestActive, "yyyy-MM-dd", new Date());
+    const safeRefDate = isNaN(refDate.getTime()) ? now : refDate;
+
+    setRetroType(newType);
+    try {
+      if (newType === "DAILY") setInputValue(latestActive);
+      else if (newType === "WEEKLY") setInputValue(format(safeRefDate, "RRRR-'W'II"));
+      else if (newType === "MONTHLY") setInputValue(format(safeRefDate, "yyyy-MM"));
+    } catch (e) {
+      setInputValue(latestActive);
+    }
+  };
+
+  const handleBrowseTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
+    const now = new Date();
+    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
+    const refDate = parse(latestActive, "yyyy-MM-dd", new Date());
+    const safeRefDate = isNaN(refDate.getTime()) ? now : refDate;
+
+    setBrowseType(newType);
+    try {
+      if (newType === "DAILY") setBrowseInputValue(latestActive);
+      else if (newType === "WEEKLY") setBrowseInputValue(format(safeRefDate, "RRRR-'W'II"));
+      else if (newType === "MONTHLY") setBrowseInputValue(format(safeRefDate, "yyyy-MM"));
+    } catch (e) {
+      setBrowseInputValue(latestActive);
+    }
+  };
+
   // Helper to calculate ranges (Unify logic)
   const calculateRange = (val: string, type: "DAILY" | "WEEKLY" | "MONTHLY") => {
     let start = "";
@@ -211,27 +262,26 @@ export const RetrospectiveView = ({
 
     try {
       if (type === "DAILY") {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) throw new Error("Invalid Daily format");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return { start: "", end: "", label: "" };
         start = val;
         end = val;
       } else if (type === "WEEKLY") {
-        if (!val.includes("-W")) throw new Error("Invalid Weekly format");
+        if (!val.includes("-W")) return { start: "", end: "", label: "" };
         const [year, weekStr] = val.split("-W");
         const date = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
-        if (isNaN(date.getTime())) throw new Error("Invalid Weekly date");
+        if (isNaN(date.getTime())) return { start: "", end: "", label: "" };
         start = format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
         end = format(endOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
         label = `${year} ${weekStr}W (${start} ~ ${end})`;
       } else if (type === "MONTHLY") {
-        if (!/^\d{4}-\d{2}$/.test(val)) throw new Error("Invalid Monthly format");
+        if (!/^\d{4}-\d{2}$/.test(val)) return { start: "", end: "", label: "" };
         const date = parse(val, "yyyy-MM", new Date());
-        if (isNaN(date.getTime())) throw new Error("Invalid Monthly date");
+        if (isNaN(date.getTime())) return { start: "", end: "", label: "" };
         start = format(startOfMonth(date), "yyyy-MM-dd");
         end = format(endOfMonth(date), "yyyy-MM-dd");
         label = `${format(date, "yyyy-MM")} Retrospective`;
       }
     } catch (e) {
-      console.warn("Date parsing bypass:", e);
       return { start: "", end: "", label: "" };
     }
     return { start, end, label };
@@ -239,23 +289,27 @@ export const RetrospectiveView = ({
 
   // Sync Create inputs
   useEffect(() => {
-    if (!inputValue) return;
-    const { start, end, label } = calculateRange(inputValue, retroType);
-    setStartDate(start);
-    setEndDate(end);
-    setDateLabel(label);
+    try {
+      if (!inputValue) return;
+      const { start, end, label } = calculateRange(inputValue, retroType);
+      if (start) setStartDate(start);
+      if (end) setEndDate(end);
+      if (label) setDateLabel(label);
+    } catch (e) { console.error("Sync Create failed:", e); }
   }, [inputValue, retroType]);
 
   // Sync Browse inputs & Auto Query
   useEffect(() => {
-    if (!browseInputValue) return;
-    const { label } = calculateRange(browseInputValue, browseType);
-    setBrowseDateLabel(label);
+    try {
+      if (!browseInputValue) return;
+      const { label } = calculateRange(browseInputValue, browseType);
+      if (label) setBrowseDateLabel(label);
+    } catch (e) { console.error("Sync Browse failed:", e); }
   }, [browseInputValue, browseType]);
 
   useEffect(() => {
     const fetchSavedRetro = async () => {
-      if (tab !== "browse") return;
+      if (tab !== "browse" || !browseDateLabel) return;
       try {
         const retros = await invoke<Retrospective[]>("get_saved_retrospectives", { 
           workspaceId, 
@@ -268,27 +322,6 @@ export const RetrospectiveView = ({
     };
     fetchSavedRetro();
   }, [browseDateLabel, workspaceId, tab]);
-
-  // Reset input value when type changes
-  useEffect(() => {
-    const now = new Date();
-    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
-    const refDate = parse(latestActive, "yyyy-MM-dd", new Date());
-
-    if (retroType === "DAILY") setInputValue(latestActive);
-    else if (retroType === "WEEKLY") setInputValue(format(refDate, "RRRR-'W'II"));
-    else if (retroType === "MONTHLY") setInputValue(format(refDate, "yyyy-MM"));
-  }, [retroType, activeDates]);
-
-  useEffect(() => {
-    const now = new Date();
-    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
-    const refDate = parse(latestActive, "yyyy-MM-dd", new Date());
-
-    if (browseType === "DAILY") setBrowseInputValue(latestActive);
-    else if (browseType === "WEEKLY") setBrowseInputValue(format(refDate, "RRRR-'W'II"));
-    else if (browseType === "MONTHLY") setBrowseInputValue(format(refDate, "yyyy-MM"));
-  }, [browseType, activeDates]);
 
   const handleGenerate = async () => {
     if (retroType === "DAILY" && !activeDates.includes(startDate)) {
@@ -399,7 +432,7 @@ export const RetrospectiveView = ({
                       <Button 
                         key={type}
                         variant={retroType === type ? "default" : "outline"}
-                        onClick={() => setRetroType(type)}
+                        onClick={() => handleTypeChange(type)}
                         className="flex-1 font-bold h-12 rounded-xl border-border"
                       >
                         {type === "DAILY" ? t.retrospective.daily : type === "WEEKLY" ? t.retrospective.weekly : t.retrospective.monthly}
@@ -462,7 +495,7 @@ export const RetrospectiveView = ({
                       <Button 
                         key={type}
                         variant={browseType === type ? "default" : "outline"}
-                        onClick={() => setBrowseType(type)}
+                        onClick={() => handleBrowseTypeChange(type)}
                         className="flex-1 font-bold h-12 rounded-xl border-border"
                       >
                         {type === "DAILY" ? t.retrospective.daily : type === "WEEKLY" ? t.retrospective.weekly : t.retrospective.monthly}
