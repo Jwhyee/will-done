@@ -62,10 +62,6 @@ export const SortableItem = ({
   const isHovered = block.taskId && hoverTaskId === block.taskId;
   const isDone = block.status === "DONE";
 
-  const zigzagBottom = "polygon(0% 0%, 100% 0%, 100% 92%, 98% 100%, 96% 92%, 94% 100%, 92% 92%, 90% 100%, 88% 92%, 86% 100%, 84% 92%, 82% 100%, 80% 92%, 78% 100%, 76% 92%, 74% 100%, 72% 92%, 70% 100%, 68% 92%, 66% 100%, 64% 92%, 62% 100%, 60% 92%, 58% 100%, 56% 92%, 54% 100%, 52% 92%, 50% 100%, 48% 92%, 46% 100%, 44% 92%, 42% 100%, 40% 92%, 38% 100%, 36% 92%, 34% 100%, 32% 92%, 30% 100%, 28% 92%, 26% 100%, 24% 92%, 22% 100%, 20% 92%, 18% 100%, 16% 92%, 14% 100%, 12% 92%, 10% 100%, 8% 92%, 6% 100%, 4% 92%, 2% 100%, 0% 92%)";
-  const zigzagTop = "polygon(0% 8%, 2% 0%, 4% 8%, 6% 0%, 8% 8%, 10% 0%, 12% 8%, 14% 0%, 16% 8%, 18% 0%, 20% 8%, 22% 0%, 24% 8%, 26% 0%, 28% 8%, 30% 0%, 32% 8%, 34% 0%, 36% 8%, 38% 0%, 40% 8%, 42% 0%, 44% 8%, 46% 0%, 48% 8%, 50% 0%, 52% 8%, 54% 0%, 56% 8%, 58% 0%, 60% 8%, 62% 0%, 64% 8%, 66% 0%, 68% 8%, 70% 0%, 72% 8%, 74% 0%, 76% 8%, 78% 0%, 80% 8%, 82% 0%, 84% 8%, 86% 0%, 88% 8%, 90% 0%, 92% 8%, 94% 0%, 96% 8%, 98% 0%, 100% 8%, 100% 100%, 0% 100%)";
-  const zigzagBoth = "polygon(0% 8%, 2% 0%, 4% 8%, 6% 0%, 8% 8%, 10% 0%, 12% 8%, 14% 0%, 16% 8%, 18% 0%, 20% 8%, 22% 0%, 24% 8%, 26% 0%, 28% 8%, 30% 0%, 32% 8%, 34% 0%, 36% 8%, 38% 0%, 40% 8%, 42% 0%, 44% 8%, 46% 0%, 48% 8%, 50% 0%, 52% 8%, 54% 0%, 56% 8%, 58% 0%, 60% 8%, 62% 0%, 64% 8%, 66% 0%, 68% 8%, 70% 0%, 72% 8%, 74% 0%, 76% 8%, 78% 0%, 80% 8%, 82% 0%, 84% 8%, 86% 0%, 88% 8%, 90% 0%, 92% 8%, 94% 0%, 96% 8%, 98% 0%, 100% 8%, 100% 92%, 98% 100%, 96% 92%, 94% 100%, 92% 92%, 90% 100%, 88% 92%, 86% 100%, 84% 92%, 82% 100%, 80% 92%, 78% 100%, 76% 92%, 74% 100%, 72% 92%, 70% 100%, 68% 92%, 66% 100%, 64% 92%, 62% 100%, 60% 92%, 58% 100%, 56% 92%, 54% 100%, 52% 92%, 50% 100%, 48% 92%, 46% 100%, 44% 92%, 42% 100%, 40% 92%, 38% 100%, 36% 92%, 34% 100%, 32% 92%, 30% 100%, 28% 92%, 26% 100%, 24% 92%, 22% 100%, 20% 92%, 18% 100%, 16% 92%, 14% 100%, 12% 92%, 10% 100%, 8% 92%, 6% 100%, 4% 92%, 2% 100%, 0% 92%)";
-
   return (
     <div ref={setNodeRef} style={style} className="relative group/item">
       <div className="absolute -left-[6.5rem] top-6 w-16 text-right space-y-1">
@@ -91,20 +87,11 @@ export const SortableItem = ({
         onMouseEnter={() => block.taskId && setHoverTaskId(block.taskId)}
         onMouseLeave={() => setHoverTaskId(null)}
         className={`p-5 rounded-2xl border-[1.5px] transition-all duration-300 transform ${
-        block.status === "DONE" ? "bg-success/5 border-success/20" :
-        block.status === "NOW" ? (new Date(block.endTime) < currentTime ? "bg-danger/10 border-danger animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-accent/5 border-accent shadow-[0_0_15px_rgba(59,130,246,0.1)]") :
-        block.status === "PENDING" ? "bg-warning/5 border-warning/40 border-dashed" :
-        block.status === "UNPLUGGED" ? "bg-surface/40 border-border opacity-60 border-dashed cursor-default" : "bg-surface-elevated/50 border-border hover:bg-surface-elevated"
-      } ${isHovered ? "border-text-primary/40 bg-surface-elevated/80 -translate-x-1 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.01]" : ""} ${isFirstOfTask ? "rounded-b-none border-b-0 pb-8 mb-0" : ""} ${isLastOfTask ? "rounded-t-none border-t-0 mt-[-2px]" : ""} ${isMiddleOfTask ? "rounded-none border-y-0 py-8 my-[-2px]" : ""}`}
-        style={{
-          clipPath: isFirstOfTask 
-            ? zigzagBottom
-            : isLastOfTask
-            ? zigzagTop
-            : isMiddleOfTask
-            ? zigzagBoth
-            : undefined
-        }}
+        block.status === "DONE" ? "bg-success/5 border-success/20 opacity-60" :
+        block.status === "NOW" ? (new Date(block.endTime) < currentTime ? "bg-danger/10 border-danger animate-breathing" : "bg-accent/5 border-accent shadow-[0_0_15px_rgba(59,130,246,0.1)]") :
+        block.status === "PENDING" ? "bg-warning/5 border-warning/40 opacity-80" :
+        block.status === "UNPLUGGED" ? "bg-surface/40 border-border opacity-40 cursor-default" : "bg-surface-elevated/50 border-border hover:bg-surface-elevated"
+      } ${isHovered ? "border-text-primary/40 bg-surface-elevated/80 -translate-x-1 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.01] opacity-100" : ""} ${isSplit ? "shadow-sm" : ""} ${isFirstOfTask ? "mb-1" : ""} ${isLastOfTask ? "mt-1" : ""} ${isMiddleOfTask ? "my-1" : ""}`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
