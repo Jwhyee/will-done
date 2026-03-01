@@ -44,7 +44,10 @@
       - `Task Input Form`: 커스텀 Time Picker(Popover), 긴급 여부, 메모 입력.
       - `Timeline`: `SortableContext` 내부의 `SortableItem` 리스트. 드래그 가능.
       - `Modals`: 업무 종료 분기 처리(`TransitionModal`), 삭제 확인, 인박스 전체 이동 확인.
-    - **Retrospective View**: 회고 생성(`create`) 및 조회(`browse`) 탭 전환 방식.
+    - **Retrospective View**: 
+      - **Create Tab**: Generate daily/weekly/monthly AI retrospectives with intelligent range calculation.
+      - **Browse Tab**: Multi-period tab system (Daily/Weekly/Monthly) with unified input logic. Immediate DB query on input change and content rendering with `ReactMarkdown` directly in the view.
+      - **Header**: Standardized with a "Latest Retrospective" button for quick access.
     - **Settings View**: 사이드바 기반 탭 전환 (프로필 / 워크스페이스).
 
     ---

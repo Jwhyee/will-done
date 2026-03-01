@@ -415,7 +415,7 @@ function AppContent() {
               {activeRetrospective?.dateLabel || "Retrospective"}
             </DialogTitle>
             <DialogDescription className="text-text-secondary font-bold text-sm">
-              Your professional Brag Document.
+              {t.retrospective.brag_desc}
             </DialogDescription>
           </DialogHeader>
           
@@ -440,7 +440,7 @@ function AppContent() {
               disabled={!activeRetrospective}
               className="w-full bg-text-primary text-background hover:bg-zinc-200 font-black h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95 disabled:opacity-50"
             >
-              Copy to Clipboard
+              {t.retrospective.copy_btn}
             </Button>
           </DialogFooter>
         </DialogContent>
