@@ -48,6 +48,11 @@
       - **Create Tab**: Generate daily/weekly/monthly AI retrospectives. Uses a high-fidelity `DateSelector`:
         - **Daily**: Integrated `Calendar` view that highlights and enables only dates with actual task data (`activeDates`).
         - **Weekly/Monthly**: Intelligent 'Stepper' UI with `prev`/`next` buttons to navigate periods within the available data range.
+      - **Stability & Defense**: 
+        - **Defensive Date Handling**: All date operations (`parse`, `format`) are wrapped in `try-catch` and verified with `isValid` to prevent "Invalid Date" runtime crashes.
+        - **Atomic State Transitions**: `type` and `value` are updated simultaneously in handlers to ensure consistent rendering during tab transitions.
+        - **Strict RegEx Validation**: Inputs are strictly validated (Daily: `yyyy-MM-dd`, Weekly: `RRRR-WII`, Monthly: `yyyy-MM`) before parsing.
+        - **ISO Week Standard**: Uses `RRRR-II-i` for parsing and `RRRR-'W'II` for formatting to handle year-boundary week numbering accurately.
       - **Browse Tab**: Shares the same `DateSelector` logic for consistency. Immediate DB query on period change and high-fidelity markdown rendering.
       - **Layout**: Optimized for content visibility by removing redundant labels (Final Label, Selected Range) and compacting the selection area.
       - **Header**: Standardized with a "Latest Retrospective" button for quick access.

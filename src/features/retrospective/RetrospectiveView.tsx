@@ -44,27 +44,28 @@ const DateSelector = ({
   activeDates: string[];
   t: any;
 }) => {
-  const activeDateObjects = useMemo(() => 
-    activeDates
+  const activeDateObjects = useMemo(() => {
+    if (!activeDates || activeDates.length === 0) return [];
+    return activeDates
       .map(d => {
         try {
           const p = parse(d, "yyyy-MM-dd", new Date());
           return isValid(p) ? p : null;
         } catch (e) { return null; }
       })
-      .filter((d): d is Date => d !== null), 
-    [activeDates]
-  );
+      .filter((d): d is Date => d !== null);
+  }, [activeDates]);
   
   const minDate = activeDateObjects.length > 0 ? activeDateObjects[0] : null;
   const maxDate = activeDateObjects.length > 0 ? activeDateObjects[activeDateObjects.length - 1] : null;
 
   const currentParsedDate = useMemo(() => {
-    if (!value) return null;
+    if (!value || value === "") return null;
     try {
       if (type === "WEEKLY") {
         if (!value.includes("-W")) return null;
         const [year, weekStr] = value.split("-W");
+        // Use RRRR-II-i for precise ISO week parsing
         const date = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
         return isValid(date) ? date : null;
       } else if (type === "MONTHLY") {
@@ -77,12 +78,13 @@ const DateSelector = ({
         return isValid(date) ? date : null;
       }
     } catch (e) {
+      console.warn("DateSelector parsing failed:", e);
       return null;
     }
   }, [value, type]);
 
   if (type === "DAILY") {
-    const selectedDate = currentParsedDate || new Date();
+    const selectedDate = (currentParsedDate && isValid(currentParsedDate)) ? currentParsedDate : new Date();
     return (
       <div className="flex justify-center p-4 bg-surface rounded-2xl border border-border">
         <Calendar
@@ -97,12 +99,14 @@ const DateSelector = ({
           }}
           disabled={(date) => {
             try {
+              if (!date || !isValid(date)) return true;
               return !activeDates.includes(format(date, "yyyy-MM-dd"));
             } catch (e) { return true; }
           }}
           modifiers={{
             active: (date) => {
               try {
+                if (!date || !isValid(date)) return false;
                 return activeDates.includes(format(date, "yyyy-MM-dd"));
               } catch (e) { return false; }
             }
@@ -117,15 +121,22 @@ const DateSelector = ({
   }
 
   const handleStep = (direction: "prev" | "next") => {
-    if (!currentParsedDate || !isValid(currentParsedDate)) return;
+    if (!currentParsedDate || !isValid(currentParsedDate)) {
+      console.error("Invalid current date in handleStep");
+      return;
+    }
     
     try {
       if (type === "WEEKLY") {
         const next = direction === "prev" ? subWeeks(currentParsedDate, 1) : addWeeks(currentParsedDate, 1);
-        onChange(format(next, "RRRR-'W'II"));
+        if (isValid(next)) {
+          onChange(format(next, "RRRR-'W'II"));
+        }
       } else {
         const next = direction === "prev" ? subMonths(currentParsedDate, 1) : addMonths(currentParsedDate, 1);
-        onChange(format(next, "yyyy-MM"));
+        if (isValid(next)) {
+          onChange(format(next, "yyyy-MM"));
+        }
       }
     } catch (e) {
       console.error("Stepper move failed:", e);
@@ -133,7 +144,7 @@ const DateSelector = ({
   };
 
   const isPrevDisabled = useMemo(() => {
-    if (!minDate || !currentParsedDate || !isValid(currentParsedDate) || !isValid(minDate)) return true;
+    if (!minDate || !isValid(minDate) || !currentParsedDate || !isValid(currentParsedDate)) return true;
     try {
       if (type === "WEEKLY") {
         return startOfWeek(currentParsedDate, { weekStartsOn: 1 }) <= startOfWeek(minDate, { weekStartsOn: 1 });
@@ -144,7 +155,7 @@ const DateSelector = ({
   }, [currentParsedDate, type, minDate]);
 
   const isNextDisabled = useMemo(() => {
-    if (!maxDate || !currentParsedDate || !isValid(currentParsedDate) || !isValid(maxDate)) return true;
+    if (!maxDate || !isValid(maxDate) || !currentParsedDate || !isValid(currentParsedDate)) return true;
     try {
       if (type === "WEEKLY") {
         return endOfWeek(currentParsedDate, { weekStartsOn: 1 }) >= endOfWeek(maxDate, { weekStartsOn: 1 });
@@ -174,7 +185,7 @@ const DateSelector = ({
       </TooltipProvider>
 
       <div className="text-2xl font-black text-text-primary tracking-tighter">
-        {value}
+        {value || "---"}
       </div>
 
       <TooltipProvider>
@@ -208,13 +219,12 @@ export const RetrospectiveView = ({
   const [browseType, setBrowseType] = useState<"DAILY" | "WEEKLY" | "MONTHLY">("DAILY");
   const { showToast } = useToast();
   
-  // Create tab inputs
+  // Initialize with safe defaults
   const [inputValue, setInputValue] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [dateLabel, setDateLabel] = useState("");
   
-  // Browse tab inputs
   const [browseInputValue, setBrowseInputValue] = useState("");
   const [browseDateLabel, setBrowseDateLabel] = useState("");
   const [foundRetro, setFoundRetro] = useState<Retrospective | null>(null);
@@ -223,25 +233,29 @@ export const RetrospectiveView = ({
   const [genMessage, setGenMessage] = useState("");
   const [activeDates, setActiveDates] = useState<string[]>([]);
 
-  // Initial value setup
+  // Initial value setup with safety
   useEffect(() => {
-    const now = new Date();
     try {
-      const formatted = format(now, "yyyy-MM-dd");
-      setInputValue(formatted);
-      setBrowseInputValue(formatted);
-      setStartDate(formatted);
-      setEndDate(formatted);
-      setDateLabel(formatted);
-      setBrowseDateLabel(formatted);
-    } catch (e) { console.error(e); }
+      const now = new Date();
+      if (isValid(now)) {
+        const formatted = format(now, "yyyy-MM-dd");
+        setInputValue(prev => prev || formatted);
+        setBrowseInputValue(prev => prev || formatted);
+        setStartDate(prev => prev || formatted);
+        setEndDate(prev => prev || formatted);
+        setDateLabel(prev => prev || formatted);
+        setBrowseDateLabel(prev => prev || formatted);
+      }
+    } catch (e) { console.error("Initial effect failed:", e); }
   }, []);
 
   useEffect(() => {
     const fetchActiveDates = async () => {
       try {
         const dates = await invoke<string[]>("get_active_dates", { workspaceId });
-        setActiveDates(dates.sort());
+        if (Array.isArray(dates)) {
+          setActiveDates(dates.sort());
+        }
       } catch (e) {
         console.error("Failed to fetch active dates:", e);
       }
@@ -249,77 +263,104 @@ export const RetrospectiveView = ({
     fetchActiveDates();
   }, [workspaceId]);
 
-  // Unified type/value change handler
+  // Atomic state updates for type changes
   const handleTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
     const now = new Date();
-    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
+    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : (isValid(now) ? format(now, "yyyy-MM-dd") : "");
     
     let refDate = now;
-    try {
-      const parsed = parse(latestActive, "yyyy-MM-dd", new Date());
-      if (isValid(parsed)) refDate = parsed;
-    } catch (e) { refDate = now; }
+    if (activeDates.length > 0) {
+      try {
+        const parsed = parse(activeDates[activeDates.length - 1], "yyyy-MM-dd", new Date());
+        if (isValid(parsed)) refDate = parsed;
+      } catch (e) { refDate = now; }
+    }
 
-    setRetroType(newType);
     try {
-      if (newType === "DAILY") setInputValue(latestActive);
-      else if (newType === "WEEKLY") setInputValue(format(refDate, "RRRR-'W'II"));
-      else if (newType === "MONTHLY") setInputValue(format(refDate, "yyyy-MM"));
+      let newValue = "";
+      if (newType === "DAILY") newValue = latestActive;
+      else if (newType === "WEEKLY") newValue = format(refDate, "RRRR-'W'II");
+      else if (newType === "MONTHLY") newValue = format(refDate, "yyyy-MM");
+      
+      // Update both type and value to maintain consistency
+      setRetroType(newType);
+      setInputValue(newValue);
     } catch (e) {
+      console.error("handleTypeChange failed:", e);
+      setRetroType(newType);
       setInputValue(latestActive);
     }
   };
 
   const handleBrowseTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
     const now = new Date();
-    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
+    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : (isValid(now) ? format(now, "yyyy-MM-dd") : "");
 
     let refDate = now;
-    try {
-      const parsed = parse(latestActive, "yyyy-MM-dd", new Date());
-      if (isValid(parsed)) refDate = parsed;
-    } catch (e) { refDate = now; }
+    if (activeDates.length > 0) {
+      try {
+        const parsed = parse(activeDates[activeDates.length - 1], "yyyy-MM-dd", new Date());
+        if (isValid(parsed)) refDate = parsed;
+      } catch (e) { refDate = now; }
+    }
 
-    setBrowseType(newType);
     try {
-      if (newType === "DAILY") setBrowseInputValue(latestActive);
-      else if (newType === "WEEKLY") setBrowseInputValue(format(refDate, "RRRR-'W'II"));
-      else if (newType === "MONTHLY") setBrowseInputValue(format(refDate, "yyyy-MM"));
+      let newValue = "";
+      if (newType === "DAILY") newValue = latestActive;
+      else if (newType === "WEEKLY") newValue = format(refDate, "RRRR-'W'II");
+      else if (newType === "MONTHLY") newValue = format(refDate, "yyyy-MM");
+
+      setBrowseType(newType);
+      setBrowseInputValue(newValue);
     } catch (e) {
+      console.error("handleBrowseTypeChange failed:", e);
+      setBrowseType(newType);
       setBrowseInputValue(latestActive);
     }
   };
 
-  // Helper to calculate ranges (Unify logic)
+  // Helper to calculate ranges (Harden RegEx and checks)
   const calculateRange = (val: string | null | undefined, type: "DAILY" | "WEEKLY" | "MONTHLY") => {
     let start = "";
     let end = "";
     let label = val || "";
 
-    if (!val) return { start, end, label };
+    if (!val || val === "") return { start, end, label };
 
     try {
       if (type === "DAILY") {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return { start: "", end: "", label: "" };
         start = val;
         end = val;
+        label = val;
       } else if (type === "WEEKLY") {
         if (!val.includes("-W")) return { start: "", end: "", label: "" };
         const [year, weekStr] = val.split("-W");
         const date = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
         if (!isValid(date)) return { start: "", end: "", label: "" };
-        start = format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
-        end = format(endOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
+        
+        const s = startOfWeek(date, { weekStartsOn: 1 });
+        const e = endOfWeek(date, { weekStartsOn: 1 });
+        if (!isValid(s) || !isValid(e)) return { start: "", end: "", label: "" };
+        
+        start = format(s, "yyyy-MM-dd");
+        end = format(e, "yyyy-MM-dd");
         label = `${year} ${weekStr}W (${start} ~ ${end})`;
       } else if (type === "MONTHLY") {
         if (!/^\d{4}-\d{2}$/.test(val)) return { start: "", end: "", label: "" };
         const date = parse(val, "yyyy-MM", new Date());
         if (!isValid(date)) return { start: "", end: "", label: "" };
-        start = format(startOfMonth(date), "yyyy-MM-dd");
-        end = format(endOfMonth(date), "yyyy-MM-dd");
+        
+        const s = startOfMonth(date);
+        const e = endOfMonth(date);
+        if (!isValid(s) || !isValid(e)) return { start: "", end: "", label: "" };
+        
+        start = format(s, "yyyy-MM-dd");
+        end = format(e, "yyyy-MM-dd");
         label = `${format(date, "yyyy-MM")} Retrospective`;
       }
     } catch (e) {
+      console.error("calculateRange error:", e);
       return { start: "", end: "", label: "" };
     }
     return { start, end, label };
