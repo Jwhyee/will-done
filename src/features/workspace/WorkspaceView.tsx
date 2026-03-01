@@ -79,9 +79,28 @@ export const WorkspaceView = ({
     taskForm.reset({ title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false });
   };
 
-  const totalBlocks = timeline.filter(b => b.status !== "UNPLUGGED").length;
-  const doneBlocks = timeline.filter(b => b.status === "DONE").length;
-  const dailyProgress = totalBlocks > 0 ? Math.round((doneBlocks / totalBlocks) * 100) : 0;
+  const calculateProgress = () => {
+    const activeBlocks = timeline.filter(b => b.status !== "UNPLUGGED");
+    if (activeBlocks.length === 0) return 0;
+    
+    const totalMinutes = activeBlocks.reduce((acc, b) => {
+      const start = new Date(b.startTime).getTime();
+      const end = new Date(b.endTime).getTime();
+      return acc + (end - start);
+    }, 0);
+    
+    const doneMinutes = activeBlocks
+      .filter(b => b.status === "DONE")
+      .reduce((acc, b) => {
+        const start = new Date(b.startTime).getTime();
+        const end = new Date(b.endTime).getTime();
+        return acc + (end - start);
+      }, 0);
+      
+    return totalMinutes > 0 ? Math.round((doneMinutes / totalMinutes) * 100) : 0;
+  };
+
+  const dailyProgress = calculateProgress();
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
@@ -102,8 +121,8 @@ export const WorkspaceView = ({
                   className="h-full bg-accent transition-all duration-1000 ease-out"
                   style={{ width: `${dailyProgress}%` }}
                 />
-                <div className="absolute inset-0 flex items-center justify-center transition-opacity">
-                   <span className="text-xs font-medium text-text-primary bg-background/80 px-1.5 rounded-md shadow-sm border border-border">
+                <div className="absolute inset-0 flex items-center justify-center">
+                   <span className="text-[10px] font-black text-text-primary bg-background/90 px-1.5 py-0.5 rounded-md shadow-sm border border-border">
                      {dailyProgress}%
                    </span>
                 </div>
@@ -181,7 +200,7 @@ export const WorkspaceView = ({
               </div>
             </div>
           ) : (
-            <DroppableArea id="timeline" className="space-y-6 relative pl-16 border-l border-border ml-4 py-4 min-h-[200px]">
+            <DroppableArea id="timeline" className="space-y-6 relative pl-16 ml-4 py-4 min-h-[200px]">
                 <SortableContext
                   items={timeline.map(b => b.id.toString())}
                   strategy={verticalListSortingStrategy}
