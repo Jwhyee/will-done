@@ -72,11 +72,146 @@ pub struct TaskTransitionInput {
     pub review_memo: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct GeminiRequest {
+    contents: Vec<GeminiContent>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GeminiContent {
+    parts: Vec<GeminiPart>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GeminiPart {
+    text: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GeminiResponse {
+    candidates: Vec<GeminiCandidate>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GeminiCandidate {
+    content: GeminiContent,
+}
+
 pub struct DbState {
     pub pool: Pool<Sqlite>,
 }
 
 // --- Commands ---
+
+#[tauri::command]
+async fn generate_retrospective(
+    state: State<'_, DbState>,
+    workspace_id: i64,
+    date: String,
+) -> Result<String, String> {
+    let user = get_user(state.clone()).await?.ok_or("User not found")?;
+    let api_key = user.gemini_api_key.ok_or("Gemini API Key is missing. Please set it in Settings.")?;
+    
+    let workspace = get_workspace(state.clone(), workspace_id).await?.ok_or("Workspace not found")?;
+    let role_intro = workspace.role_intro.unwrap_or_else(|| "A professional worker".to_string());
+
+    let target_date = NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date format: {}", e))?;
+    let start_of_day = target_date.and_hms_opt(0, 0, 0).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let end_of_day = target_date.and_hms_opt(23, 59, 59).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
+
+    // Fetch done blocks with their associated task planning memos
+    let blocks: Vec<(String, Option<String>, Option<String>, String, String)> = sqlx::query_as(
+        "SELECT tb.title, t.planning_memo, tb.review_memo, tb.start_time, tb.end_time 
+         FROM time_blocks tb
+         LEFT JOIN tasks t ON tb.task_id = t.id
+         WHERE tb.workspace_id = ?1 AND tb.status = 'DONE' AND tb.start_time >= ?2 AND tb.start_time <= ?3
+         ORDER BY tb.start_time ASC"
+    )
+    .bind(workspace_id)
+    .bind(start_of_day)
+    .bind(end_of_day)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    if blocks.is_empty() {
+        return Err("No completed tasks found for this date.".to_string());
+    }
+
+    let task_summary = build_task_summary(blocks);
+
+    let prompt = format!(
+        "You are an AI assistant helping a user write a professional daily retrospective (also known as a 'Brag Document').
+Based on the following user role and completed tasks, generate a well-structured, professional, and encouraging retrospective in Markdown format.
+The language of the retrospective should be Korean.
+
+**User Role/Intro**:
+{}
+
+**Today's Completed Tasks**:
+{}
+
+Please summarize the achievements, highlight the impact of the work, and suggest areas for improvement or focus for tomorrow.
+Use a professional yet friendly tone.",
+        role_intro,
+        task_summary
+    );
+
+    let client = reqwest::Client::new();
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={}",
+        api_key
+    );
+
+    let body = GeminiRequest {
+        contents: vec![GeminiContent {
+            parts: vec![GeminiPart { text: prompt }],
+        }],
+    };
+
+    let response = client
+        .post(url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to call Gemini API: {}", e))?;
+
+    if !response.status().is_success() {
+        let err_text = response.text().await.unwrap_or_default();
+        return Err(format!("Gemini API error: {}", err_text));
+    }
+
+    let gemini_res: GeminiResponse = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Gemini response: {}", e))?;
+
+    let result_text = gemini_res
+        .candidates
+        .get(0)
+        .map(|c| c.content.parts.get(0).map(|p| p.text.clone()).unwrap_or_default())
+        .ok_or("No response from Gemini")?;
+
+    Ok(result_text)
+}
+
+fn build_task_summary(blocks: Vec<(String, Option<String>, Option<String>, String, String)>) -> String {
+    let mut task_summary = String::new();
+    for (title, planning, review, start, end) in blocks {
+        let s = NaiveDateTime::parse_from_str(&start, "%Y-%m-%dT%H:%M:%S").unwrap_or_default();
+        let e = NaiveDateTime::parse_from_str(&end, "%Y-%m-%dT%H:%M:%S").unwrap_or_default();
+        let duration = (e - s).num_minutes();
+        
+        task_summary.push_str(&format!(
+            "### Task: {}\n- **Duration**: {} mins\n- **Planning**: {}\n- **Review/Outcome**: {}\n\n",
+            title,
+            duration,
+            planning.unwrap_or_else(|| "N/A".to_string()),
+            review.unwrap_or_else(|| "N/A".to_string())
+        ));
+    }
+    task_summary
+}
 
 #[tauri::command]
 async fn get_user(state: State<'_, DbState>) -> Result<Option<User>, String> {
@@ -854,7 +989,8 @@ pub fn run() {
             process_task_transition,
             update_block_status,
             reorder_blocks,
-            get_active_dates
+            get_active_dates,
+            generate_retrospective
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -886,5 +1022,35 @@ mod tests {
 
         let ws = sqlx::query_as::<_, Workspace>("SELECT * FROM workspaces WHERE id = ?1").bind(workspace_id).fetch_one(&pool).await.unwrap();
         assert_eq!(ws.name, "Test Workspace");
+    }
+
+    #[test]
+    fn test_build_task_summary() {
+        let blocks = vec![
+            (
+                "Task 1".to_string(),
+                Some("Planning 1".to_string()),
+                Some("Review 1".to_string()),
+                "2026-03-01T09:00:00".to_string(),
+                "2026-03-01T10:00:00".to_string(),
+            ),
+            (
+                "Task 2".to_string(),
+                None,
+                None,
+                "2026-03-01T10:30:00".to_string(),
+                "2026-03-01T11:00:00".to_string(),
+            ),
+        ];
+
+        let summary = build_task_summary(blocks);
+        assert!(summary.contains("### Task: Task 1"));
+        assert!(summary.contains("- **Duration**: 60 mins"));
+        assert!(summary.contains("- **Planning**: Planning 1"));
+        assert!(summary.contains("- **Review/Outcome**: Review 1"));
+        assert!(summary.contains("### Task: Task 2"));
+        assert!(summary.contains("- **Duration**: 30 mins"));
+        assert!(summary.contains("- **Planning**: N/A"));
+        assert!(summary.contains("- **Review/Outcome**: N/A"));
     }
 }
