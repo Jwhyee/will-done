@@ -87,13 +87,14 @@
     - `SecondarySidebar`: 인박스 태스크 관리, 워크스페이스 설정/회고 바로가기, 접기/펼치기 토글 기능.
 
     ### ⏳ Timeline Engine (Scheduling)
-    - `add_task`: 태스크 생성 및 자동 스케줄링.
+    - `add_task`: 태스크 생성 및 자동 스케줄링. 긴급 업무 삽입 시 기존 업무를 PENDING으로 분할하고 이후 일정을 정확히 타임 시프트함.
     - `schedule_task_blocks`: Unplugged Time 회피 및 블록 분할 로직.
     - `shift_future_blocks`: 업무 시간 변동 시 이후 모든 `WILL` 블록 밀기.
     - `reorder_blocks`: Dnd-kit의 `arrayMove` 결과를 DB에 반영하고 시간 재계산.
-    - `process_task_transition`: 업무 종료 시나리오 처리 (`COMPLETE_NOW`, `DELAY` 등).
+    - `process_task_transition`: 업무 종료 시나리오 처리 (`COMPLETE_NOW`, `DELAY` 등). 분할된 태스크의 경우 마지막 블록이 완료될 때 전체 블록의 상태를 `DONE`으로 동기화.
     - `move_to_inbox` / `move_to_timeline`: 타임라인과 인박스 간의 데이터 상태 전환.
     - `move_all_to_timeline`: 인박스의 모든 태스크를 현재 타임라인 마지막 시점 이후로 일괄 스케줄링.
+    - `handle_split_task_deletion`: 분할된 태스크 삭제 시 "전체 삭제" 또는 "이전 블록 유지(완료 처리)" 분기 처리.
 
     ### ✨ AI Retrospective (Gemini Multi-Model Fallback)
     - `generate_retrospective`: 

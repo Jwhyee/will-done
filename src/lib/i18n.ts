@@ -77,11 +77,24 @@ export const translations = {
         btn: "삭제",
         cancel: "취소",
       },
+      delete_split_confirm: {
+        title: "분할된 태스크 삭제",
+        description: "이 태스크는 여러 블록으로 분할되어 있습니다. 어떻게 처리하시겠습니까?",
+        delete_all: "전체 삭제",
+        keep_past: "이전 블록 유지 (완료 처리)",
+        cancel: "취소",
+      },
       move_all: {
         title: "인박스 태스크 이동",
         description: "인박스에 있는 모든 태스크를 타임라인으로 옮기시겠습니까?",
         btn: "모두 이동",
         cancel: "취소",
+      },
+      tooltip: {
+        edit: "수정",
+        delete: "삭제",
+        move_to_inbox: "인박스로 이동",
+        edit_disabled: "분할된 이전 블록은 수정할 수 없습니다.",
       },
       toast: {
         past_time_error: "현재 시간 이전으로 태스크를 이동할 수 없습니다.",
@@ -208,11 +221,24 @@ export const translations = {
         btn: "Delete",
         cancel: "Cancel",
       },
+      delete_split_confirm: {
+        title: "Delete Split Task",
+        description: "This task is split into multiple blocks. How would you like to handle it?",
+        delete_all: "Delete All",
+        keep_past: "Keep Past Blocks (Mark as Done)",
+        cancel: "Cancel",
+      },
       move_all: {
         title: "Move Inbox Tasks",
         description: "Would you like to move all tasks in the inbox to the timeline?",
         btn: "Move All",
         cancel: "Cancel",
+      },
+      tooltip: {
+        edit: "Edit",
+        delete: "Delete",
+        move_to_inbox: "Move to Inbox",
+        edit_disabled: "Past split blocks cannot be edited.",
       },
       toast: {
         past_time_error: "Cannot move task to before current time.",
