@@ -11,7 +11,7 @@ pub async fn get_today_completed_duration(pool: &SqlitePool, workspace_id: i64) 
     let row: (Option<i64>,) = sqlx::query_as(
         "SELECT SUM((strftime('%s', end_time) - strftime('%s', start_time)) / 60) 
          FROM time_blocks 
-         WHERE workspace_id = ?1 AND status = 'DONE' AND start_time >= ?2 AND start_time <= ?3"
+         WHERE workspace_id = ?1 AND status IN ('DONE', 'PENDING') AND start_time >= ?2 AND start_time <= ?3"
     )
     .bind(workspace_id)
     .bind(start_of_day)
