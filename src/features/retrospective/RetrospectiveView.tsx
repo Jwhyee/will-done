@@ -48,8 +48,29 @@ const DateSelector = ({
   const minDate = activeDateObjects.length > 0 ? activeDateObjects[0] : null;
   const maxDate = activeDateObjects.length > 0 ? activeDateObjects[activeDateObjects.length - 1] : null;
 
+  const currentParsedDate = useMemo(() => {
+    if (!value) return null;
+    try {
+      if (type === "WEEKLY") {
+        if (!value.includes("-W")) return null;
+        const [year, weekStr] = value.split("-W");
+        const date = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
+        return isNaN(date.getTime()) ? null : date;
+      } else if (type === "MONTHLY") {
+        if (!/^\d{4}-\d{2}$/.test(value)) return null;
+        const date = parse(value, "yyyy-MM", new Date());
+        return isNaN(date.getTime()) ? null : date;
+      } else {
+        const date = parse(value, "yyyy-MM-dd", new Date());
+        return isNaN(date.getTime()) ? null : date;
+      }
+    } catch (e) {
+      return null;
+    }
+  }, [value, type]);
+
   if (type === "DAILY") {
-    const selectedDate = parse(value, "yyyy-MM-dd", new Date());
+    const selectedDate = currentParsedDate || new Date();
     return (
       <div className="flex justify-center p-4 bg-surface rounded-2xl border border-border">
         <Calendar
@@ -70,41 +91,34 @@ const DateSelector = ({
   }
 
   const handleStep = (direction: "prev" | "next") => {
+    if (!currentParsedDate) return;
+    
     if (type === "WEEKLY") {
-      const [year, weekStr] = value.split("-W");
-      const current = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
-      const next = direction === "prev" ? subWeeks(current, 1) : addWeeks(current, 1);
+      const next = direction === "prev" ? subWeeks(currentParsedDate, 1) : addWeeks(currentParsedDate, 1);
       onChange(format(next, "RRRR-'W'II"));
     } else {
-      const current = parse(value, "yyyy-MM", new Date());
-      const next = direction === "prev" ? subMonths(current, 1) : addMonths(current, 1);
+      const next = direction === "prev" ? subMonths(currentParsedDate, 1) : addMonths(currentParsedDate, 1);
       onChange(format(next, "yyyy-MM"));
     }
   };
 
   const isPrevDisabled = useMemo(() => {
-    if (!minDate) return true;
+    if (!minDate || !currentParsedDate) return true;
     if (type === "WEEKLY") {
-      const [year, weekStr] = value.split("-W");
-      const current = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
-      return startOfWeek(current, { weekStartsOn: 1 }) <= startOfWeek(minDate, { weekStartsOn: 1 });
+      return startOfWeek(currentParsedDate, { weekStartsOn: 1 }) <= startOfWeek(minDate, { weekStartsOn: 1 });
     } else {
-      const current = parse(value, "yyyy-MM", new Date());
-      return startOfMonth(current) <= startOfMonth(minDate);
+      return startOfMonth(currentParsedDate) <= startOfMonth(minDate);
     }
-  }, [value, type, minDate]);
+  }, [currentParsedDate, type, minDate]);
 
   const isNextDisabled = useMemo(() => {
-    if (!maxDate) return true;
+    if (!maxDate || !currentParsedDate) return true;
     if (type === "WEEKLY") {
-      const [year, weekStr] = value.split("-W");
-      const current = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
-      return endOfWeek(current, { weekStartsOn: 1 }) >= endOfWeek(maxDate, { weekStartsOn: 1 });
+      return endOfWeek(currentParsedDate, { weekStartsOn: 1 }) >= endOfWeek(maxDate, { weekStartsOn: 1 });
     } else {
-      const current = parse(value, "yyyy-MM", new Date());
-      return endOfMonth(current) >= endOfMonth(maxDate);
+      return endOfMonth(currentParsedDate) >= endOfMonth(maxDate);
     }
-  }, [value, type, maxDate]);
+  }, [currentParsedDate, type, maxDate]);
 
   return (
     <div className="flex items-center justify-between p-6 bg-surface rounded-2xl border border-border">
@@ -193,24 +207,32 @@ export const RetrospectiveView = ({
     let end = "";
     let label = val;
 
+    if (!val) return { start, end, label };
+
     try {
       if (type === "DAILY") {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) throw new Error("Invalid Daily format");
         start = val;
         end = val;
       } else if (type === "WEEKLY") {
+        if (!val.includes("-W")) throw new Error("Invalid Weekly format");
         const [year, weekStr] = val.split("-W");
         const date = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
+        if (isNaN(date.getTime())) throw new Error("Invalid Weekly date");
         start = format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
         end = format(endOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
         label = `${year} ${weekStr}W (${start} ~ ${end})`;
       } else if (type === "MONTHLY") {
+        if (!/^\d{4}-\d{2}$/.test(val)) throw new Error("Invalid Monthly format");
         const date = parse(val, "yyyy-MM", new Date());
+        if (isNaN(date.getTime())) throw new Error("Invalid Monthly date");
         start = format(startOfMonth(date), "yyyy-MM-dd");
         end = format(endOfMonth(date), "yyyy-MM-dd");
         label = `${format(date, "yyyy-MM")} Retrospective`;
       }
     } catch (e) {
-      console.error("Date parsing error:", e);
+      console.warn("Date parsing bypass:", e);
+      return { start: "", end: "", label: "" };
     }
     return { start, end, label };
   };
