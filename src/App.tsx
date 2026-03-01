@@ -577,6 +577,14 @@ const SettingsView = ({
     name: "unplugged_times"
   });
 
+  useEffect(() => {
+    userForm.reset({
+      nickname: user.nickname,
+      gemini_api_key: user.gemini_api_key || "",
+      lang: user.lang
+    });
+  }, [user]);
+
   const onUserSubmit = async (data: any) => {
     try {
       await invoke("save_user", { 
@@ -1841,9 +1849,9 @@ function App() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-red-500 text-white px-6 py-3 rounded-2xl shadow-2xl font-black text-sm flex items-center gap-3 border border-red-400/50"
+            className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] ${toast.type === "success" ? "bg-emerald-600 border-emerald-500/50" : "bg-red-500 border-red-400/50"} text-white px-6 py-3 rounded-2xl shadow-2xl font-black text-sm flex items-center gap-3 border`}
           >
-            <AlertCircle size={18} />
+            {toast.type === "success" ? <Sparkles size={18} /> : <AlertCircle size={18} />}
             {toast.message}
           </motion.div>
         )}
