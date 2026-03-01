@@ -1,15 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
-import { Sparkles, ChevronLeft } from "lucide-react";
+import { Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parse } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { 
+  format, 
+  startOfWeek, 
+  endOfWeek, 
+  startOfMonth, 
+  endOfMonth, 
+  parse,
+  addWeeks,
+  subWeeks,
+  addMonths,
+  subMonths,
+} from "date-fns";
 import { Retrospective } from "@/types";
 import { useToast } from "@/providers/ToastProvider";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface RetrospectiveViewProps {
   workspaceId: number;
@@ -17,6 +29,125 @@ interface RetrospectiveViewProps {
   onClose: () => void;
   onShowSavedRetro: (retro: Retrospective) => void;
 }
+
+const DateSelector = ({ 
+  type, 
+  value, 
+  onChange, 
+  activeDates, 
+  t 
+}: { 
+  type: "DAILY" | "WEEKLY" | "MONTHLY"; 
+  value: string; 
+  onChange: (val: string) => void; 
+  activeDates: string[];
+  t: any;
+}) => {
+  const activeDateObjects = useMemo(() => activeDates.map(d => parse(d, "yyyy-MM-dd", new Date())), [activeDates]);
+  
+  const minDate = activeDateObjects.length > 0 ? activeDateObjects[0] : null;
+  const maxDate = activeDateObjects.length > 0 ? activeDateObjects[activeDateObjects.length - 1] : null;
+
+  if (type === "DAILY") {
+    const selectedDate = parse(value, "yyyy-MM-dd", new Date());
+    return (
+      <div className="flex justify-center p-4 bg-surface rounded-2xl border border-border">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={(date) => date && onChange(format(date, "yyyy-MM-dd"))}
+          disabled={(date) => !activeDates.includes(format(date, "yyyy-MM-dd"))}
+          modifiers={{
+            active: (date) => activeDates.includes(format(date, "yyyy-MM-dd"))
+          }}
+          modifiersClassNames={{
+            active: "bg-primary/20 text-primary font-bold border border-primary/50"
+          }}
+          className="[color-scheme:dark]"
+        />
+      </div>
+    );
+  }
+
+  const handleStep = (direction: "prev" | "next") => {
+    if (type === "WEEKLY") {
+      const [year, weekStr] = value.split("-W");
+      const current = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
+      const next = direction === "prev" ? subWeeks(current, 1) : addWeeks(current, 1);
+      onChange(format(next, "RRRR-'W'II"));
+    } else {
+      const current = parse(value, "yyyy-MM", new Date());
+      const next = direction === "prev" ? subMonths(current, 1) : addMonths(current, 1);
+      onChange(format(next, "yyyy-MM"));
+    }
+  };
+
+  const isPrevDisabled = useMemo(() => {
+    if (!minDate) return true;
+    if (type === "WEEKLY") {
+      const [year, weekStr] = value.split("-W");
+      const current = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
+      return startOfWeek(current, { weekStartsOn: 1 }) <= startOfWeek(minDate, { weekStartsOn: 1 });
+    } else {
+      const current = parse(value, "yyyy-MM", new Date());
+      return startOfMonth(current) <= startOfMonth(minDate);
+    }
+  }, [value, type, minDate]);
+
+  const isNextDisabled = useMemo(() => {
+    if (!maxDate) return true;
+    if (type === "WEEKLY") {
+      const [year, weekStr] = value.split("-W");
+      const current = parse(`${year}-${weekStr}-1`, "RRRR-II-i", new Date());
+      return endOfWeek(current, { weekStartsOn: 1 }) >= endOfWeek(maxDate, { weekStartsOn: 1 });
+    } else {
+      const current = parse(value, "yyyy-MM", new Date());
+      return endOfMonth(current) >= endOfMonth(maxDate);
+    }
+  }, [value, type, maxDate]);
+
+  return (
+    <div className="flex items-center justify-between p-6 bg-surface rounded-2xl border border-border">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => handleStep("prev")} 
+              disabled={isPrevDisabled}
+              className="h-12 w-12 rounded-xl border-border hover:bg-surface-elevated"
+            >
+              <ChevronLeft size={20} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t.retrospective.prev_period}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <div className="text-2xl font-black text-text-primary tracking-tighter">
+        {value}
+      </div>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => handleStep("next")} 
+              disabled={isNextDisabled}
+              className="h-12 w-12 rounded-xl border-border hover:bg-surface-elevated"
+            >
+              <ChevronRight size={20} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t.retrospective.next_period}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+};
 
 export const RetrospectiveView = ({ 
   workspaceId, 
@@ -48,7 +179,7 @@ export const RetrospectiveView = ({
     const fetchActiveDates = async () => {
       try {
         const dates = await invoke<string[]>("get_active_dates", { workspaceId });
-        setActiveDates(dates);
+        setActiveDates(dates.sort());
       } catch (e) {
         console.error("Failed to fetch active dates:", e);
       }
@@ -119,17 +250,23 @@ export const RetrospectiveView = ({
   // Reset input value when type changes
   useEffect(() => {
     const now = new Date();
-    if (retroType === "DAILY") setInputValue(format(now, "yyyy-MM-dd"));
-    else if (retroType === "WEEKLY") setInputValue(format(now, "RRRR-'W'II"));
-    else if (retroType === "MONTHLY") setInputValue(format(now, "yyyy-MM"));
-  }, [retroType]);
+    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
+    const refDate = parse(latestActive, "yyyy-MM-dd", new Date());
+
+    if (retroType === "DAILY") setInputValue(latestActive);
+    else if (retroType === "WEEKLY") setInputValue(format(refDate, "RRRR-'W'II"));
+    else if (retroType === "MONTHLY") setInputValue(format(refDate, "yyyy-MM"));
+  }, [retroType, activeDates]);
 
   useEffect(() => {
     const now = new Date();
-    if (browseType === "DAILY") setBrowseInputValue(format(now, "yyyy-MM-dd"));
-    else if (browseType === "WEEKLY") setBrowseInputValue(format(now, "RRRR-'W'II"));
-    else if (browseType === "MONTHLY") setBrowseInputValue(format(now, "yyyy-MM"));
-  }, [browseType]);
+    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(now, "yyyy-MM-dd");
+    const refDate = parse(latestActive, "yyyy-MM-dd", new Date());
+
+    if (browseType === "DAILY") setBrowseInputValue(latestActive);
+    else if (browseType === "WEEKLY") setBrowseInputValue(format(refDate, "RRRR-'W'II"));
+    else if (browseType === "MONTHLY") setBrowseInputValue(format(refDate, "yyyy-MM"));
+  }, [browseType, activeDates]);
 
   const handleGenerate = async () => {
     if (retroType === "DAILY" && !activeDates.includes(startDate)) {
@@ -226,7 +363,7 @@ export const RetrospectiveView = ({
       <main className="flex-1 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-y-auto p-12 max-w-4xl mx-auto w-full space-y-12 pb-24">
           {tab === "create" ? (
-            <div className="space-y-12">
+            <div className="space-y-8">
               <div className="space-y-2">
                 <h1 className="text-4xl font-black tracking-tighter text-text-primary">{t.retrospective.create_title}</h1>
                 <p className="text-text-secondary font-bold">{t.retrospective.create_desc}</p>
@@ -249,35 +386,17 @@ export const RetrospectiveView = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-8">
-                  <div className="space-y-4">
-                    <Label className="text-xs font-black text-text-secondary uppercase tracking-widest">
-                      {retroType === "DAILY" ? t.retrospective.select_date : retroType === "WEEKLY" ? t.retrospective.select_week : t.retrospective.select_month}
-                    </Label>
-                    <Input 
-                      type={retroType === "DAILY" ? "date" : retroType === "WEEKLY" ? "week" : "month"} 
-                      value={inputValue} 
-                      onChange={(e) => setInputValue(e.target.value)}
-                      className={`bg-surface border-border h-12 rounded-xl px-4 font-bold [color-scheme:dark] ${retroType === 'DAILY' && !activeDates.includes(inputValue) ? 'border-danger/50 text-danger' : ''}`}
-                      list={retroType === "DAILY" ? "active-dates" : undefined}
-                    />
-                    {retroType === "DAILY" && (
-                      <datalist id="active-dates">
-                        {activeDates.map(d => <option key={d} value={d} />)}
-                      </datalist>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-4 bg-surface rounded-2xl border border-border space-y-2">
-                  <div className="flex justify-between items-center text-xs font-bold">
-                    <span className="text-text-secondary uppercase tracking-tighter">{t.retrospective.selected_range}</span>
-                    <span className="text-text-primary">{startDate} ~ {endDate}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs font-bold">
-                    <span className="text-text-secondary uppercase tracking-tighter">{t.retrospective.final_label}</span>
-                    <span className="text-text-primary">{dateLabel}</span>
-                  </div>
+                <div className="space-y-4">
+                  <Label className="text-xs font-black text-text-secondary uppercase tracking-widest">
+                    {retroType === "DAILY" ? t.retrospective.select_date : retroType === "WEEKLY" ? t.retrospective.select_week : t.retrospective.select_month}
+                  </Label>
+                  <DateSelector 
+                    type={retroType}
+                    value={inputValue}
+                    onChange={setInputValue}
+                    activeDates={activeDates}
+                    t={t}
+                  />
                 </div>
 
                 {genMessage && (
@@ -297,7 +416,7 @@ export const RetrospectiveView = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-12">
+            <div className="space-y-8">
               <div className="flex justify-between items-start">
                 <div className="space-y-2">
                   <h1 className="text-4xl font-black tracking-tighter text-text-primary">{t.retrospective.browse_title}</h1>
@@ -330,25 +449,17 @@ export const RetrospectiveView = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-8">
-                  <div className="space-y-4">
-                    <Label className="text-xs font-black text-text-secondary uppercase tracking-widest">
-                      {browseType === "DAILY" ? t.retrospective.select_date : browseType === "WEEKLY" ? t.retrospective.select_week : t.retrospective.select_month}
-                    </Label>
-                    <Input 
-                      type={browseType === "DAILY" ? "date" : browseType === "WEEKLY" ? "week" : "month"} 
-                      value={browseInputValue} 
-                      onChange={(e) => setBrowseInputValue(e.target.value)}
-                      className="bg-surface border-border h-12 rounded-xl px-4 font-bold [color-scheme:dark]"
-                    />
-                  </div>
-                </div>
-
-                <div className="p-4 bg-surface rounded-2xl border border-border space-y-2">
-                  <div className="flex justify-between items-center text-xs font-bold">
-                    <span className="text-text-secondary uppercase tracking-tighter">{t.retrospective.final_label}</span>
-                    <span className="text-text-primary">{browseDateLabel}</span>
-                  </div>
+                <div className="space-y-4">
+                  <Label className="text-xs font-black text-text-secondary uppercase tracking-widest">
+                    {browseType === "DAILY" ? t.retrospective.select_date : browseType === "WEEKLY" ? t.retrospective.select_week : t.retrospective.select_month}
+                  </Label>
+                  <DateSelector 
+                    type={browseType}
+                    value={browseInputValue}
+                    onChange={setBrowseInputValue}
+                    activeDates={activeDates}
+                    t={t}
+                  />
                 </div>
               </div>
 

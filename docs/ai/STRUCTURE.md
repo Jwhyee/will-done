@@ -45,8 +45,11 @@
       - `Timeline`: `SortableContext` 내부의 `SortableItem` 리스트. 드래그 가능.
       - `Modals`: 업무 종료 분기 처리(`TransitionModal`), 삭제 확인, 인박스 전체 이동 확인.
     - **Retrospective View**: 
-      - **Create Tab**: Generate daily/weekly/monthly AI retrospectives with intelligent range calculation.
-      - **Browse Tab**: Multi-period tab system (Daily/Weekly/Monthly) with unified input logic. Immediate DB query on input change and content rendering with `ReactMarkdown` directly in the view.
+      - **Create Tab**: Generate daily/weekly/monthly AI retrospectives. Uses a high-fidelity `DateSelector`:
+        - **Daily**: Integrated `Calendar` view that highlights and enables only dates with actual task data (`activeDates`).
+        - **Weekly/Monthly**: Intelligent 'Stepper' UI with `prev`/`next` buttons to navigate periods within the available data range.
+      - **Browse Tab**: Shares the same `DateSelector` logic for consistency. Immediate DB query on period change and high-fidelity markdown rendering.
+      - **Layout**: Optimized for content visibility by removing redundant labels (Final Label, Selected Range) and compacting the selection area.
       - **Header**: Standardized with a "Latest Retrospective" button for quick access.
     - **Settings View**: 사이드바 기반 탭 전환 (프로필 / 워크스페이스).
 
