@@ -50,10 +50,14 @@
   - `SecondarySidebar` (L2): 인박스/설정/회고 (200px). 접기/펼치기 지원.
   - `WorkspaceView` (Content):
     - `Header`: 실시간 시계(HH:mm:ss, text-sm), 지능형 인사말(#D1D5DB), **태스크 완료율 진행바(Daily Progress Bar)** (인사말 하단 배치, h-1.5, 시간 기준 계산), 태스크 입력 폼.
-    - `Task Input Form`: 입력 영역에 subtle background 및 border 추가로 어포던스 강화. 하단 좌측에 Time Picker와 긴급 토글, 우측에 등록 버튼 배치.
-    - `Timeline`: 각 태스크 왼쪽의 타임라인 점(Dot)들을 잇는 **수직 실선(Solid Line)** 가시성 개선. 원형 인디케이터(Dot)는 연결선의 정중앙(`-translate-x-1/2`)에 위치하며 `-left-16`으로 정렬.
-    - `SortableItem`: 태스크 제목(15px SemiBold), 상태/시간 범위(12px), 액션 아이콘 간격(12px). 버튼 기본 가시성 상향 및 호버 시 `surface-elevated` 스케일 업 애니메이션 적용.
-    - `Modals`: 업무 종료 분기 처리(`TransitionModal`), 삭제 확인, 인박스 전체 이동 확인.    - **Retrospective View**: 
+    - `Task Input Form`: 입력 영역에 subtle background 및 border 추가로 어포던스 강화. 제목 입력창과 본문 입력창 사이 간격 확보(`mt-2`). 0분 등록 시 **"수행 시간을 설정해주세요."** 토스트 알림 및 차단 로직 적용. 하단 좌측에 Time Picker와 긴급 토글, 우측에 등록 버튼 배치.
+    - `Timeline`: 컨테이너 상단 여백 확보(`pt-10`)를 통해 최상단 시간 레이블 잘림 방지. 각 태스크 왼쪽의 타임라인 점(Dot)들을 잇는 **수직 실선(Solid Line)** 가시성 개선. 원형 인디케이터(Dot)는 연결선의 정중앙(`-translate-x-1/2`)에 위치하며 `-left-16`으로 정렬.
+    - `SortableItem`: 태스크 제목(15px SemiBold), 상태/시간 범위(12px), 액션 아이콘 간격(12px). 버튼 기본 가시성 상향 및 호버 시 `surface-elevated` 스케일 업 애니메이션 적용. 
+      - **종료 임박 강조**: 마감 시간이 지난 태스크는 `animate-breathing`(2.8s 주기) 효과를 적용하여 부드러운 글로우 피드백 제공.
+      - **스타일 통일**: 분절된 블록(Past/Future)의 테두리를 모두 **실선(Solid)**으로 통일하고, 투명도(DONE: 60%, UNPLUGGED: 40%)를 통해 상태 구분.
+      - **완전한 테두리**: 모든 조각난 블록이 독립된 사각형 형태의 4면 테두리를 유지하도록 수정.
+    - `Modals`: 업무 종료 분기 처리(`TransitionModal`), 삭제 확인, 인박스 전체 이동 확인.
+    - **Retrospective View**: 
       - **Create Tab**: Generate daily/weekly/monthly AI retrospectives. Uses an intuitive "Step-by-Step" selection architecture:
         - **Daily**: Integrated `Calendar` view that highlights dates with task data (`activeDates`).
         - **Weekly**: Sequential dropdowns for Year -> Month -> n-th Week. Automatically calculates precise start/end dates for the selected week.
