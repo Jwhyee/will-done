@@ -103,6 +103,27 @@ const DateSelector = ({
     }
   }, [value, type]);
 
+  const weeksOptions = useMemo(() => {
+    if (type !== "WEEKLY") return [];
+    try {
+      const firstDayOfMonth = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1);
+      const lastDayOfMonth = endOfMonth(firstDayOfMonth);
+      const weeks = eachWeekOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth }, { weekStartsOn: 1 });
+
+      return weeks.map((weekStart, idx) => {
+        const s = weekStart > firstDayOfMonth ? weekStart : firstDayOfMonth;
+        const e_raw = endOfWeek(weekStart, { weekStartsOn: 1 });
+        const e = e_raw < lastDayOfMonth ? e_raw : lastDayOfMonth;
+        return {
+          label: `${idx + 1}${t.retrospective.week_unit || 'W'} (${format(s, "MM/dd")} - ${format(e, "MM/dd")})`,
+          value: (idx + 1).toString()
+        };
+      });
+    } catch (e) {
+      return [{ label: "1W", value: "1" }];
+    }
+  }, [selectedYear, selectedMonth, t, type]);
+
   const handleDropdownChange = (y: string, m: string, w?: string) => {
     if (type === "MONTHLY") {
       onChange(`${y}-${m}`);
@@ -166,26 +187,6 @@ const DateSelector = ({
       </div>
     );
   }
-
-  const weeksOptions = useMemo(() => {
-    try {
-      const firstDayOfMonth = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1);
-      const lastDayOfMonth = endOfMonth(firstDayOfMonth);
-      const weeks = eachWeekOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth }, { weekStartsOn: 1 });
-
-      return weeks.map((weekStart, idx) => {
-        const s = weekStart > firstDayOfMonth ? weekStart : firstDayOfMonth;
-        const e_raw = endOfWeek(weekStart, { weekStartsOn: 1 });
-        const e = e_raw < lastDayOfMonth ? e_raw : lastDayOfMonth;
-        return {
-          label: `${idx + 1}${t.retrospective.week_unit || 'W'} (${format(s, "MM/dd")} - ${format(e, "MM/dd")})`,
-          value: (idx + 1).toString()
-        };
-      });
-    } catch (e) {
-      return [{ label: "1W", value: "1" }];
-    }
-  }, [selectedYear, selectedMonth, t]);
 
   return (
     <div className="flex gap-4 p-6 bg-surface rounded-2xl border border-border">
