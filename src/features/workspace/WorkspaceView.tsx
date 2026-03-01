@@ -232,7 +232,7 @@ export const WorkspaceView = ({
               </div>
             </div>
           ) : (
-            <DroppableArea id="timeline" className="space-y-6 relative pl-16 ml-4 pt-10 pb-4 min-h-[200px]">
+            <DroppableArea id="timeline" className="space-y-6 relative pl-28 ml-4 pt-10 pb-4 min-h-[200px]">
                 <SortableContext
                   items={timeline.map(b => b.id.toString())}
                   strategy={verticalListSortingStrategy}

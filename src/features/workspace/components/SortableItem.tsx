@@ -64,15 +64,17 @@ export const SortableItem = ({
 
   return (
     <div ref={setNodeRef} style={style} className="relative group/item" id={`block-${block.id}`}>
-      <div className="absolute -left-[6.5rem] top-6 w-16 text-right space-y-1">
-        <p className="text-[10px] font-black font-mono text-text-muted group-hover/item:text-text-secondary transition-colors">{formatDisplayTime(block.startTime)}</p>
+      <div className="absolute -left-28 top-[31px] w-14 -translate-y-1/2 text-right">
+        <p className="text-[10px] font-black font-mono text-text-muted group-hover/item:text-text-secondary transition-colors">
+          {formatDisplayTime(block.startTime)}
+        </p>
       </div>
       
       {/* Timeline Line - Improved visibility and centering */}
-      <div className={`absolute -left-16 top-4 w-[2px] bottom-[-24px] bg-border z-0 group-last/item:hidden -translate-x-1/2`} />
+      <div className={`absolute -left-12 top-[31px] w-[2px] bottom-[-55px] bg-border z-0 group-last/item:hidden -translate-x-1/2`} />
 
       {/* Status Indicator Dot - Improved centering and contrast */}
-      <div className={`absolute -left-16 top-1 w-4 h-4 rounded-full border-2 bg-background z-10 transition-all duration-500 -translate-x-1/2 ${
+      <div className={`absolute -left-12 top-[31px] w-3 h-3 rounded-full border-2 bg-background z-10 transition-all duration-500 -translate-x-1/2 -translate-y-1/2 ${
         block.status === "DONE" ? "border-success bg-success/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]" :
         block.status === "NOW" ? "border-accent scale-125 shadow-[0_0_15px_rgba(59,130,246,0.5)] bg-accent/30" :
         block.status === "PENDING" ? "border-warning bg-warning/20 shadow-[0_0_10px_rgba(234,179,8,0.2)]" :
