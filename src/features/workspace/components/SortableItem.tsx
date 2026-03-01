@@ -64,7 +64,7 @@ export const SortableItem = ({
 
   return (
     <div ref={setNodeRef} style={style} className="relative group/item" id={`block-${block.id}`}>
-      <div className="absolute -left-28 top-[31px] w-14 -translate-y-1/2 text-right">
+      <div className="absolute -left-28 top-[31px] w-14 -translate-y-1/2 text-center">
         <p className="text-[10px] font-black font-mono text-text-muted group-hover/item:text-text-secondary transition-colors">
           {formatDisplayTime(block.startTime)}
         </p>
