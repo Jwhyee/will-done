@@ -40,7 +40,7 @@ export const SortableItem = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: block.id, disabled: block.status === "UNPLUGGED" || block.status === "DONE" });
+  } = useSortable({ id: block.id, disabled: block.status === "UNPLUGGED" || block.status === "DONE" || (isSplit && !isLastOfTask) });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -95,12 +95,12 @@ export const SortableItem = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            {!isDone && (
+            {!(isDone || (isSplit && !isLastOfTask)) && (
               <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
                 <GripVertical size={14} className={`transition-opacity duration-300 ${isHovered || isDragging ? "text-text-primary opacity-100" : "text-text-muted opacity-40"}`} />
               </div>
             )}
-            {isDone && <div className="w-[14px]" />} {/* Spacer for layout consistency */}
+            {(isDone || (isSplit && !isLastOfTask)) && <div className="w-[14px]" />} {/* Spacer for layout consistency */}
             <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   {block.isUrgent && <AlertTriangle size={14} className="text-danger fill-danger/20" />}
@@ -125,49 +125,8 @@ export const SortableItem = ({
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onMoveToInbox(block.id);
-                    }}
-                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered ? "bg-surface-elevated text-text-primary border-border shadow-lg scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-border/80"}`}
-                  >
-                    <Inbox size={16} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                  {t.main.tooltip?.move_to_inbox || "인박스로 이동"}
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      disabled={isSplit && !isLastOfTask}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTransition(block);
-                      }}
-                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered && !(isSplit && !isLastOfTask) ? "bg-surface-elevated text-text-primary border-border shadow-lg scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-border/80"} disabled:opacity-30 disabled:cursor-not-allowed`}
-                    >
-                      <Pencil size={16} />
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                  {isSplit && !isLastOfTask ? (t.main.tooltip?.edit_disabled || "분할된 이전 블록은 수정할 수 없습니다.") : (t.main.tooltip?.edit || "수정")}
-                </TooltipContent>
-              </Tooltip>
-
-              {block.taskId !== null && (
+            {!(isSplit && !isLastOfTask) && (
+              <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button 
@@ -175,19 +134,61 @@ export const SortableItem = ({
                       size="sm" 
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDelete(block.taskId!);
+                        onMoveToInbox(block.id);
                       }}
-                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered ? "bg-danger/20 text-danger border-danger/40 shadow-lg shadow-danger/10 scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-danger/40 hover:text-danger"}`}
+                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered ? "bg-surface-elevated text-text-primary border-border shadow-lg scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-border/80"}`}
                     >
-                      <X size={16} />
+                      <Inbox size={16} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                    {t.main.tooltip?.delete || "삭제"}
+                    {t.main.tooltip?.move_to_inbox || "인박스로 이동"}
                   </TooltipContent>
                 </Tooltip>
-              )}
-            </TooltipProvider>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTransition(block);
+                        }}
+                        className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered ? "bg-surface-elevated text-text-primary border-border shadow-lg scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-border/80"} disabled:opacity-30 disabled:cursor-not-allowed`}
+                      >
+                        <Pencil size={16} />
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
+                    {t.main.tooltip?.edit || "수정"}
+                  </TooltipContent>
+                </Tooltip>
+
+                {block.taskId !== null && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(block.taskId!);
+                        }}
+                        className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered ? "bg-danger/20 text-danger border-danger/40 shadow-lg shadow-danger/10 scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-danger/40 hover:text-danger"}`}
+                      >
+                        <X size={16} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
+                      {t.main.tooltip?.delete || "삭제"}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+            )}
           </div>
         </div>
       </div>
