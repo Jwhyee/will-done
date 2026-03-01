@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,6 +17,7 @@ import {
   DragOverlay,
   DragStartEvent,
   defaultDropAnimationSideEffects,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -25,6 +28,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion, AnimatePresence } from "framer-motion";
+
+const DroppableArea = ({ id, children, className }: { id: string, children: React.ReactNode, className?: string }) => {
+  const { isOver, setNodeRef } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className={`${className} ${isOver ? 'ring-2 ring-blue-500/50 rounded-xl' : ''}`}>
+      {children}
+    </div>
+  );
+};
 
 import {
   Dialog,
@@ -296,6 +308,9 @@ function App() {
   const [moveAllConfirm, setMoveAllConfirm] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [reviewMemo, setReviewMemo] = useState("");
+  const [retrospectiveOpen, setRetrospectiveOpen] = useState(false);
+  const [retrospectiveContent, setRetrospectiveContent] = useState("");
+  const [isGeneratingRetro, setIsGeneratingRetro] = useState(false);
   const [customDelay, setCustomDelay] = useState<number>(15);
   const [agoMinutes, setAgoMinutes] = useState<number>(5);
   const [hoverTaskId, setHoverTaskId] = useState<number | null>(null);
@@ -511,6 +526,24 @@ function App() {
     const activeId = active.id.toString();
     const overId = over.id.toString();
 
+    // Inbox -> Timeline
+    if (activeId.includes("inbox") && !overId.includes("inbox")) {
+      const taskId = parseInt(activeId.replace("inbox-", ""));
+      if (activeWorkspaceId) {
+        await invoke("move_to_timeline", { taskId, workspaceId: activeWorkspaceId });
+        fetchMainData();
+      }
+      return;
+    }
+
+    // Timeline -> Inbox
+    if (!activeId.includes("inbox") && (overId === "inbox" || overId.includes("inbox"))) {
+      const blockId = parseInt(activeId);
+      await invoke("move_to_inbox", { blockId });
+      fetchMainData();
+      return;
+    }
+
     // Only Timeline Reordering
     if (!activeId.includes("inbox") && !overId.includes("inbox")) {
       const oldIndex = timeline.findIndex((item) => item.id.toString() === activeId);
@@ -583,6 +616,37 @@ function App() {
       setWorkspaces(wsList);
     } catch (error) {
       console.error("Settings update failed:", error);
+    }
+  };
+
+  const handleGenerateRetrospective = async (date: Date) => {
+    if (!activeWorkspaceId) return;
+    setRetrospectiveOpen(true);
+    setIsGeneratingRetro(true);
+    setRetrospectiveContent("");
+    try {
+      const dateStr = format(date, "yyyy-MM-dd");
+      const content = await invoke<string>("generate_retrospective", { 
+        workspaceId: activeWorkspaceId, 
+        date: dateStr 
+      });
+      setRetrospectiveContent(content);
+    } catch (error: any) {
+      setRetrospectiveContent(`Error generating retrospective:\n\n${error}`);
+    } finally {
+      setIsGeneratingRetro(false);
+    }
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    const dateStr = format(date, "yyyy-MM-dd");
+    const isToday = format(new Date(), "yyyy-MM-dd") === dateStr;
+    
+    if (!isToday && activeDates.includes(dateStr)) {
+      handleGenerateRetrospective(date);
+    } else {
+      setSelectedDate(date);
     }
   };
 
@@ -733,7 +797,7 @@ function App() {
                   <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
+                    onSelect={handleDateSelect}
                     initialFocus
                     className="bg-[#1c1c21] text-white"
                     disabled={(date) => {
@@ -772,7 +836,7 @@ function App() {
               </h3>
             </div>
               <ScrollArea className="flex-1 p-5 pt-0">
-                <div id="inbox" className="space-y-3 py-3 min-h-[100px]">
+                <DroppableArea id="inbox" className="space-y-3 py-3 min-h-[100px]">
                   <SortableContext 
                     items={inboxTasks.map(t => `inbox-${t.id}`)}
                     strategy={verticalListSortingStrategy}
@@ -797,7 +861,7 @@ function App() {
                       ))
                     )}
                   </SortableContext>
-                </div>
+                </DroppableArea>
               </ScrollArea>
             </div>
 
@@ -828,7 +892,11 @@ function App() {
                     </div>
                     <p className="text-zinc-500 font-bold text-sm tracking-tight">{greeting}</p>
                   </div>
-                  <Button className="bg-zinc-800 hover:bg-zinc-700 text-white font-black rounded-xl gap-2 h-11 border border-zinc-700 shadow-xl shadow-black/40 px-6">
+                  <Button 
+                    onClick={() => handleGenerateRetrospective(selectedDate)}
+                    disabled={timeline.filter(t => t.status === "DONE").length === 0}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white font-black rounded-xl gap-2 h-11 border border-zinc-700 shadow-xl shadow-black/40 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <Sparkles size={18} className="text-yellow-400" />
                     {t.main.retrospective_btn}
                   </Button>
@@ -902,33 +970,32 @@ function App() {
                         )}
                       </div>
                     </div>
-                  ) : (
-                    <div id="timeline" className="space-y-6 relative pl-16 border-l border-zinc-800 ml-4 py-4 min-h-[200px]">
-                        <SortableContext 
-                          items={timeline.map(b => b.id.toString())}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {timeline.map((block) => (
-                            <SortableItem 
-                              key={block.id === -1 ? `unplugged-${block.start_time}` : block.id} 
-                              block={block} 
-                              timeline={timeline}
-                              currentTime={currentTime}
-                              t={t}
-                              onTransition={setTransitionBlock}
-                              onMoveToInbox={async (blockId: number) => {
-                                await invoke("move_to_inbox", { blockId });
-                                fetchMainData();
-                              }}
-                              onDelete={(id: number) => setDeleteTaskId(id)}
-                              hoverTaskId={hoverTaskId}
-                              setHoverTaskId={setHoverTaskId}
-                            />
-                          ))}
-                        </SortableContext>
-                    </div>
-                  )}
-                </div>
+                                    ) : (
+                                      <DroppableArea id="timeline" className="space-y-6 relative pl-16 border-l border-zinc-800 ml-4 py-4 min-h-[200px]">
+                                          <SortableContext
+                                            items={timeline.map(b => b.id.toString())}
+                                            strategy={verticalListSortingStrategy}
+                                          >
+                                            {timeline.map((block) => (
+                                              <SortableItem
+                                                key={block.id === -1 ? `unplugged-${block.start_time}` : block.id}
+                                                block={block}
+                                                timeline={timeline}
+                                                currentTime={currentTime}
+                                                t={t}
+                                                onTransition={setTransitionBlock}
+                                                onMoveToInbox={async (blockId: number) => {
+                                                  await invoke("move_to_inbox", { blockId });
+                                                  fetchMainData();
+                                                }}
+                                                onDelete={(id: number) => setDeleteTaskId(id)}
+                                                hoverTaskId={hoverTaskId}
+                                                setHoverTaskId={setHoverTaskId}
+                                              />
+                                            ))}
+                                          </SortableContext>
+                                      </DroppableArea>
+                                    )}                </div>
               </ScrollArea>
 
               {/* Deletion Confirmation */}
@@ -1076,6 +1143,46 @@ function App() {
                       </div>
                     </div>
                   </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Retrospective Modal */}
+              <Dialog open={retrospectiveOpen} onOpenChange={setRetrospectiveOpen}>
+                <DialogContent className="sm:max-w-[700px] h-[85vh] bg-[#1c1c21] border-[#2e2e33] text-white shadow-2xl flex flex-col rounded-2xl p-0 border-t-zinc-700/50 overflow-hidden antialiased">
+                  <DialogHeader className="p-8 pb-4 shrink-0 space-y-3">
+                    <DialogTitle className="text-2xl font-black tracking-tighter text-white leading-none flex items-center gap-2">
+                      <Sparkles size={24} className="text-yellow-400" />
+                      Daily Retrospective
+                    </DialogTitle>
+                    <DialogDescription className="text-zinc-400 font-bold text-sm">
+                      {isGeneratingRetro ? "AI is generating your professional retrospective..." : "Your generated Brag Document for the selected date."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="flex-1 overflow-y-auto px-8 scrollbar-hide bg-[#111114]">
+                    <div className="py-8 text-sm leading-relaxed prose prose-invert max-w-none">
+                      {isGeneratingRetro ? (
+                        <div className="flex flex-col items-center justify-center space-y-4 py-20">
+                          <div className="w-10 h-10 border-4 border-zinc-700 border-t-yellow-400 rounded-full animate-spin" />
+                          <p className="text-zinc-500 font-bold animate-pulse">Analyzing completed tasks and memos...</p>
+                        </div>
+                      ) : (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {retrospectiveContent || "No retrospective generated yet."}
+                        </ReactMarkdown>
+                      )}
+                    </div>
+                  </div>
+
+                  <DialogFooter className="p-6 border-t border-[#2e2e33] bg-[#1c1c21] shrink-0">
+                    <Button 
+                      onClick={() => navigator.clipboard.writeText(retrospectiveContent)}
+                      disabled={isGeneratingRetro || !retrospectiveContent}
+                      className="w-full bg-white text-black hover:bg-zinc-200 font-black h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95 disabled:opacity-50"
+                    >
+                      Copy to Clipboard
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
 
