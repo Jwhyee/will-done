@@ -5530,6 +5530,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-notification",
  "tauri-plugin-opener",
+ "thiserror 2.0.18",
  "tokio",
 ]
 

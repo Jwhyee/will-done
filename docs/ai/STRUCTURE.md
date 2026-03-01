@@ -22,9 +22,15 @@
 - `types/`: TypeScript 인터페이스 정의 (`index.ts`).
 
 ### 📂 Backend (`src-tauri/`)
-- `src/lib.rs`: 모든 Tauri Command, 데이터 엔티티(Struct), SQLite 비즈니스 로직 및 AI 프롬프트 엔진 포함.
-- `src/main.rs`: Tauri 앱 초기화, DB 마이그레이션(Lang/Urgent 컬럼 추가 등) 및 커맨드 핸들러 등록.
-- `Cargo.toml`: Rust 의존성 관리 (`sqlx`, `tokio`, `serde`, `reqwest` 등).
+- `src/lib.rs`: Tauri 앱 라이브러리 엔트리 포인트. 모듈 선언 및 초기화.
+- `src/main.rs`: Tauri 앱 실행기. `will_done_lib::run()` 호출.
+- `src/error.rs`: `AppError` 및 `Result` 타입을 통한 통합 에러 핸들링.
+- `src/models.rs`: 데이터 엔티티(User, Workspace, Task 등) 및 DTO 정의.
+- `src/database/`: 데이터 접근 계층 (DAL). SQL 쿼리 및 물리적 DB 조작 로직.
+  - `user.rs`, `workspace.rs`, `timeline.rs`, `retrospective.rs`
+- `src/commands/`: Tauri 커맨드 계층. 비즈니스 로직 및 서비스 연동.
+  - `user.rs`, `workspace.rs`, `timeline.rs`, `retrospective.rs`
+- `Cargo.toml`: Rust 의존성 관리 (`sqlx`, `thiserror`, `chrono` 등).
 
 ---
 
