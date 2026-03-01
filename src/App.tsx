@@ -1086,14 +1086,14 @@ function App() {
                     <DialogTitle className="text-2xl font-black tracking-tighter text-white leading-none">
                       {t.sidebar.settings}
                     </DialogTitle>
-                    <DialogDescription className="text-zinc-400 font-bold text-sm">Configure your profile and workspace.</DialogDescription>
+                    <DialogDescription className="text-zinc-400 font-bold text-sm">{t.sidebar.settings_title}</DialogDescription>
                   </DialogHeader>
                   
                   <div className="flex-1 overflow-y-auto px-8 scrollbar-hide">
                     <div className="space-y-10 py-6">
                       {/* User Settings */}
                       <form className="space-y-6">
-                        <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Profile</h3>
+                        <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">{t.sidebar.profile}</h3>
                         <div className="space-y-3">
                           <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.onboarding.nickname_label}</Label>
                           <Input {...settingsUserForm.register("nickname")} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold" />
@@ -1108,7 +1108,7 @@ function App() {
 
                       {/* Workspace Settings */}
                       <form className="space-y-8">
-                        <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Workspace</h3>
+                        <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">{t.sidebar.workspace}</h3>
                         <div className="space-y-3">
                           <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
                           <Input {...settingsWorkspaceForm.register("name")} className="bg-[#111114] border-[#2e2e33] text-white h-12 rounded-xl px-4 font-bold" />
@@ -1141,7 +1141,7 @@ function App() {
                                 <button type="button" onClick={() => sRemove(index)} className="absolute top-4 right-4 text-zinc-600 hover:text-red-400">
                                   <X size={16} />
                                 </button>
-                                <Input {...settingsWorkspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder="Label" className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl px-4 font-bold" />
+                                <Input {...settingsWorkspaceForm.register(`unplugged_times.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl px-4 font-bold" />
                                 <div className="grid grid-cols-2 gap-4">
                                   <Input type="time" {...settingsWorkspaceForm.register(`unplugged_times.${index}.start_time` as const)} className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl font-bold [color-scheme:dark]" />
                                   <Input type="time" {...settingsWorkspaceForm.register(`unplugged_times.${index}.end_time` as const)} className="bg-[#1c1c21] border-[#2e2e33] h-11 rounded-xl font-bold [color-scheme:dark]" />
@@ -1155,6 +1155,7 @@ function App() {
                           <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t.workspace_setup.role_intro}</Label>
                           <textarea 
                             {...settingsWorkspaceForm.register("role_intro")}
+                            placeholder={t.workspace_setup.role_placeholder}
                             className="w-full min-h-[120px] bg-[#111114] border-[#2e2e33] rounded-2xl p-5 text-sm text-white focus:outline-none placeholder:text-zinc-700 font-bold leading-relaxed"
                           />
                         </div>
@@ -1163,8 +1164,8 @@ function App() {
                   </div>
 
                   <DialogFooter className="p-8 pt-4 pb-8 border-t border-[#2e2e33] bg-[#1c1c21] shrink-0">
-                    <Button onClick={onSettingsSubmit} className="w-full bg-white text-black hover:bg-zinc-200 font-black h-12 rounded-xl text-md transition-all shadow-xl shadow-black/20 active:scale-95">
-                      Save Changes
+                    <Button onClick={onSettingsSubmit} className="w-full bg-white text-black hover:bg-zinc-200 font-black h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95">
+                      {t.sidebar.save_changes}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

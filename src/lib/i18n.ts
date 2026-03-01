@@ -37,6 +37,10 @@ export const translations = {
     sidebar: {
       inbox: "인박스",
       settings: "설정",
+      settings_title: "프로필 및 워크스페이스를 설정합니다.",
+      profile: "프로필",
+      workspace: "워크스페이스",
+      save_changes: "변경 사항 저장",
       date_search: "날짜 검색",
       no_tasks: "대기 중인 태스크가 없습니다.",
     },
@@ -119,6 +123,10 @@ export const translations = {
     sidebar: {
       inbox: "Inbox",
       settings: "Settings",
+      settings_title: "Configure your profile and workspace.",
+      profile: "Profile",
+      workspace: "Workspace",
+      save_changes: "Save Changes",
       date_search: "Search Date",
       no_tasks: "No pending tasks.",
     },
