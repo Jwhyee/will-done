@@ -4,97 +4,79 @@
 
 "will-done" is a cross-platform desktop application designed to manage workflow interruptions, separate contexts via "Workspaces," and generate high-quality performance reviews (Brag Documents) using an AI API.
 
-* **Architecture**: A secure, high-performance Desktop App utilizing a decoupled Frontend UI and a native Backend with a local database.
-* **UI/UX Vision**: Strictly Dark Mode, pixel-perfect, modern desktop application aesthetics with a **Dual Sidebar** layout (Slack-style).
+*   **Architecture**: Tauri v2, Rust (Backend), React + TypeScript (Frontend), SQLite (Local DB).
+*   **UI/UX Vision**: Strictly Dark Mode, pixel-perfect, modern desktop aesthetics with a **Dual Sidebar** layout.
+*   **Current Status**: Core engine (Scheduling, Time-shifting, State transitions) and AI integration are implemented. Multi-language (KR/EN) support is active.
 
 ---
 
 ## 2. Core Domain Glossary
 
-* **User/Global Settings**: A single-row entity storing the user's nickname and AI API Key.
-* **Workspace**: A user-defined environment profile (e.g., "Toss Payments", "Side Project"). Each workspace isolates settings, tasks, and AI context.
-* **Core Time**: The main working hours (e.g., 09:00~18:00). *OPTIONAL*.
-* **Unplugged Time**: Fixed, recurring time blocks where no tasks should be scheduled (e.g., Lunch, Dinner). *OPTIONAL*.
-* **Task**: The original job definition.
-* **TimeBlock**: The actual time segment on the timeline. A Task can be split into multiple TimeBlocks due to Unplugged Times or urgent interruptions.
+*   **User**: Global entity storing `Nickname`, `Gemini API Key`, and `Language` (KR/EN).
+*   **Workspace**: User-defined environment profile. Isolates tasks and AI context. Includes `Core Time` and `Role Intro`.
+*   **Unplugged Time**: Fixed, recurring time blocks (e.g., Lunch) that the scheduler automatically bypasses.
+*   **Task**: The original job definition with `Title`, `Planning Memo`, and `Estimated Minutes`.
+*   **TimeBlock**: Actual segments on the timeline.
+    *   **Status**: `DONE` (Completed), `NOW` (Currently active), `WILL` (Scheduled), `UNPLUGGED` (Blocked), `PENDING` (Interrupted/Paused).
+*   **Time Shift Engine**: The logic that automatically splits tasks around Unplugged times and shifts future tasks when interruptions or delays occur.
 
 ---
 
-## 3. User Scenarios & Functional Specifications
+## 3. Implementation Progress & Current Features
 
-### Scenario A: Initial Setup & Onboarding
+### ✅ Phase 1: Foundation & Onboarding
+*   [x] **Global Profile**: One-time setup for Nickname and Language.
+*   [x] **Workspace Setup**: Creation of workspaces with Core/Unplugged times.
+*   [x] **Dual Sidebar Layout**: Primary (Workspace switcher) + Secondary (Date/Inbox/Settings).
 
-1. **Global Profile (One-time)**: If no user exists, show a modal to input `Nickname` (Required) and `AI API Key` (Optional, with a guide: "Used for AI Retrospectives").
-2. **Workspace Creation**:
-* Input `Workspace Name`.
-* Set `Core Time` and multiple `Unplugged Times` with labels.
-* Input `Role Intro` for AI context.
+### ✅ Phase 2: Intelligent Scheduling Engine
+*   [x] **Intelligent Greetings**: Context-aware greetings based on time and active task status.
+*   [x] **Auto-Scheduling**: Tasks are automatically split into multiple blocks if they overlap with `Unplugged Time`.
+*   [x] **Inbox & Timeline**: Seamless movement between the unscheduled queue (Inbox) and the daily timeline.
+*   [x] **Drag & Drop**: Reordering tasks and moving between Sidebar/Main View using `dnd-kit`.
 
+### ✅ Phase 3: Real-time Interaction
+*   [x] **Task Transitions**: Manual and semi-automatic status changes (START -> DONE/DELAY).
+*   [x] **Expiration Logic**: Detection of finished tasks and prompting for Review Memos.
+*   [x] **Urgent Interruptions**: Inserting urgent tasks splits the current one and shifts the entire remaining schedule.
 
-3. **Dual Sidebar Interface**:
-* **Primary Sidebar (Left-most)**: Workspace switcher (Icon list).
-* **Secondary Sidebar**:
-* Date Search (Top): View archive for specific dates.
-* Inbox (Middle): Task queue for unscheduled tasks.
-* Settings (Bottom): Reconfigure Workspace/Core/Unplugged times.
-
-
-
-
-
-### Scenario B: Intelligent Greetings & Task Planning
-
-1. **Intelligent Greeting**: Changes dynamically based on the system time and active task status (Morning, Lunch, Afternoon, Evening, Night, Dawn).
-2. **Task Input**: Separate Number Inputs for `[Hours (0-23)]` and `[Minutes (0-59)]`.
-3. **Planning Memo**: Markdown-supported area to define steps or goals.
-4. **Auto-Scheduling**: If a task overlaps with `Unplugged Time`, the system MUST split the block to bypass that segment.
-
-### Scenario C: Task Expiration & Transition Logic
-
-1. **Expiration**: Timer ends → System Alert → Idle state. No auto-start for the next task.
-2. **Action - [Delay]**: Extend duration (15/30m, or manual) and shift subsequent tasks.
-3. **Action - [Completion]**: Mark as Done and prompt for a **Review Memo** (Markdown supported).
-4. **Next Step**: Choose to start immediately, wait (5/10/15m/Custom), or stay undecided (Hourly reminders).
-
-### Scenario D: Urgent Ad-hoc Interruptions (Time Shift Engine)
-
-1. **Trigger**: Check `[🔥 Urgent Task]` during entry.
-2. **Process**: Split the currently running task → Insert Urgent Task → Shift all subsequent tasks backward.
-3. **Resume**: The original task's `[Remaining Time]` must be finished later to complete the task.
-
-### Scenario E: End-of-day Overtime Alert
-
-1. **Trigger**: 30 minutes before `Core Time End`.
-2. **Logic**: If total remaining duration > Core Time End, show warning.
-3. **Action**: User decides to move remaining tasks to the Inbox or continue working.
-
-### Scenario F: AI Retrospectives
-
-1. **Trigger**: **[✨ Generate Retrospective]** button (Enabled if Completed Tasks >= 1).
-2. **Execution**: Combines `Planning Memo`, `Review Memo`, and `Role Intro` to generate a markdown summary via AI.
+### ✅ Phase 4: AI & Archive
+*   [x] **AI Retrospectives**: Generates professional summaries (Brag Documents) using Gemini 1.5 Flash based on Planning/Review memos.
+*   [x] **History Archive**: View previous dates' timelines and saved retrospectives.
+*   [x] **Multi-Frequency Retro**: Support for Daily, Weekly, and Monthly retrospective generation.
 
 ---
 
-## 4. Strict UI/UX & Data Constraints
+## 4. Detailed Technical Specifications
 
-1. **Form Validation**: Time inputs MUST strictly be Numbers (min/max enforced).
-2. **Markdown Viewers**: Planning/Review memos and AI Retrospectives MUST be rendered as rich text.
-3. **Immutability Protection**: Editing a `Completed` task requires confirmation.
-4. **Drag & Drop**: Support moving tasks between the Inbox (Secondary Sidebar) and the Main Timeline, and reordering within the timeline.
+### A. Time Shift Logic (Rust)
+1.  **Shift**: When a task is delayed or an urgent task is inserted, all subsequent `WILL` blocks are shifted by `N` minutes.
+2.  **Split**: If a scheduled block crosses an `Unplugged Time` boundary, it is split into two or more blocks, maintaining the total duration.
+3.  **Resume**: Interrupted tasks (by urgent ones) are set to `PENDING` and a new block for the remaining time is scheduled after the urgent task.
 
----
+### B. Intelligent Greeting Logic
+*   Morning (06-11), Lunch (11-13), Afternoon (13-18), Evening (18-22), Night (22-04), Dawn (04-06).
+*   Greetings vary if there is a task currently in `NOW` status (Encouragement vs. Planning).
 
-## 5. Database Schema Design (Core Entities)
-
-* **`users`**: `id` (Primary, always 1), `nickname`, `gemini_api_key`.
-* **`workspaces`**: `id`, `name`, `core_time_start` (Nullable), `core_time_end` (Nullable), `role_intro`.
-* **`unplugged_times`**: `id`, `workspace_id` (FK), `label`, `start_time`, `end_time`. (Stored as separate rows for efficient scheduling).
-* **`tasks`**: `id`, `workspace_id` (FK), `title`, `planning_memo`.
-* **`time_blocks`**: `id`, `task_id` (FK), `start_time`, `end_time`, `status`, `review_memo`.
+### C. AI Prompt Engineering
+*   **Context**: Role Intro + Completed Task List (Title, Duration, Planning Memo, Review Memo).
+*   **Output**: Structured Markdown in the user's preferred language.
 
 ---
 
-## 6. Future Implementations (Out of Scope for MVP)
+## 5. Database Schema (Finalized)
 
-* **GitHub Auto-Sync**: Background cron job to push anonymized data to a private repository.
-* **Manual Export/Import**: Export/Import local `.sqlite` file.
+*   **`users`**: `id` (1), `nickname`, `gemini_api_key`, `lang`.
+*   **`workspaces`**: `id`, `name`, `core_time_start`, `core_time_end`, `role_intro`.
+*   **`unplugged_times`**: `id`, `workspace_id`, `label`, `start_time`, `end_time`.
+*   **`tasks`**: `id`, `workspace_id`, `title`, `planning_memo`, `estimated_minutes`.
+*   **`time_blocks`**: `id`, `task_id`, `workspace_id`, `title`, `start_time`, `end_time`, `status`, `review_memo`, `is_urgent`.
+*   **`retrospectives`**: `id`, `workspace_id`, `retro_type`, `content`, `date_label`, `created_at`.
+
+---
+
+## 6. Future Implementations (Next Sprints)
+
+*   **Statistics View**: Visualize time spent per category/workspace.
+*   **Pomodoro Integration**: Optional timer sounds and break reminders.
+*   **Cloud Sync/Export**: Exporting data for external backup.
