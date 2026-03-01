@@ -42,7 +42,7 @@ export const SecondarySidebar = ({
           {!isCollapsed && (
             <div className="flex items-center space-x-2">
               <Inbox size={14} className="text-accent" />
-              <h3 className="text-[14px] font-black text-text-primary uppercase tracking-widest">
+              <h3 className="text-sm font-bold text-text-primary uppercase tracking-tight">
                 {t.sidebar.inbox}
               </h3>
             </div>
@@ -67,8 +67,8 @@ export const SecondarySidebar = ({
                   strategy={verticalListSortingStrategy}
                 >
                   {inboxTasks.length === 0 ? (
-                    <div className="p-6 border-2 border-dashed border-border/40 bg-background/20 rounded-2xl text-center">
-                      <p className="text-[14px] text-text-muted font-bold italic">{t.sidebar.no_tasks}</p>
+                    <div className="p-6 border border-dashed border-border bg-background/20 rounded-2xl text-center">
+                      <p className="text-sm text-text-secondary font-bold leading-relaxed">{t.sidebar.no_tasks}</p>
                     </div>
                   ) : (
                     inboxTasks.map((task) => (
@@ -88,9 +88,9 @@ export const SecondarySidebar = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="relative">
-                    <Inbox size={20} className="text-text-muted" />
+                    <Inbox size={20} className="text-text-secondary" />
                     {inboxTasks.length > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[8px] font-black text-text-primary">
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-xs font-bold text-text-primary">
                         {inboxTasks.length}
                       </span>
                     )}

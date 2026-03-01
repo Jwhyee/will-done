@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Sparkles } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -247,7 +246,7 @@ function AppContent() {
 
   if (view === "loading") {
     return (
-      <div className="h-screen flex items-center justify-center bg-surface text-text-primary antialiased font-bold">
+      <div className="h-screen flex items-center justify-center bg-surface text-text-primary antialiased font-medium">
         <p className="animate-pulse">{t.checking}</p>
       </div>
     );
@@ -411,10 +410,9 @@ function AppContent() {
         <DialogContent className="sm:max-w-[700px] h-[85vh] bg-surface-elevated border-border text-text-primary shadow-2xl flex flex-col rounded-2xl p-0 border-t-border/50 overflow-hidden antialiased">
           <DialogHeader className="p-8 pb-4 shrink-0 space-y-3">
             <DialogTitle className="text-2xl font-black tracking-tighter text-text-primary leading-none flex items-center gap-2">
-              <Sparkles size={24} className="text-warning" />
               {activeRetrospective?.dateLabel || "Retrospective"}
             </DialogTitle>
-            <DialogDescription className="text-text-secondary font-bold text-sm">
+            <DialogDescription className="text-text-secondary text-sm leading-relaxed">
               {t.retrospective.brag_desc}
             </DialogDescription>
           </DialogHeader>
@@ -427,7 +425,7 @@ function AppContent() {
             </div>
             {activeRetrospective?.usedModel && (
               <div className="pb-8 flex justify-end">
-                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest bg-surface px-2 py-1 rounded-md border border-border">
+                <span className="text-xs font-medium text-text-secondary uppercase tracking-widest bg-surface px-2 py-1 rounded-md border border-border">
                   {t.retrospective.used_model}: {activeRetrospective.usedModel.replace('models/', '')}
                 </span>
               </div>
@@ -438,7 +436,7 @@ function AppContent() {
             <Button 
               onClick={() => activeRetrospective && navigator.clipboard.writeText(activeRetrospective.content)}
               disabled={!activeRetrospective}
-              className="w-full bg-text-primary text-background hover:bg-zinc-200 font-black h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95 disabled:opacity-50"
+              className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95 disabled:opacity-50"
             >
               {t.retrospective.copy_btn}
             </Button>

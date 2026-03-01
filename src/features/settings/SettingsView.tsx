@@ -111,7 +111,7 @@ export const SettingsView = ({
         </Button>
 
         <div className="space-y-4">
-          <h2 className="text-xl font-black tracking-tighter text-text-primary">{t.sidebar.settings}</h2>
+          <h2 className="text-lg font-bold tracking-tight text-text-primary">{t.sidebar.settings}</h2>
           <nav className="space-y-2">
             <Button 
               variant={tab === "profile" ? "secondary" : "ghost"} 
@@ -131,86 +131,86 @@ export const SettingsView = ({
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-12">
+      <main className="flex-1 overflow-y-auto p-12 bg-background">
         <div className="max-w-4xl">
           {tab === "profile" ? (
             <form key="profile-form" onSubmit={userForm.handleSubmit(onUserSubmit)} className="space-y-12">
-              <div className="space-y-2">
-                <h1 className="text-4xl font-black tracking-tighter text-text-primary">{t.sidebar.profile}</h1>
-                <p className="text-text-secondary font-bold">{t.sidebar.settings_desc}</p>
+              <div className="space-y-1.5">
+                <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">{t.sidebar.profile}</h1>
+                <p className="text-sm text-text-secondary leading-relaxed">{t.sidebar.settings_desc}</p>
               </div>
 
               <div className="space-y-8">
                 <div className="space-y-3">
-                  <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.onboarding.nickname_label}</Label>
-                  <Input {...userForm.register("nickname")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold" />
+                  <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.onboarding.nickname_label}</Label>
+                  <Input {...userForm.register("nickname")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium" />
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
-                  <Input type="password" {...userForm.register("geminiApiKey")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold" />
+                  <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
+                  <Input type="password" {...userForm.register("geminiApiKey")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium" />
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.sidebar.lang_label}</Label>
+                  <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.sidebar.lang_label}</Label>
                   <select 
                     {...userForm.register("lang")}
-                    className="w-full h-12 bg-surface-elevated border border-border rounded-xl px-4 font-bold text-text-primary outline-none focus:ring-1 focus:ring-white/10 appearance-none"
+                    className="w-full h-12 bg-surface border border-border rounded-xl px-4 font-medium text-text-primary outline-none focus:ring-1 focus:ring-white/10 appearance-none"
                   >
                     <option value="ko">한국어 (Korean)</option>
                     <option value="en">English</option>
                   </select>
                 </div>
 
-                <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-black h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">
+                <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">
                   {t.sidebar.save_changes}
                 </Button>
               </div>
             </form>
           ) : (
             <form key="workspace-form" onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="space-y-12">
-              <div className="space-y-2">
-                <h1 className="text-4xl font-black tracking-tighter text-text-primary">{t.sidebar.workspace}</h1>
-                <p className="text-text-secondary font-bold">{t.sidebar.workspace_settings_desc}</p>
+              <div className="space-y-1.5">
+                <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">{t.sidebar.workspace}</h1>
+                <p className="text-sm text-text-secondary leading-relaxed">{t.sidebar.workspace_settings_desc}</p>
               </div>
 
               <div className="space-y-8">
                 <div className="space-y-3">
-                  <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
-                  <Input {...workspaceForm.register("name")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold" />
+                  <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
+                  <Input {...workspaceForm.register("name")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium" />
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
+                  <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
                   <div className="grid grid-cols-2 gap-6">
-                    <Input type="time" {...workspaceForm.register("coreTimeStart")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
-                    <Input type="time" {...workspaceForm.register("coreTimeEnd")} className="bg-surface-elevated border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
+                    <Input type="time" {...workspaceForm.register("coreTimeStart")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium [color-scheme:dark]" />
+                    <Input type="time" {...workspaceForm.register("coreTimeEnd")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium [color-scheme:dark]" />
                   </div>
                 </div>
 
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
+                    <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
                     <Button 
                       type="button" 
                       variant="outline" 
                       size="sm" 
                       onClick={() => append({ label: "", startTime: "12:00", endTime: "13:00" })} 
-                      className="border-border bg-surface-elevated hover:bg-border text-text-secondary font-black rounded-lg h-9"
+                      className="border-border bg-surface hover:bg-border text-text-secondary font-bold rounded-lg h-9"
                     >
                       <Plus size={16} className="mr-2" /> {t.workspace_setup.add_unplugged}
                     </Button>
                   </div>
                   <div className="space-y-4 pb-2">
                     {fields.map((field, index) => (
-                      <div key={field.id} className="p-5 bg-surface-elevated/60 border border-border rounded-2xl space-y-4 relative">
+                      <div key={field.id} className="p-5 bg-surface/60 border border-border rounded-2xl space-y-4 relative">
                         <button type="button" onClick={() => remove(index)} className="absolute top-4 right-4 text-text-muted hover:text-danger transition-colors">
                           <X size={16} />
                         </button>
-                        <Input {...workspaceForm.register(`unpluggedTimes.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-surface border-border h-11 rounded-xl px-4 font-bold" />
+                        <Input {...workspaceForm.register(`unpluggedTimes.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-background border-border h-11 rounded-xl px-4 font-medium" />
                         <div className="grid grid-cols-2 gap-4">
-                          <Input type="time" {...workspaceForm.register(`unpluggedTimes.${index}.startTime` as const)} className="bg-surface border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
-                          <Input type="time" {...workspaceForm.register(`unpluggedTimes.${index}.endTime` as const)} className="bg-surface border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
+                          <Input type="time" {...workspaceForm.register(`unpluggedTimes.${index}.startTime` as const)} className="bg-background border-border h-11 rounded-xl font-medium [color-scheme:dark]" />
+                          <Input type="time" {...workspaceForm.register(`unpluggedTimes.${index}.endTime` as const)} className="bg-background border-border h-11 rounded-xl font-medium [color-scheme:dark]" />
                         </div>
                       </div>
                     ))}
@@ -218,15 +218,15 @@ export const SettingsView = ({
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.workspace_setup.roleIntro}</Label>
+                  <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.roleIntro}</Label>
                   <textarea 
                     {...workspaceForm.register("roleIntro")}
                     placeholder={t.workspace_setup.role_placeholder}
-                    className="w-full min-h-[120px] bg-surface-elevated border-border rounded-2xl p-5 text-sm text-text-primary focus:outline-none placeholder:text-text-muted font-bold leading-relaxed"
+                    className="w-full min-h-[120px] bg-surface border-border rounded-2xl p-5 text-sm text-text-primary focus:outline-none placeholder:text-text-muted font-medium leading-relaxed"
                   />
                 </div>
 
-                <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-black h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">
+                <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">
                   {t.sidebar.save_changes}
                 </Button>
               </div>

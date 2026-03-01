@@ -20,7 +20,7 @@ export const PrimarySidebar = ({
         <button
           key={ws.id}
           onClick={() => onSelectWorkspace(ws.id)}
-          className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black transition-all duration-300 transform ${
+          className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all duration-300 transform ${
             activeWorkspaceId === ws.id 
             ? "bg-text-primary text-background scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]" 
             : "bg-surface-elevated text-text-muted hover:bg-border hover:text-text-primary"

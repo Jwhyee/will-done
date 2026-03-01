@@ -50,22 +50,22 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
         <DialogContent className="sm:max-w-[425px] bg-surface-elevated border-border text-text-primary shadow-2xl [&>button]:hidden rounded-2xl p-8 border-t-border/50 antialiased">
           <DialogHeader className="space-y-3">
             <DialogTitle className="text-2xl font-black tracking-tighter text-text-primary leading-none">{t.onboarding.title}</DialogTitle>
-            <DialogDescription className="text-text-secondary font-bold text-sm leading-relaxed">{t.onboarding.description}</DialogDescription>
+            <DialogDescription className="text-text-secondary text-sm leading-relaxed">{t.onboarding.description}</DialogDescription>
           </DialogHeader>
           <form onSubmit={userForm.handleSubmit(onUserSubmit)} className="space-y-8 mt-6">
             <div className="space-y-3">
-              <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.onboarding.nickname_label}</Label>
-              <Input {...userForm.register("nickname")} placeholder={t.onboarding.nickname_placeholder} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold focus:ring-1 focus:ring-white/10" />
+              <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.onboarding.nickname_label}</Label>
+              <Input {...userForm.register("nickname")} placeholder={t.onboarding.nickname_placeholder} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10" />
               {userForm.formState.errors.nickname && (
-                <p className="text-[11px] text-danger font-bold flex items-center gap-1"><AlertCircle size={12}/> {userForm.formState.errors.nickname.message}</p>
+                <p className="text-xs text-danger font-medium flex items-center gap-1"><AlertCircle size={12}/> {userForm.formState.errors.nickname.message}</p>
               )}
             </div>
             <div className="space-y-3">
-              <Label className="text-xs font-black text-text-muted uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
-              <Input type="password" {...userForm.register("geminiApiKey")} placeholder={t.onboarding.api_key_placeholder} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold focus:ring-1 focus:ring-white/10" />
-              <p className="text-[10px] text-text-secondary font-bold leading-relaxed">{t.onboarding.api_key_guide}</p>
+              <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
+              <Input type="password" {...userForm.register("geminiApiKey")} placeholder={t.onboarding.api_key_placeholder} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10" />
+              <p className="text-xs text-text-secondary leading-relaxed">{t.onboarding.api_key_guide}</p>
             </div>
-            <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-black h-14 rounded-xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95">
+            <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-14 rounded-xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95">
               {t.onboarding.submit_btn}
             </Button>
           </form>
