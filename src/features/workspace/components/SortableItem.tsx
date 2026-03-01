@@ -72,9 +72,9 @@ export const SortableItem = ({
         <p className="text-[10px] font-black font-mono text-text-secondary">{formatDisplayTime(block.startTime)}</p>
       </div>
       
-      <div className={`absolute -left-[70px] top-4 w-[2px] bottom-[-24px] bg-border/50 z-0 group-last/item:hidden`} />
+      <div className={`absolute -left-[70px] top-4 w-[2px] bottom-[-24px] bg-border/50 z-0 group-last/item:hidden -translate-x-1/2`} />
 
-      <div className={`absolute -left-[75px] top-1 w-3.5 h-3.5 rounded-full border-2 bg-surface z-10 transition-all duration-300 ${
+      <div className={`absolute -left-[70px] top-1 w-4 h-4 rounded-full border-2 bg-surface z-10 transition-all duration-300 -translate-x-1/2 ${
         block.status === "DONE" ? "border-success bg-success/20" :
         block.status === "NOW" ? "border-accent scale-125 shadow-[0_0_10px_rgba(59,130,246,0.5)] bg-accent/20" :
         block.status === "PENDING" ? "border-warning bg-warning/20" :
@@ -146,7 +146,7 @@ export const SortableItem = ({
                       e.stopPropagation();
                       onMoveToInbox(block.id);
                     }}
-                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 opacity-40 hover:opacity-100 ${isHovered ? "bg-surface-elevated text-text-primary hover:bg-border" : "bg-surface text-text-muted hover:text-text-primary"}`}
+                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 opacity-80 hover:opacity-100 ${isHovered ? "bg-text-primary text-background hover:bg-zinc-200" : "bg-surface text-text-muted hover:text-text-primary"}`}
                   >
                     <Inbox size={16} />
                   </Button>
@@ -165,7 +165,7 @@ export const SortableItem = ({
                       e.stopPropagation();
                       onTransition(block);
                     }}
-                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 opacity-40 hover:opacity-100 ${isHovered ? "bg-text-primary text-background hover:bg-text-secondary" : "bg-surface text-text-muted hover:text-text-primary"}`}
+                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 opacity-80 hover:opacity-100 ${isHovered ? "bg-text-primary text-background hover:bg-zinc-200" : "bg-surface text-text-muted hover:text-text-primary"}`}
                   >
                     <Pencil size={16} />
                   </Button>
@@ -185,7 +185,7 @@ export const SortableItem = ({
                         e.stopPropagation();
                         onDelete(block.taskId!);
                       }}
-                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 opacity-40 hover:opacity-100 ${isHovered ? "bg-danger/20 text-danger hover:bg-danger hover:text-text-primary" : "bg-surface text-text-muted hover:text-text-primary"}`}
+                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 opacity-80 hover:opacity-100 ${isHovered ? "bg-danger text-text-primary hover:bg-red-400" : "bg-surface text-text-muted hover:text-text-primary"}`}
                     >
                       <X size={16} />
                     </Button>
@@ -201,4 +201,5 @@ export const SortableItem = ({
       </div>
     </div>
   );
+
 };

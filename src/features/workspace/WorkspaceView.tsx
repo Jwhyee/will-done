@@ -165,6 +165,10 @@ export const WorkspaceView = ({
     setReviewMemo("");
   };
 
+  const totalBlocks = timeline.filter(b => b.status !== "UNPLUGGED").length;
+  const doneBlocks = timeline.filter(b => b.status === "DONE").length;
+  const dailyProgress = totalBlocks > 0 ? Math.round((doneBlocks / totalBlocks) * 100) : 0;
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Header */}
@@ -179,14 +183,14 @@ export const WorkspaceView = ({
                 <Clock size={18} className="text-accent" />
                 <span>{format(currentTime, "HH:mm:ss")}</span>
               </div>
-              <div className="flex-1 max-w-[200px] h-1.5 bg-surface-elevated rounded-full overflow-hidden border border-border/50 relative group">
+              <div className="flex-1 max-w-[200px] h-2.5 bg-surface-elevated rounded-full overflow-hidden border border-border/50 relative group">
                 <div 
                   className="h-full bg-accent transition-all duration-1000 ease-out"
-                  style={{ width: `${((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100}%` }}
+                  style={{ width: `${dailyProgress}%` }}
                 />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                   <span className="text-[8px] font-black text-text-primary bg-background/80 px-1 rounded">
-                     {Math.round(((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100)}%
+                <div className="absolute inset-0 flex items-center justify-center transition-opacity">
+                   <span className="text-[10px] font-black text-text-primary bg-background/80 px-1.5 rounded-md shadow-sm border border-white/5">
+                     {dailyProgress}%
                    </span>
                 </div>
               </div>

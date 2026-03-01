@@ -42,7 +42,7 @@ export const SecondarySidebar = ({
           {!isCollapsed && (
             <div className="flex items-center space-x-2">
               <Inbox size={14} className="text-accent" />
-              <h3 className="text-[10px] font-black text-text-primary uppercase tracking-widest">
+              <h3 className="text-[14px] font-black text-text-primary uppercase tracking-widest">
                 {t.sidebar.inbox}
               </h3>
             </div>
@@ -68,7 +68,7 @@ export const SecondarySidebar = ({
                 >
                   {inboxTasks.length === 0 ? (
                     <div className="p-6 border-2 border-dashed border-border/40 bg-background/20 rounded-2xl text-center">
-                      <p className="text-[10px] text-text-muted font-bold italic">{t.sidebar.no_tasks}</p>
+                      <p className="text-[14px] text-text-muted font-bold italic">{t.sidebar.no_tasks}</p>
                     </div>
                   ) : (
                     inboxTasks.map((task) => (
