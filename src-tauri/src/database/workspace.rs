@@ -1,4 +1,4 @@
-use sqlx::{SqlitePool, Sqlite, Transaction};
+use sqlx::SqlitePool;
 use crate::models::{Workspace, UnpluggedTime, CreateWorkspaceInput};
 use crate::error::Result;
 
