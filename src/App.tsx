@@ -38,6 +38,7 @@ const DroppableArea = ({ id, children, className }: { id: string, children: Reac
   );
 };
 
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { translations, getLang } from "@/lib/i18n";
 import { format } from "date-fns";
 
@@ -80,6 +82,15 @@ interface User {
   id: number;
   nickname: string;
   gemini_api_key: string | null;
+}
+
+interface Retrospective {
+  id: number;
+  workspace_id: number;
+  retro_type: "DAILY" | "WEEKLY" | "MONTHLY";
+  content: string;
+  date_label: string;
+  created_at: string;
 }
 
 // --- Time Helper ---
@@ -294,10 +305,234 @@ const InboxItem = ({ task, onMoveToTimeline, onDelete }: any) => {
   );
 };
 
+const RetrospectiveView = ({ 
+  workspaceId, 
+  onClose, 
+  onShowSavedRetro 
+}: { 
+  workspaceId: number, 
+  onClose: () => void,
+  onShowSavedRetro: (retro: Retrospective) => void
+}) => {
+  const [tab, setTab] = useState<"create" | "browse">("create");
+  const [retroType, setRetroType] = useState<"DAILY" | "WEEKLY" | "MONTHLY">("DAILY");
+  const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [dateLabel, setDateLabel] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [browseDate, setBrowseDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genMessage, setGenMessage] = useState("");
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    setGenMessage("회고 생성까지 최대 3분 소요될 수 있습니다. 완료되면 데스크탑 알림으로 알려드릴게요!");
+    
+    try {
+      const retro = await invoke<Retrospective>("generate_retrospective", {
+        workspaceId,
+        startDate,
+        endDate,
+        retroType,
+        dateLabel
+      });
+
+      let permission = await isPermissionGranted();
+      if (!permission) {
+        permission = await requestPermission() === 'granted';
+      }
+      if (permission) {
+        sendNotification({
+          title: '회고 생성 완료!',
+          body: `${dateLabel} ${retroType} 회고가 생성되었습니다. 클릭하여 확인하세요.`,
+        });
+      }
+      
+      onShowSavedRetro(retro);
+    } catch (error: any) {
+      alert(`Error: ${error}`);
+    } finally {
+      setIsGenerating(false);
+      setGenMessage("");
+    }
+  };
+
+  const handleBrowseLatest = async () => {
+    try {
+      const latest = await invoke<Retrospective | null>("get_latest_saved_retrospective", { workspaceId });
+      if (latest) {
+        onShowSavedRetro(latest);
+      } else {
+        alert("최근 회고가 없습니다.");
+      }
+    } catch (error: any) {
+      alert(error);
+    }
+  };
+
+  const handleBrowseByDate = async () => {
+    try {
+      const retros = await invoke<Retrospective[]>("get_saved_retrospectives", { workspaceId, dateLabel: browseDate });
+      if (retros.length > 0) {
+        onShowSavedRetro(retros[0]);
+      } else {
+        alert("해당 날짜의 회고가 없습니다.");
+      }
+    } catch (error: any) {
+      alert(error);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex overflow-hidden bg-[#111114]">
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-[#2e2e33] flex flex-col shrink-0 p-6 space-y-8">
+        <div className="space-y-4">
+          <h2 className="text-xl font-black tracking-tighter text-white">Retrospective</h2>
+          <nav className="space-y-2">
+            <Button 
+              variant={tab === "create" ? "secondary" : "ghost"} 
+              className="w-full justify-start font-bold"
+              onClick={() => setTab("create")}
+            >
+              회고 생성
+            </Button>
+            <Button 
+              variant={tab === "browse" ? "secondary" : "ghost"} 
+              className="w-full justify-start font-bold"
+              onClick={() => setTab("browse")}
+            >
+              회고 톺아보기
+            </Button>
+          </nav>
+        </div>
+        <Button variant="outline" className="mt-auto border-[#2e2e33] font-bold" onClick={onClose}>
+          메인으로 돌아가기
+        </Button>
+      </aside>
+
+      {/* Content */}
+      <main className="flex-1 overflow-y-auto p-12 max-w-4xl mx-auto">
+        {tab === "create" ? (
+          <div className="space-y-12">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-black tracking-tighter text-white">Create New Retrospective</h1>
+              <p className="text-zinc-500 font-bold">AI와 함께 업무를 돌아보고 더 나은 내일을 계획하세요.</p>
+            </div>
+
+            <div className="p-8 bg-[#1c1c21] border border-[#2e2e33] rounded-3xl space-y-8 shadow-2xl">
+              <div className="space-y-4">
+                <Label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Type</Label>
+                <div className="flex gap-4">
+                  {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((type) => (
+                    <Button 
+                      key={type}
+                      variant={retroType === type ? "default" : "outline"}
+                      onClick={() => setRetroType(type)}
+                      className="flex-1 font-bold h-12 rounded-xl border-[#2e2e33]"
+                    >
+                      {type === "DAILY" ? "일간" : type === "WEEKLY" ? "주간" : "월간"}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <Label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Start Date</Label>
+                  <Input 
+                    type="date" 
+                    value={startDate} 
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-[#111114] border-[#2e2e33] h-12 rounded-xl px-4 font-bold [color-scheme:dark]"
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Label className="text-xs font-black text-zinc-500 uppercase tracking-widest">End Date</Label>
+                  <Input 
+                    type="date" 
+                    value={endDate} 
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="bg-[#111114] border-[#2e2e33] h-12 rounded-xl px-4 font-bold [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Date Label (Title)</Label>
+                <Input 
+                  value={dateLabel} 
+                  onChange={(e) => setDateLabel(e.target.value)}
+                  placeholder="예: 2026-03-01 또는 2026년 3월 1주차"
+                  className="bg-[#111114] border-[#2e2e33] h-12 rounded-xl px-4 font-bold"
+                />
+              </div>
+
+              {genMessage && (
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-3">
+                  <Sparkles size={18} className="text-blue-400 animate-pulse shrink-0" />
+                  <p className="text-xs text-blue-400 font-bold">{genMessage}</p>
+                </div>
+              )}
+
+              <Button 
+                onClick={handleGenerate} 
+                disabled={isGenerating}
+                className="w-full bg-white text-black hover:bg-zinc-200 h-14 rounded-2xl font-black text-lg shadow-xl active:scale-95 disabled:opacity-50"
+              >
+                {isGenerating ? "Generating..." : "회고 생성하기"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-12">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-black tracking-tighter text-white">Browse Retrospectives</h1>
+              <p className="text-zinc-500 font-bold">과거의 기록들을 톺아보며 성장을 확인하세요.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="p-8 bg-[#1c1c21] border border-[#2e2e33] rounded-3xl space-y-6 shadow-xl flex flex-col">
+                <div className="flex items-center gap-3">
+                  <CalendarIcon size={24} className="text-white" />
+                  <h3 className="text-xl font-black text-white">날짜로 검색</h3>
+                </div>
+                <div className="space-y-4 flex-1">
+                  <Label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Select Date Label</Label>
+                  <Input 
+                    value={browseDate} 
+                    onChange={(e) => setBrowseDate(e.target.value)}
+                    placeholder="YYYY-MM-DD"
+                    className="bg-[#111114] border-[#2e2e33] h-12 rounded-xl px-4 font-bold"
+                  />
+                </div>
+                <Button onClick={handleBrowseByDate} variant="outline" className="w-full h-12 rounded-xl font-bold border-[#2e2e33]">
+                  검색하기
+                </Button>
+              </div>
+
+              <div className="p-8 bg-[#1c1c21] border border-[#2e2e33] rounded-3xl space-y-6 shadow-xl flex flex-col border-t-yellow-400/30">
+                <div className="flex items-center gap-3">
+                  <Sparkles size={24} className="text-yellow-400" />
+                  <h3 className="text-xl font-black text-white">가장 최근 회고</h3>
+                </div>
+                <p className="text-sm text-zinc-500 font-bold flex-1">마지막으로 생성된 회고 내용을 즉시 확인합니다.</p>
+                <Button onClick={handleBrowseLatest} className="w-full h-12 rounded-xl font-bold bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700">
+                  최근 회고 보기
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
 function App() {
-  const [view, setView] = useState<"loading" | "onboarding" | "workspace_setup" | "main">("loading");
+  const [view, setView] = useState<"loading" | "onboarding" | "workspace_setup" | "main" | "retrospective">("loading");
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<number | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [greeting, setGreeting] = useState<string>("");
   const [timeline, setTimeline] = useState<TimeBlock[]>([]);
   const [inboxTasks, setInboxTasks] = useState<Task[]>([]);
@@ -458,11 +693,13 @@ function App() {
 
   const init = async () => {
     try {
-      const userExists = await invoke<boolean>("check_user_exists");
-      if (!userExists) {
+      const u = await invoke<User | null>("get_user");
+      if (!u) {
         setView("onboarding");
         return;
       }
+      setUser(u);
+      
       const wsList = await invoke<any[]>("get_workspaces");
       setWorkspaces(wsList);
 
@@ -750,15 +987,19 @@ function App() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-screen bg-[#111114] text-white flex overflow-hidden font-sans antialiased select-none">
-        
-        {/* 1차 사이드바 */}
-        {view === "main" && (
+      <TooltipProvider>
+        <div className="h-screen bg-[#111114] text-white flex overflow-hidden font-sans antialiased select-none">
+          
+          {/* 1차 사이드바 */}
+          {(view === "main" || view === "retrospective") && (
           <aside className="w-16 border-r border-[#2e2e33] bg-[#111114] flex flex-col items-center py-4 space-y-4 shrink-0 shadow-2xl z-20">
             {workspaces.map((ws) => (
               <button
                 key={ws.id}
-                onClick={() => setActiveWorkspaceId(ws.id)}
+                onClick={() => {
+                  setActiveWorkspaceId(ws.id);
+                  setView("main");
+                }}
                 className={`w-11 h-11 rounded-xl flex items-center justify-center text-xs font-black transition-all duration-300 transform ${
                   activeWorkspaceId === ws.id 
                   ? "bg-white text-black scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]" 
@@ -778,6 +1019,17 @@ function App() {
               <Plus size={22} />
             </button>
           </aside>
+        )}
+
+        {view === "retrospective" && activeWorkspaceId && (
+          <RetrospectiveView 
+            workspaceId={activeWorkspaceId} 
+            onClose={() => setView("main")} 
+            onShowSavedRetro={(retro) => {
+              setRetrospectiveContent(retro.content);
+              setRetrospectiveOpen(true);
+            }}
+          />
         )}
 
         {/* 2차 사이드바 */}
@@ -892,14 +1144,28 @@ function App() {
                     </div>
                     <p className="text-zinc-500 font-bold text-sm tracking-tight">{greeting}</p>
                   </div>
-                  <Button 
-                    onClick={() => handleGenerateRetrospective(selectedDate)}
-                    disabled={timeline.filter(t => t.status === "DONE").length === 0}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-white font-black rounded-xl gap-2 h-11 border border-zinc-700 shadow-xl shadow-black/40 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Sparkles size={18} className="text-yellow-400" />
-                    {t.main.retrospective_btn}
-                  </Button>
+                  
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button 
+                            onClick={() => setView("retrospective")}
+                            disabled={!user?.gemini_api_key}
+                            className="bg-zinc-800 hover:bg-zinc-700 text-white font-black rounded-xl gap-2 h-11 border border-zinc-700 shadow-xl shadow-black/40 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Sparkles size={18} className="text-yellow-400" />
+                            {t.main.retrospective_btn}
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      {!user?.gemini_api_key && (
+                        <TooltipContent className="bg-[#1c1c21] border-[#2e2e33] text-zinc-400 font-bold text-xs p-3 rounded-xl shadow-2xl">
+                          <p>설정에서 GOOGLE AI STUDIO API KEY를 입력해주세요.</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
 
                 {/* Task Input Form */}
@@ -1152,10 +1418,10 @@ function App() {
                   <DialogHeader className="p-8 pb-4 shrink-0 space-y-3">
                     <DialogTitle className="text-2xl font-black tracking-tighter text-white leading-none flex items-center gap-2">
                       <Sparkles size={24} className="text-yellow-400" />
-                      Daily Retrospective
+                      Work Retrospective
                     </DialogTitle>
                     <DialogDescription className="text-zinc-400 font-bold text-sm">
-                      {isGeneratingRetro ? "AI is generating your professional retrospective..." : "Your generated Brag Document for the selected date."}
+                      {isGeneratingRetro ? "AI is generating your professional retrospective..." : "Your professional Brag Document."}
                     </DialogDescription>
                   </DialogHeader>
                   
@@ -1485,6 +1751,7 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      </TooltipProvider>
     </DndContext>
   );
 }

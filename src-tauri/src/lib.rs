@@ -53,6 +53,16 @@ pub struct TimeBlock {
     pub is_urgent: bool,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
+pub struct Retrospective {
+    pub id: i64,
+    pub workspace_id: i64,
+    pub retro_type: String, // DAILY, WEEKLY, MONTHLY
+    pub content: String,
+    pub date_label: String, // e.g., "2026-03-01", "2026-W09", "2026-03"
+    pub created_at: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AddTaskInput {
     pub workspace_id: i64,
@@ -107,17 +117,22 @@ pub struct DbState {
 async fn generate_retrospective(
     state: State<'_, DbState>,
     workspace_id: i64,
-    date: String,
-) -> Result<String, String> {
+    start_date: String, // "YYYY-MM-DD"
+    end_date: String,   // "YYYY-MM-DD"
+    retro_type: String, // "DAILY", "WEEKLY", "MONTHLY"
+    date_label: String, // "2026-03-01", "2026-W09", etc.
+) -> Result<Retrospective, String> {
     let user = get_user(state.clone()).await?.ok_or("User not found")?;
     let api_key = user.gemini_api_key.ok_or("Gemini API Key is missing. Please set it in Settings.")?;
     
     let workspace = get_workspace(state.clone(), workspace_id).await?.ok_or("Workspace not found")?;
     let role_intro = workspace.role_intro.unwrap_or_else(|| "A professional worker".to_string());
 
-    let target_date = NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date format: {}", e))?;
-    let start_of_day = target_date.and_hms_opt(0, 0, 0).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
-    let end_of_day = target_date.and_hms_opt(23, 59, 59).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let start_dt = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d").map_err(|e| format!("Invalid start date: {}", e))?;
+    let end_dt = NaiveDate::parse_from_str(&end_date, "%Y-%m-%d").map_err(|e| format!("Invalid end date: {}", e))?;
+
+    let start_of_range = start_dt.and_hms_opt(0, 0, 0).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let end_of_range = end_dt.and_hms_opt(23, 59, 59).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
 
     // Fetch done blocks with their associated task planning memos
     let blocks: Vec<(String, Option<String>, Option<String>, String, String)> = sqlx::query_as(
@@ -128,31 +143,42 @@ async fn generate_retrospective(
          ORDER BY tb.start_time ASC"
     )
     .bind(workspace_id)
-    .bind(start_of_day)
-    .bind(end_of_day)
+    .bind(start_of_range)
+    .bind(end_of_range)
     .fetch_all(&state.pool)
     .await
     .map_err(|e| e.to_string())?;
 
     if blocks.is_empty() {
-        return Err("No completed tasks found for this date.".to_string());
+        return Err("No completed tasks found for the selected period.".to_string());
     }
 
     let task_summary = build_task_summary(blocks);
 
+    let period_desc = if start_date == end_date {
+        format!("Daily summary for {}", start_date)
+    } else {
+        format!("Summary for the period from {} to {}", start_date, end_date)
+    };
+
     let prompt = format!(
-        "You are an AI assistant helping a user write a professional daily retrospective (also known as a 'Brag Document').
-Based on the following user role and completed tasks, generate a well-structured, professional, and encouraging retrospective in Markdown format.
+        "You are an AI assistant helping a user write a professional daily/weekly/monthly retrospective (also known as a 'Brag Document').
+Based on the following user role and completed tasks ({} retrospective), generate a well-structured, professional, and encouraging retrospective in Markdown format.
 The language of the retrospective should be Korean.
+
+**Period**:
+{}
 
 **User Role/Intro**:
 {}
 
-**Today's Completed Tasks**:
+**Completed Tasks**:
 {}
 
-Please summarize the achievements, highlight the impact of the work, and suggest areas for improvement or focus for tomorrow.
+Please summarize the achievements, highlight the impact of the work, and suggest areas for improvement or focus for the next period.
 Use a professional yet friendly tone.",
+        retro_type.to_lowercase(),
+        period_desc,
         role_intro,
         task_summary
     );
@@ -192,7 +218,62 @@ Use a professional yet friendly tone.",
         .map(|c| c.content.parts.get(0).map(|p| p.text.clone()).unwrap_or_default())
         .ok_or("No response from Gemini")?;
 
-    Ok(result_text)
+    // Save result to DB
+    let now = Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let result = sqlx::query(
+        "INSERT INTO retrospectives (workspace_id, retro_type, content, date_label, created_at) VALUES (?1, ?2, ?3, ?4, ?5)"
+    )
+    .bind(workspace_id)
+    .bind(&retro_type)
+    .bind(&result_text)
+    .bind(&date_label)
+    .bind(&now)
+    .execute(&state.pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let retro_id = result.last_insert_rowid();
+
+    Ok(Retrospective {
+        id: retro_id,
+        workspace_id,
+        retro_type,
+        content: result_text,
+        date_label,
+        created_at: now,
+    })
+}
+
+#[tauri::command]
+async fn get_saved_retrospectives(
+    state: State<'_, DbState>,
+    workspace_id: i64,
+    date_label: String,
+) -> Result<Vec<Retrospective>, String> {
+    let retros = sqlx::query_as::<_, Retrospective>(
+        "SELECT * FROM retrospectives WHERE workspace_id = ?1 AND date_label = ?2 ORDER BY created_at DESC"
+    )
+    .bind(workspace_id)
+    .bind(date_label)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(retros)
+}
+
+#[tauri::command]
+async fn get_latest_saved_retrospective(
+    state: State<'_, DbState>,
+    workspace_id: i64,
+) -> Result<Option<Retrospective>, String> {
+    let retro = sqlx::query_as::<_, Retrospective>(
+        "SELECT * FROM retrospectives WHERE workspace_id = ?1 ORDER BY created_at DESC LIMIT 1"
+    )
+    .bind(workspace_id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(retro)
 }
 
 fn build_task_summary(blocks: Vec<(String, Option<String>, Option<String>, String, String)>) -> String {
@@ -932,6 +1013,7 @@ async fn reorder_blocks(state: State<'_, DbState>, workspace_id: i64, block_ids:
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
@@ -965,6 +1047,8 @@ pub fn run() {
                 // Migration: add column if exists (for existing DBs)
                 sqlx::query("ALTER TABLE time_blocks ADD COLUMN is_urgent BOOLEAN NOT NULL DEFAULT 0").execute(&pool).await.ok();
 
+                sqlx::query("CREATE TABLE IF NOT EXISTS retrospectives (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, retro_type TEXT NOT NULL, content TEXT NOT NULL, date_label TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+
                 app_handle.manage(DbState { pool });
             });
             Ok(())
@@ -990,7 +1074,9 @@ pub fn run() {
             update_block_status,
             reorder_blocks,
             get_active_dates,
-            generate_retrospective
+            generate_retrospective,
+            get_saved_retrospectives,
+            get_latest_saved_retrospective
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
