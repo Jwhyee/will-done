@@ -58,7 +58,8 @@ export const CompletionSection = ({
               min={0}
               value={agoHours}
               onChange={(e) => setAgoHours(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-14 h-9 text-center font-bold bg-background border-border rounded-lg text-sm"
+              // 아래 className 끝에 화살표 제거 클래스 추가
+              className="w-14 h-9 text-center font-bold bg-background border-border rounded-lg text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none m-0 [appearance:textfield]"
             />
             <span className="text-xs font-bold text-text-muted">{t.main.hours}</span>
           </div>
@@ -69,7 +70,7 @@ export const CompletionSection = ({
               max={59}
               value={agoMinutes}
               onChange={(e) => setAgoMinutes(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
-              className="w-14 h-9 text-center font-bold bg-background border-border rounded-lg text-sm"
+              className="w-14 h-9 text-center font-bold bg-background border-border rounded-lg text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none m-0 [appearance:textfield]"
             />
             <span className="text-xs font-bold text-text-muted">{t.main.mins}</span>
           </div>
