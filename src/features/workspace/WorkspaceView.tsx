@@ -22,6 +22,7 @@ import { SortableItem } from "./components/SortableItem";
 import { DroppableArea } from "./components/DroppableArea";
 import { TimePicker } from "./components/TimePicker";
 import { TransitionModal } from "./components/TransitionModal";
+import { useToast } from "@/providers/ToastProvider";
 
 interface WorkspaceViewProps {
   t: any;
@@ -55,6 +56,7 @@ export const WorkspaceView = ({
   const [hoverTaskId, setHoverTaskId] = useState<number | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
   const [moveAllConfirm, setMoveAllConfirm] = useState(false);
+  const { showToast } = useToast();
 
   const taskSchema = z.object({
     title: z.string().min(1, "Task title is required"),
@@ -77,6 +79,14 @@ export const WorkspaceView = ({
   const handleTaskSubmit = async (data: TaskFormValues) => {
     await onTaskSubmit(data);
     taskForm.reset({ title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false });
+  };
+
+  const handleTaskError = (errors: any) => {
+    if (errors.minutes && (taskForm.getValues("hours") === 0 && taskForm.getValues("minutes") === 0)) {
+      showToast(t.main?.toast?.set_duration || "수행 시간을 설정해주세요.", "error");
+    } else if (errors.title) {
+      showToast(t.main?.toast?.set_title || "태스크 제목을 입력해주세요.", "error");
+    }
   };
 
   const calculateProgress = () => {
@@ -138,7 +148,7 @@ export const WorkspaceView = ({
         
         {/* Task Input Form */}
         <div className="p-1 bg-surface border border-border rounded-2xl shadow-xl overflow-hidden group/form transition-all duration-300 hover:border-border/80">
-          <form onSubmit={taskForm.handleSubmit(handleTaskSubmit)} className="flex flex-col">
+          <form onSubmit={taskForm.handleSubmit(handleTaskSubmit, handleTaskError)} className="flex flex-col">
             <div className="px-3 pt-2">
               <div className="bg-background/40 border border-border/50 rounded-xl transition-all duration-300 group-focus-within/form:bg-background/60 group-focus-within/form:border-accent/30">
                 <Input 
@@ -149,7 +159,7 @@ export const WorkspaceView = ({
               </div>
             </div>
             
-            <div className="px-4 mt-[-4px]">
+            <div className="px-4 mt-2">
               <textarea 
                 {...taskForm.register("planningMemo")}
                 placeholder={t.main.planning_placeholder}
@@ -206,7 +216,7 @@ export const WorkspaceView = ({
               </div>
             </div>
           ) : (
-            <DroppableArea id="timeline" className="space-y-6 relative pl-16 ml-4 py-4 min-h-[200px]">
+            <DroppableArea id="timeline" className="space-y-6 relative pl-16 ml-4 pt-10 pb-4 min-h-[200px]">
                 <SortableContext
                   items={timeline.map(b => b.id.toString())}
                   strategy={verticalListSortingStrategy}
