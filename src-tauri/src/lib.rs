@@ -155,6 +155,22 @@ async fn generate_retrospective(
     date_label: String, // "2026-03-01", "2026-W09", etc.
 ) -> Result<Retrospective, String> {
     let user = get_user(state.clone()).await?.ok_or("User not found")?;
+
+    // Check for duplicates
+    let existing: Option<Retrospective> = sqlx::query_as(
+        "SELECT * FROM retrospectives WHERE workspace_id = ?1 AND date_label = ?2 AND retro_type = ?3"
+    )
+    .bind(workspace_id)
+    .bind(&date_label)
+    .bind(&retro_type)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    if existing.is_some() {
+        return Err("A retrospective for this period already exists.".to_string());
+    }
+
     let api_key = user.gemini_api_key.ok_or("Gemini API Key is missing. Please set it in Settings.")?;
     
     let workspace = get_workspace(state.clone(), workspace_id).await?.ok_or("Workspace not found")?;

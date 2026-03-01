@@ -36,7 +36,7 @@ import {
 import { AppProvider } from "@/providers/AppProvider";
 import { useToast } from "@/providers/ToastProvider";
 import { translations, getLang, type Lang } from "@/lib/i18n";
-import { TimeBlock, Task, User, Workspace } from "@/types";
+import { TimeBlock, Task, User, Workspace, Retrospective } from "@/types";
 
 // Layout & Features
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -62,7 +62,7 @@ function AppContent() {
   const [selectedDate] = useState<Date>(new Date());
   const [transitionBlock, setTransitionBlock] = useState<TimeBlock | null>(null);
   const [retrospectiveOpen, setRetrospectiveOpen] = useState(false);
-  const [retrospectiveContent, setRetrospectiveContent] = useState("");
+  const [activeRetrospective, setActiveRetrospective] = useState<Retrospective | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   
   const { showToast } = useToast();
@@ -275,9 +275,10 @@ function AppContent() {
         return activeWorkspaceId ? (
           <RetrospectiveView 
             workspaceId={activeWorkspaceId} 
+            t={t}
             onClose={() => setView("main")} 
             onShowSavedRetro={(retro) => {
-              setRetrospectiveContent(retro.content);
+              setActiveRetrospective(retro);
               setRetrospectiveOpen(true);
             }}
           />
@@ -411,7 +412,7 @@ function AppContent() {
           <DialogHeader className="p-8 pb-4 shrink-0 space-y-3">
             <DialogTitle className="text-2xl font-black tracking-tighter text-text-primary leading-none flex items-center gap-2">
               <Sparkles size={24} className="text-warning" />
-              Work Retrospective
+              {activeRetrospective?.dateLabel || "Retrospective"}
             </DialogTitle>
             <DialogDescription className="text-text-secondary font-bold text-sm">
               Your professional Brag Document.
@@ -421,15 +422,22 @@ function AppContent() {
           <div className="flex-1 overflow-y-auto px-8 scrollbar-hide bg-background">
             <div className="py-8 text-sm leading-relaxed prose prose-invert max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {retrospectiveContent || "No retrospective generated yet."}
+                {activeRetrospective?.content || "No retrospective generated yet."}
               </ReactMarkdown>
             </div>
+            {activeRetrospective?.usedModel && (
+              <div className="pb-8 flex justify-end">
+                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest bg-surface px-2 py-1 rounded-md border border-border">
+                  {t.retrospective.used_model}: {activeRetrospective.usedModel.replace('models/', '')}
+                </span>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="p-6 border-t border-border bg-surface-elevated shrink-0">
             <Button 
-              onClick={() => navigator.clipboard.writeText(retrospectiveContent)}
-              disabled={!retrospectiveContent}
+              onClick={() => activeRetrospective && navigator.clipboard.writeText(activeRetrospective.content)}
+              disabled={!activeRetrospective}
               className="w-full bg-text-primary text-background hover:bg-zinc-200 font-black h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95 disabled:opacity-50"
             >
               Copy to Clipboard

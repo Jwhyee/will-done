@@ -31,6 +31,7 @@ export interface Retrospective {
   content: string;
   dateLabel: string;
   createdAt: string;
+  usedModel?: string;
 }
 
 export interface Workspace {

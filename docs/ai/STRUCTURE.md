@@ -72,16 +72,18 @@
     - `generate_retrospective`: 
       1. 기간 선택(`DAILY`, `WEEKLY`, `MONTHLY`)에 따른 동적 입력 폼(`type="date/week/month"`) 제공.
       2. 선택된 기간의 모든 `DONE` 블록과 `planning_memo`, `review_memo`를 수집.
-      3. **모델 Fallback 엔진**: 
+      3. **데이터 정합성**: 생성 전 DB를 조회하여 동일 기간/유형의 회고가 이미 존재하는지 확인 및 중복 생성 차단.
+      4. **모델 Fallback 엔진**: 
          - 로컬 DB에 캐싱된 `last_successful_model` 우선 시도.
          - 실패 시 `/v1/models`에서 가용 모델 목록 호출 및 필터링(`generateContent` 지원 여부).
          - 우선순위(`flash-lite` -> `flash` -> `pro`) 및 버전별 재시도 체인 가동.
          - 429(Quota Exceeded) 또는 503 에러 발생 시 즉시 다음 모델로 전환.
-      4. **프롬프트 엔지니어링**:
+      5. **프롬프트 엔지니어링**:
          - 기간별 영문 System Prompt 분기 및 유저 설정 언어(`ko/en`) 강제 규칙 적용.
          - 모델 스펙에 따라 `system_instruction` 필드 또는 프롬프트 결합(Concatenation) 방식 자동 선택.
-      5. 성공 시 해당 모델명을 캐싱하고 결과를 DB에 저장.
-    - `get_saved_retrospectives` / `get_latest_saved_retrospective`: 과거 생성 내역 조회.
+      6. 성공 시 해당 모델명을 캐싱하고 결과를 DB에 저장 (`used_model` 포함).
+    - `get_saved_retrospectives` / `get_latest_saved_retrospective`: 과거 생성 내역 조회 (`used_model` 정보 포함).
+    - `get_active_dates`: 실제 태스크 기록이 있는 날짜 목록을 반환하여 프론트엔드에서 선택 가능한 날짜를 제한하는 데 활용.
 
     ---
 
