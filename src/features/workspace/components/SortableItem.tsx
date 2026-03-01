@@ -33,6 +33,13 @@ export const SortableItem = ({
   hoverTaskId, 
   setHoverTaskId 
 }: SortableItemProps) => {
+  const taskBlocks = block.taskId ? timeline.filter((b) => b.taskId === block.taskId) : [];
+  const blockIndexInTask = taskBlocks.findIndex((b) => b.id === block.id);
+  const isSplit = taskBlocks.length > 1;
+  const isFirstOfTask = isSplit && blockIndexInTask === 0;
+  const isLastOfTask = isSplit && blockIndexInTask === taskBlocks.length - 1;
+  const isMiddleOfTask = isSplit && blockIndexInTask > 0 && blockIndexInTask < taskBlocks.length - 1;
+
   const {
     attributes,
     listeners,
@@ -50,13 +57,6 @@ export const SortableItem = ({
     scale: isDragging ? 1.05 : 1,
     boxShadow: isDragging ? "0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.3)" : undefined,
   };
-
-  const taskBlocks = block.taskId ? timeline.filter((b) => b.taskId === block.taskId) : [];
-  const blockIndexInTask = taskBlocks.findIndex((b) => b.id === block.id);
-  const isSplit = taskBlocks.length > 1;
-  const isFirstOfTask = isSplit && blockIndexInTask === 0;
-  const isLastOfTask = isSplit && blockIndexInTask === taskBlocks.length - 1;
-  const isMiddleOfTask = isSplit && blockIndexInTask > 0 && blockIndexInTask < taskBlocks.length - 1;
 
   const isPending = block.status === "PENDING";
   const isHovered = block.taskId && hoverTaskId === block.taskId;
