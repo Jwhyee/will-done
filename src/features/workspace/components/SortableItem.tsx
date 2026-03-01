@@ -69,15 +69,17 @@ export const SortableItem = ({
   return (
     <div ref={setNodeRef} style={style} className="relative group/item">
       <div className="absolute -left-[6.5rem] top-6 w-16 text-right space-y-1">
-        <p className="text-[10px] font-black font-mono text-text-secondary">{formatDisplayTime(block.startTime)}</p>
+        <p className="text-[10px] font-black font-mono text-text-muted group-hover/item:text-text-secondary transition-colors">{formatDisplayTime(block.startTime)}</p>
       </div>
       
-      <div className={`absolute -left-16 top-4 w-[2px] bottom-[-24px] bg-border/50 z-0 group-last/item:hidden -translate-x-1/2`} />
+      {/* Timeline Line - Improved visibility and centering */}
+      <div className={`absolute -left-16 top-4 w-[2px] bottom-[-24px] bg-border z-0 group-last/item:hidden -translate-x-1/2`} />
 
-      <div className={`absolute -left-16 top-1 w-4 h-4 rounded-full border-2 bg-surface z-10 transition-all duration-300 -translate-x-1/2 ${
-        block.status === "DONE" ? "border-success bg-success/20" :
-        block.status === "NOW" ? "border-accent scale-125 shadow-[0_0_10px_rgba(59,130,246,0.5)] bg-accent/20" :
-        block.status === "PENDING" ? "border-warning bg-warning/20" :
+      {/* Status Indicator Dot - Improved centering and contrast */}
+      <div className={`absolute -left-16 top-1 w-4 h-4 rounded-full border-2 bg-background z-10 transition-all duration-500 -translate-x-1/2 ${
+        block.status === "DONE" ? "border-success bg-success/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]" :
+        block.status === "NOW" ? "border-accent scale-125 shadow-[0_0_15px_rgba(59,130,246,0.5)] bg-accent/30" :
+        block.status === "PENDING" ? "border-warning bg-warning/20 shadow-[0_0_10px_rgba(234,179,8,0.2)]" :
         block.status === "UNPLUGGED" ? "border-border bg-surface-elevated" : "border-border"
       }`} />
 
@@ -108,7 +110,7 @@ export const SortableItem = ({
           <div className="flex items-center space-x-4">
             {!isDone && (
               <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-                <GripVertical size={14} className={`transition-opacity duration-300 ${isHovered || isDragging ? "text-text-primary opacity-100" : "text-text-muted opacity-20"}`} />
+                <GripVertical size={14} className={`transition-opacity duration-300 ${isHovered || isDragging ? "text-text-primary opacity-100" : "text-text-muted opacity-40"}`} />
               </div>
             )}
             {isDone && <div className="w-[14px]" />} {/* Spacer for layout consistency */}
@@ -119,7 +121,7 @@ export const SortableItem = ({
                 </div>
                 <div className="flex items-center space-x-2">
                     <span className={`text-[12px] font-black uppercase tracking-widest ${block.status === "NOW" ? "text-accent" : (isDone ? "text-success" : "text-text-muted")}`}>{block.status}</span>
-                    <span className="text-[12px] font-mono font-bold text-text-muted bg-background/50 px-2 py-0.5 rounded-md">
+                    <span className="text-[12px] font-mono font-bold text-text-secondary bg-surface px-2 py-0.5 rounded-md border border-border/50">
                       {formatDisplayTime(block.startTime)} - {formatDisplayTime(block.endTime)}
                     </span>
                     {block.status === "NOW" && new Date(block.endTime) < currentTime && (
@@ -146,7 +148,7 @@ export const SortableItem = ({
                       e.stopPropagation();
                       onMoveToInbox(block.id);
                     }}
-                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border border-transparent ${isHovered ? "bg-surface-elevated text-text-primary border-border/50 shadow-lg" : "bg-surface text-text-muted hover:text-text-primary"}`}
+                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered ? "bg-surface-elevated text-text-primary border-border shadow-lg scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-border/80"}`}
                   >
                     <Inbox size={16} />
                   </Button>
@@ -165,7 +167,7 @@ export const SortableItem = ({
                       e.stopPropagation();
                       onTransition(block);
                     }}
-                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border border-transparent ${isHovered ? "bg-surface-elevated text-text-primary border-border/50 shadow-lg" : "bg-surface text-text-muted hover:text-text-primary"}`}
+                    className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered ? "bg-surface-elevated text-text-primary border-border shadow-lg scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-border/80"}`}
                   >
                     <Pencil size={16} />
                   </Button>
@@ -185,7 +187,7 @@ export const SortableItem = ({
                         e.stopPropagation();
                         onDelete(block.taskId!);
                       }}
-                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border border-transparent ${isHovered ? "bg-danger/20 text-danger border-danger/20" : "bg-surface text-text-muted hover:text-text-primary"}`}
+                      className={`h-9 w-9 p-0 rounded-xl transition-all duration-300 border ${isHovered ? "bg-danger/20 text-danger border-danger/40 shadow-lg shadow-danger/10 scale-110" : "bg-surface-elevated/40 text-text-secondary border-border/30 hover:border-danger/40 hover:text-danger"}`}
                     >
                       <X size={16} />
                     </Button>
