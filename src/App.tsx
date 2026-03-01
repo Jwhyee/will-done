@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -31,7 +30,7 @@ import {
 
 // Internal
 import { AppProvider } from "@/providers/AppProvider";
-import { Workspace, User, TimeBlock } from "@/types";
+import { Workspace, User } from "@/types";
 
 // Layout & Features
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -111,9 +110,10 @@ function AppContent() {
           />
         );
       case "retrospective":
-        return activeWorkspaceId ? (
+        return (activeWorkspaceId && user) ? (
           <RetrospectiveView 
             workspaceId={activeWorkspaceId} 
+            user={user}
             t={t}
             onClose={() => setView("main")} 
             onShowSavedRetro={(retro) => {

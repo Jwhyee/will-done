@@ -11,7 +11,7 @@ import {
   parse,
   isValid,
 } from "date-fns";
-import { Retrospective } from "@/types";
+import { Retrospective, User } from "@/types";
 import { useToast } from "@/providers/ToastProvider";
 import { cn } from "@/lib/utils";
 import { DateSelector } from "./components/DateSelector";
@@ -19,6 +19,7 @@ import { getWeekKey, calculateRange } from "./utils";
 
 interface RetrospectiveViewProps {
   workspaceId: number;
+  user: User;
   t: any;
   onClose: () => void;
   onShowSavedRetro: (retro: Retrospective) => void;
@@ -26,6 +27,7 @@ interface RetrospectiveViewProps {
 
 export const RetrospectiveView = ({ 
   workspaceId, 
+  user,
   t,
   onClose, 
   onShowSavedRetro 
@@ -134,15 +136,18 @@ export const RetrospectiveView = ({
     setGenMessage(t.retrospective?.gen_message || '회고를 생성 중입니다...');
     try {
       const retro = await invoke<Retrospective>("generate_retrospective", { workspaceId, startDate, endDate, retroType, dateLabel });
-      let permission = await isPermissionGranted();
-      if (!permission) permission = await requestPermission() === 'granted';
-      if (permission) {
-        sendNotification({
-          title: t.retrospective?.notification_title || '회고 생성 완료!',
-          body: (t.retrospective?.notification_body || '{label} {type} 회고가 생성되었습니다.')
-            .replace("{label}", dateLabel)
-            .replace("{type}", t.retrospective?.[retroType.toLowerCase()] || ''),
-        });
+      
+      if (user.isNotificationEnabled) {
+        let permission = await isPermissionGranted();
+        if (!permission) permission = await requestPermission() === 'granted';
+        if (permission) {
+          sendNotification({
+            title: t.retrospective?.notification_title || '회고 생성 완료!',
+            body: (t.retrospective?.notification_body || '{label} {type} 회고가 생성되었습니다.')
+              .replace("{label}", dateLabel)
+              .replace("{type}", t.retrospective?.[retroType.toLowerCase()] || ''),
+          });
+        }
       }
       onShowSavedRetro(retro);
     } catch (error: any) {

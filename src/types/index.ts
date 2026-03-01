@@ -22,6 +22,7 @@ export interface User {
   nickname: string;
   geminiApiKey: string | null;
   lang: string;
+  isNotificationEnabled: boolean;
 }
 
 export interface Retrospective {

@@ -1,8 +1,12 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Bell } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  isPermissionGranted,
+  requestPermission,
+} from "@tauri-apps/plugin-notification";
 import {
   Dialog,
   DialogContent,
@@ -24,24 +28,38 @@ interface OnboardingViewProps {
 export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
   const userSchema = z.object({
     nickname: z.string().min(1, t.onboarding.nickname_required).max(20),
-    geminiApiKey: z.string().optional(),
+    geminiApiKey: z.string(),
+    isNotificationEnabled: z.boolean(),
   });
 
   type UserFormValues = z.infer<typeof userSchema>;
 
   const userForm = useForm<UserFormValues>({ 
     resolver: zodResolver(userSchema),
-    defaultValues: { nickname: "", geminiApiKey: "" }
+    defaultValues: { nickname: "", geminiApiKey: "", isNotificationEnabled: false }
   });
 
   const onUserSubmit = async (data: UserFormValues) => {
     await invoke("save_user", { 
       nickname: data.nickname, 
       geminiApiKey: data.geminiApiKey || null,
-      lang: getLang() 
+      lang: getLang(),
+      isNotificationEnabled: data.isNotificationEnabled
     });
     const u = await invoke<User>("get_user");
     onComplete(u);
+  };
+
+  const handleNotificationToggle = async (checked: boolean) => {
+    if (checked) {
+      let permission = await isPermissionGranted();
+      if (!permission) {
+        permission = await requestPermission() === "granted";
+      }
+      userForm.setValue("isNotificationEnabled", permission);
+    } else {
+      userForm.setValue("isNotificationEnabled", false);
+    }
   };
 
   return (
@@ -65,6 +83,22 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
               <Input type="password" {...userForm.register("geminiApiKey")} placeholder={t.onboarding.api_key_placeholder} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10" />
               <p className="text-xs text-text-secondary leading-relaxed">{t.onboarding.api_key_guide}</p>
             </div>
+
+            <div className="flex items-center justify-between p-4 bg-background border border-border rounded-xl">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-text-primary flex items-center gap-2 uppercase tracking-widest">
+                  <Bell size={14} /> {t.onboarding.notification_label}
+                </Label>
+                <p className="text-[10px] text-text-secondary leading-none">{t.onboarding.notification_guide}</p>
+              </div>
+              <input 
+                type="checkbox"
+                {...userForm.register("isNotificationEnabled")}
+                onChange={(e) => handleNotificationToggle(e.target.checked)}
+                className="w-5 h-5 rounded-md accent-text-primary cursor-pointer"
+              />
+            </div>
+
             <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-14 rounded-xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95">
               {t.onboarding.submit_btn}
             </Button>

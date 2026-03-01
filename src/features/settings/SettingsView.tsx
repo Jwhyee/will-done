@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useForm, useFieldArray } from "react-hook-form";
-import { Plus, X, ChevronLeft } from "lucide-react";
+import { Plus, X, ChevronLeft, Bell } from "lucide-react";
+import {
+  isPermissionGranted,
+  requestPermission,
+} from "@tauri-apps/plugin-notification";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +37,8 @@ export const SettingsView = ({
     defaultValues: {
       nickname: user.nickname,
       geminiApiKey: user.geminiApiKey || "",
-      lang: user.lang
+      lang: user.lang,
+      isNotificationEnabled: user.isNotificationEnabled
     }
   });
 
@@ -61,7 +66,8 @@ export const SettingsView = ({
     userForm.reset({
       nickname: user.nickname,
       geminiApiKey: user.geminiApiKey || "",
-      lang: user.lang
+      lang: user.lang,
+      isNotificationEnabled: user.isNotificationEnabled
     });
   }, [user, userForm]);
 
@@ -70,12 +76,25 @@ export const SettingsView = ({
       const updatedUser = await invoke<User>("save_user", { 
         nickname: data.nickname, 
         geminiApiKey: data.geminiApiKey || null,
-        lang: data.lang
+        lang: data.lang,
+        isNotificationEnabled: data.isNotificationEnabled
       });
       await onUserUpdate(updatedUser);
       showToast(t.main.toast.profile_updated, "success");
     } catch (error: any) {
       showToast(error.toString(), "error");
+    }
+  };
+
+  const handleNotificationToggle = async (checked: boolean) => {
+    if (checked) {
+      let permission = await isPermissionGranted();
+      if (!permission) {
+        permission = await requestPermission() === "granted";
+      }
+      userForm.setValue("isNotificationEnabled", permission);
+    } else {
+      userForm.setValue("isNotificationEnabled", false);
     }
   };
 
@@ -160,6 +179,24 @@ export const SettingsView = ({
                     <option value="ko">한국어 (Korean)</option>
                     <option value="en">English</option>
                   </select>
+                </div>
+
+                <div className="space-y-3 pt-4">
+                  <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.sidebar.notification_settings}</Label>
+                  <div className="flex items-center justify-between p-4 bg-surface border border-border rounded-xl">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-text-primary flex items-center gap-2 uppercase tracking-widest">
+                        <Bell size={14} /> {t.onboarding.notification_label}
+                      </Label>
+                      <p className="text-[10px] text-text-secondary leading-none">{t.onboarding.notification_guide}</p>
+                    </div>
+                    <input 
+                      type="checkbox"
+                      {...userForm.register("isNotificationEnabled")}
+                      onChange={(e) => handleNotificationToggle(e.target.checked)}
+                      className="w-5 h-5 rounded-md accent-text-primary cursor-pointer"
+                    />
+                  </div>
                 </div>
 
                 <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">

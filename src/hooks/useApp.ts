@@ -1,5 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import {
+  isPermissionGranted,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 import {
   DragEndEvent,
   DragStartEvent,
@@ -29,6 +34,7 @@ export function useApp() {
   const [activeRetrospective, setActiveRetrospective] = useState<Retrospective | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [todayCompletedDuration, setTodayCompletedDuration] = useState<number>(0);
+  const lastNotifiedBlockId = useRef<number | null>(null);
   
   const { showToast } = useToast();
 
@@ -54,6 +60,19 @@ export function useApp() {
         const active = list.find(b => b.status === "NOW");
         if (active && new Date(active.endTime) < now && !transitionBlock) {
           setTransitionBlock(active);
+
+          // Send Native Notification if enabled
+          if (user?.isNotificationEnabled && lastNotifiedBlockId.current !== active.id) {
+            const granted = await isPermissionGranted();
+            if (granted) {
+              sendNotification({
+                id: active.id,
+                title: t.retrospective.task_notification_title,
+                body: t.retrospective.task_notification_body.replace("{title}", active.title),
+              });
+              lastNotifiedBlockId.current = active.id;
+            }
+          }
         }
 
         if (!active) {
@@ -110,6 +129,27 @@ export function useApp() {
       fetchMainData();
     }
   }, [activeWorkspaceId, view, fetchMainData]);
+
+  useEffect(() => {
+    const unlistenPromise = listen<number>("open-transition-modal", (event) => {
+      const blockId = event.payload;
+      // Fetch latest timeline and open transition modal
+      invoke<TimeBlock[]>("get_timeline", { 
+        workspaceId: activeWorkspaceId, 
+        date: format(new Date(), "yyyy-MM-dd") 
+      }).then(list => {
+        const block = list.find(b => b.id === blockId);
+        if (block) {
+          setTransitionBlock(block);
+          setView("main");
+        }
+      });
+    });
+
+    return () => {
+      unlistenPromise.then(unlisten => unlisten());
+    };
+  }, [activeWorkspaceId, setTransitionBlock, setView]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id.toString());
