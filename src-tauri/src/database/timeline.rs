@@ -262,18 +262,51 @@ pub async fn handle_split_task_deletion(pool: &SqlitePool, task_id: i64, keep_pa
     let mut tx = pool.begin().await?;
 
     if keep_past {
-        // 미래 블록(WILL)만 삭제하고, 현재(NOW) 및 과거(PENDING/DONE) 블록은 DONE으로 변경
+        // 1. 원본 태스크 정보 가져오기
+        let task: Task = sqlx::query_as("SELECT * FROM tasks WHERE id = ?1")
+            .bind(task_id)
+            .fetch_one(&mut *tx)
+            .await?;
+
+        // 2. 미래 블록(WILL) 삭제
         sqlx::query("DELETE FROM time_blocks WHERE task_id = ?1 AND status = 'WILL'")
             .bind(task_id)
             .execute(&mut *tx)
             .await?;
 
-        sqlx::query("UPDATE time_blocks SET status = 'DONE' WHERE task_id = ?1")
+        // 3. 남은 블록(NOW, PENDING, DONE) 가져오기
+        let blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE task_id = ?1")
+            .bind(task_id)
+            .fetch_all(&mut *tx)
+            .await?;
+
+        for block in blocks {
+            // 4. 각 블록을 독립적인 태스크로 변환
+            let result = sqlx::query("INSERT INTO tasks (workspace_id, title, planning_memo, estimated_minutes) VALUES (?1, ?2, ?3, ?4)")
+                .bind(task.workspace_id)
+                .bind(&task.title)
+                .bind(&task.planning_memo)
+                .bind(0)
+                .execute(&mut *tx)
+                .await?;
+            
+            let new_task_id = result.last_insert_rowid();
+
+            // 5. 블록의 task_id를 새 태스크로 업데이트하고 상태를 DONE으로 변경
+            sqlx::query("UPDATE time_blocks SET task_id = ?1, status = 'DONE' WHERE id = ?2")
+                .bind(new_task_id)
+                .bind(block.id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        // 6. 원본 태스크 삭제 (블록들과의 연결이 끊겼으므로 블록들은 유지됨)
+        sqlx::query("DELETE FROM tasks WHERE id = ?1")
             .bind(task_id)
             .execute(&mut *tx)
             .await?;
     } else {
-        // 전체 삭제
+        // 전체 삭제 (ON DELETE CASCADE에 의해 연결된 블록들도 삭제됨)
         sqlx::query("DELETE FROM tasks WHERE id = ?1")
             .bind(task_id)
             .execute(&mut *tx)
@@ -630,5 +663,49 @@ mod tests {
         assert_eq!(blocks[3].title, "T3");
         assert_eq!(blocks[3].start_time, "2026-03-01T18:50:00");
         assert_eq!(blocks[3].end_time, "2026-03-01T19:20:00");
+    }
+
+    #[tokio::test]
+    async fn test_handle_split_task_deletion_keep_past() {
+        let pool = setup_db().await;
+        
+        // 1. 워크스페이스 및 태스크 생성
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (10, 1, 'Split Task')").execute(&pool).await.unwrap();
+
+        // 2. 분할된 블록들 생성 (PENDING, NOW, WILL)
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (101, 10, 1, 'Split Task', '2026-03-01T09:00:00', '2026-03-01T10:00:00', 'PENDING')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (102, 10, 1, 'Split Task', '2026-03-01T10:00:00', '2026-03-01T11:00:00', 'NOW')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (103, 10, 1, 'Split Task', '2026-03-01T11:00:00', '2026-03-01T12:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // 3. handle_split_task_deletion(keep_past = true) 실행
+        handle_split_task_deletion(&pool, 10, true).await.unwrap();
+
+        // 4. 검증
+        // - 원본 태스크(10)는 삭제되어야 함
+        let task_exists = sqlx::query("SELECT 1 FROM tasks WHERE id = 10").fetch_optional(&pool).await.unwrap();
+        assert!(task_exists.is_none());
+
+        // - WILL 블록(103)은 삭제되어야 함
+        let block_103_exists = sqlx::query("SELECT 1 FROM time_blocks WHERE id = 103").fetch_optional(&pool).await.unwrap();
+        assert!(block_103_exists.is_none());
+
+        // - PENDING(101) 및 NOW(102) 블록은 유지되고 상태가 DONE으로 변경되어야 함
+        let block_101: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 101").fetch_one(&pool).await.unwrap();
+        let block_102: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 102").fetch_one(&pool).await.unwrap();
+        
+        assert_eq!(block_101.status, "DONE");
+        assert_eq!(block_102.status, "DONE");
+
+        // - 각각 새로운 독립적인 태스크를 가지고 있어야 함 (task_id가 서로 다르고 10이 아니어야 함)
+        assert!(block_101.task_id.is_some());
+        assert!(block_102.task_id.is_some());
+        assert_ne!(block_101.task_id.unwrap(), 10);
+        assert_ne!(block_102.task_id.unwrap(), 10);
+        assert_ne!(block_101.task_id.unwrap(), block_102.task_id.unwrap());
+
+        // - 새로운 태스크들이 실제로 생성되었는지 확인
+        let task_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM tasks").fetch_one(&pool).await.unwrap();
+        assert_eq!(task_count.0, 2);
     }
 }
