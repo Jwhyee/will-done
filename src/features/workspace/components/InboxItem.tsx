@@ -40,7 +40,7 @@ export const InboxItem = ({ task, onMoveToTimeline, onDelete }: InboxItemProps) 
           <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing shrink-0">
             <GripVertical size={14} className="text-text-muted group-hover:text-text-secondary" />
           </div>
-          <h4 className="font-bold text-xs text-text-secondary truncate">{task.title}</h4>
+          <h4 className="font-bold text-sm text-text-secondary truncate">{task.title}</h4>
         </div>
         <div className="flex items-center space-x-1 shrink-0">
           <Button 
