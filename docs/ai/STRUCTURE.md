@@ -67,7 +67,8 @@
         - **TransitionModal**: '완료 처리'와 '연장 처리'를 분리하는 **탭(Tab) 기반 인터페이스**.
         - 삭제 확인, 인박스 전체 이동 확인.
       - **Retrospective View**: AI 회고 생성 및 조회 뷰. 콤팩트한 디자인과 단계별 선택 아키텍처 적용. 상단 전용 드래그 레이어(`h-8`) 및 여백(`pt-8`) 확보.
-      - **Settings View**: 사이드바 기반 탭 전환 (프로필 / 워크스페이스). 상단 전용 드래그 레이어(`h-8`) 및 여백(`pt-8`) 확보.
+      - **GlobalSettingsModal**: 닉네임, API Key, 언어 등 사용자 프로필 설정을 위한 독립 모달.
+      - **WorkspaceSettingsModal**: 특정 워크스페이스의 이름, 코어 타임, 언플러그드 타임 등을 관리하는 독립 모달.
 
 ---
 
@@ -76,10 +77,10 @@
 ### 👤 User & Settings
 - `get_user` / `save_user`: 유저 프로필(닉네임, geminiApiKey, 언어, 알림 활성화 여부) 관리.
 - `get_greeting`: 현재 시간과 업무 집중 여부에 따른 동적 메시지.
+- **설정 권한 분리**: 전역 설정(PrimarySidebar 하단 톱니바퀴)은 `GlobalSettingsModal`을 통해, 워크스페이스별 설정(사이드바 아이콘 호버)은 `WorkspaceSettingsModal`을 통해 각각 독립적으로 관리.
 
 ### 🏢 Workspace & Archive
 - `create_workspace` / `update_workspace`: 워크스페이스 설정 및 Unplugged Time 관리.
-- **설정 권한 분리**: 전역 설정(PrimarySidebar 하단)과 워크스페이스별 설정(아이콘 호버)으로 진입점 이원화.
 
 ### ⏳ Timeline Engine (Scheduling)
 - `get_timeline`: `day_start_time`을 기준으로 논리적 날짜에 해당하는 블록들만 쿼리.
