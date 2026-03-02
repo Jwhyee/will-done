@@ -48,7 +48,7 @@ export const WorkspaceTimeline = ({
                 <Button
                   variant="ghost"
                   onClick={onMoveAllConfirm}
-                  className="text-accent hover:text-accent hover:bg-accent/10 font-bold text-xs gap-2 transition-all duration-200 hover:scale-[1.02]"
+                  className="text-accent hover:text-accent hover:bg-accent/10 font-bold text-xs gap-2 transition-all duration-200 active:scale-95"
                 >
                   <Send size={14} />
                   {t.main.move_all.description}
