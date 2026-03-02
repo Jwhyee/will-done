@@ -37,6 +37,10 @@
   - `user.rs`, `workspace.rs`, `timeline.rs`, `retrospective.rs`
 - `Cargo.toml`: Rust 의존성 관리 (`sqlx`, `thiserror`, `chrono` 등).
 
+### 📂 Project Infrastructure
+- `.github/workflows/release.yml`: GitHub Actions를 통한 멀티 플랫폼(Windows, macOS, Linux) 자동 빌드 및 릴리스 파이프라인.
+- `src-tauri/tauri.conf.json`: `plugins.updater` 설정을 통한 자동 업데이트 활성화.
+
 ---
 
 ## 2. UI Layout Hierarchy
@@ -71,6 +75,7 @@
       - **Retrospective View**: AI 회고 생성 및 조회 뷰. 콤팩트한 디자인과 단계별 선택 아키텍처 적용. 상단 전용 드래그 레이어(`h-8`) 및 여백(`pt-8`) 확보.
       - **GlobalSettingsModal**: 닉네임, API Key, 언어 등 사용자 프로필 설정을 위한 독립 모달.
       - **WorkspaceSettingsModal**: 특정 워크스페이스의 이름, 코어 타임, 언플러그드 타임 등을 관리하는 독립 모달. **[기본 정보 / 시간 관리 / 고급 설정]**의 3단계 탭 구조와 하단 고정 저장 버튼을 적용하여 정보 위계와 접근성을 최적화함.
+  - **Updater Dialog**: 앱 실행 시 새 버전 유무를 확인(`check`)하고, 업데이트가 있을 경우 사용자에게 알림을 주어 다운로드 및 설치(`downloadAndInstall`)를 유도하는 전역 모달. `UpdaterProvider`를 통해 관리됨.
 
 ---
 
@@ -97,6 +102,10 @@
 - `generate_retrospective`: 기간별 데이터 수집 및 모델 Fallback 엔진을 통한 AI 회고 생성.
 - `get_saved_retrospectives`: 과거 생성 내역 조회.
 - `get_active_dates`: 실제 태스크 기록이 있는 날짜 목록을 반환하여 프론트엔드에서 선택 가능한 날짜를 제한하는 데 활용.
+
+### 🚀 Build & Auto-Update
+- **Cross-Platform Release**: GitHub Actions를 사용하여 태그(`v*`) 푸시 시 자동으로 아티팩트(DMG, EXE, AppImage 등) 생성 및 Draft 릴리스 생성.
+- **Auto-Updater**: Tauri Updater 플러그인을 사용하여 최신 버전 확인 및 백그라운드 다운로드/설치 지원. `TAURI_SIGNING_PUBLIC_KEY`를 통한 바이너리 서명 검증 적용.
 
 ---
 
@@ -192,4 +201,10 @@
   - 현재 `NOW` 블록이 없고 다음 `WILL` 블록의 시작 시간이 되었을 때 -> `update_block_status` 호출하여 `NOW`로 승격.
   - `NOW` 블록의 종료 시간이 지났을 때 -> `TransitionModal` 자동 팝업 및 알림 발송.
 - **[UI Feedback]**: 별도의 조작 없이도 업무 상태가 실시간으로 강조 및 전환됨.
+
+### M. 자동 업데이트 확인 및 실행 (Auto-Update Flow)
+- **[Trigger]**: 앱 실행(`mount`) 시 `UpdaterProvider`에서 `check()` 호출.
+- **[Frontend State]**: 새 버전이 있을 경우 `update` 상태 업데이트 및 `Dialog` 오픈.
+- **[Action]**: 유저가 `업데이트` 클릭 시 `downloadAndInstall()` 실행 후 `relaunch()`를 통해 앱 재시작.
+- **[UI Feedback]**: 업데이트 중 `Loader` 애니메이션 노출 및 완료 후 자동 재시작.
 
