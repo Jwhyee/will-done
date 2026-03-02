@@ -157,7 +157,7 @@ export function useApp() {
       // Fetch latest timeline and open transition modal
       invoke<TimeBlock[]>("get_timeline", { 
         workspaceId: activeWorkspaceId, 
-        date: format(new Date(), "yyyy-MM-dd") 
+        date: undefined // Let backend handle logical date for "today"
       }).then(list => {
         const block = list.find(b => b.id === blockId);
         if (block) {
@@ -293,7 +293,9 @@ export function useApp() {
     timeline,
     inboxTasks,
     currentTime,
+    logicalDate,
     selectedDate,
+    setSelectedDate,
     transitionBlock,
     setTransitionBlock,
     retrospectiveOpen,

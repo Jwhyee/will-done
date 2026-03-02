@@ -61,6 +61,7 @@ function AppContent() {
     timeline,
     inboxTasks,
     currentTime,
+    logicalDate,
     transitionBlock,
     setTransitionBlock,
     retrospectiveOpen,
