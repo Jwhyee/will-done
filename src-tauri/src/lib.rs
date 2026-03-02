@@ -60,17 +60,79 @@ pub fn run() {
                 // Enable foreign keys
                 sqlx::query("PRAGMA foreign_keys = ON").execute(&pool).await.ok();
 
-                // Clear data in dev mode (debug_assertions)
                 #[cfg(debug_assertions)]
                 {
-                    println!("Dev mode detected: Clearing database...");
-                    sqlx::query("DELETE FROM retrospectives").execute(&pool).await.ok();
-                    sqlx::query("DELETE FROM time_blocks").execute(&pool).await.ok();
-                    sqlx::query("DELETE FROM tasks").execute(&pool).await.ok();
-                    sqlx::query("DELETE FROM unplugged_times").execute(&pool).await.ok();
-                    sqlx::query("DELETE FROM workspaces").execute(&pool).await.ok();
-                    sqlx::query("DELETE FROM users").execute(&pool).await.ok();
-                    println!("Database cleared.");
+                    let args: Vec<String> = std::env::args().collect();
+                    if args.contains(&"clear".to_string()) || args.contains(&"init".to_string()) {
+                        println!("🚀 [Dev Mode] Cleaning database...");
+                        sqlx::query("DELETE FROM retrospectives").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM time_blocks").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM tasks").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM unplugged_times").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM workspaces").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM users").execute(&pool).await.ok();
+                        println!("✅ [Dev Mode] Database cleared.");
+                    }
+
+                    if args.contains(&"init".to_string()) {
+                        println!("🚀 [Dev Mode] Seeding database...");
+                        
+                        // 1. User & Workspace
+                        sqlx::query("INSERT INTO users (id, nickname, gemini_api_key, lang, is_notification_enabled, day_start_time) VALUES (1, 'TEST', 'dummy_key', 'ko', 1, '04:00')").execute(&pool).await.ok();
+                        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'HOME')").execute(&pool).await.ok();
+
+                        // 2. Tasks & TimeBlocks (Today & Yesterday)
+                        let now = chrono::Local::now();
+                        let day_start_time = "04:00";
+                        let today_logical = if now.format("%H:%M").to_string() < day_start_time.to_string() {
+                            now.date_naive() - chrono::Duration::days(1)
+                        } else {
+                            now.date_naive()
+                        };
+                        let yesterday_logical = today_logical - chrono::Duration::days(1);
+
+                        for (i, logical_date) in [yesterday_logical, today_logical].iter().enumerate() {
+                            let base_time = chrono::NaiveDateTime::parse_from_str(&format!("{}T09:00:00", logical_date.format("%Y-%m-%d")), "%Y-%m-%dT%H:%M:%S").unwrap();
+                            let offset = (i as i64) * 100;
+
+                            // Insert Tasks
+                            sqlx::query("INSERT INTO tasks (id, workspace_id, title, estimated_minutes) VALUES (?, 1, '기획서 작성', 60)").bind(10 + offset).execute(&pool).await.ok();
+                            sqlx::query("INSERT INTO tasks (id, workspace_id, title, estimated_minutes) VALUES (?, 1, '🔥 서버 장애 대응', 30)").bind(11 + offset).execute(&pool).await.ok();
+                            sqlx::query("INSERT INTO tasks (id, workspace_id, title, estimated_minutes) VALUES (?, 1, '주간 회의', 60)").bind(12 + offset).execute(&pool).await.ok();
+                            sqlx::query("INSERT INTO tasks (id, workspace_id, title, estimated_minutes) VALUES (?, 1, '이메일 회신', 30)").bind(13 + offset).execute(&pool).await.ok();
+
+                            // Block 1: Task A Part 1 (09:00 - 09:30)
+                            let s1 = base_time;
+                            let e1 = s1 + chrono::Duration::minutes(30);
+                            sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status) VALUES (?, 1, '기획서 작성', ?, ?, 'DONE')")
+                                .bind(10 + offset).bind(s1.format("%Y-%m-%dT%H:%M:%S").to_string()).bind(e1.format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&pool).await.ok();
+
+                            // Block 2: Urgent Task B (09:30 - 10:00)
+                            let s2 = e1;
+                            let e2 = s2 + chrono::Duration::minutes(30);
+                            sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status, is_urgent) VALUES (?, 1, '🔥 서버 장애 대응', ?, ?, 'DONE', 1)")
+                                .bind(11 + offset).bind(s2.format("%Y-%m-%dT%H:%M:%S").to_string()).bind(e2.format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&pool).await.ok();
+
+                            // Block 3: Task A Part 2 (10:00 - 10:30)
+                            let s3 = e2;
+                            let e3 = s3 + chrono::Duration::minutes(30);
+                            sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status) VALUES (?, 1, '기획서 작성', ?, ?, 'DONE')")
+                                .bind(10 + offset).bind(s3.format("%Y-%m-%dT%H:%M:%S").to_string()).bind(e3.format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&pool).await.ok();
+
+                            // Block 4: Task C (10:30 - 11:30)
+                            let s4 = e3;
+                            let e4 = s4 + chrono::Duration::minutes(60);
+                            sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status) VALUES (?, 1, '주간 회의', ?, ?, 'DONE')")
+                                .bind(12 + offset).bind(s4.format("%Y-%m-%dT%H:%M:%S").to_string()).bind(e4.format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&pool).await.ok();
+
+                            // Block 5: Task D (11:30 - 12:00)
+                            let s5 = e4;
+                            let e5 = s5 + chrono::Duration::minutes(30);
+                            sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status) VALUES (?, 1, '이메일 회신', ?, ?, 'DONE')")
+                                .bind(13 + offset).bind(s5.format("%Y-%m-%dT%H:%M:%S").to_string()).bind(e5.format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&pool).await.ok();
+                        }
+                        println!("✅ [Dev Mode] Database seeded successfully.");
+                    }
                 }
                 
                 // Migrations
