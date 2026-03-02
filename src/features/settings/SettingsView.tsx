@@ -123,8 +123,14 @@ export const SettingsView = ({
   };
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-surface">
-      <aside className="w-64 border-r border-border flex flex-col shrink-0 p-6 space-y-8">
+    <div className="flex-1 flex overflow-hidden bg-surface relative h-screen">
+      {/* Global Drag Handle Layer (Top 32px) */}
+      <div
+        data-tauri-drag-region
+        className="absolute top-0 left-0 right-0 h-8 z-[50] select-none cursor-grab active:cursor-grabbing"
+      />
+
+      <aside className="w-64 border-r border-border flex flex-col shrink-0 pt-8 pb-6 px-6 space-y-8">
         <Button 
           variant="ghost" 
           className="justify-start -ml-2 text-text-secondary hover:text-text-primary font-bold h-10 px-2 group transition-all"
