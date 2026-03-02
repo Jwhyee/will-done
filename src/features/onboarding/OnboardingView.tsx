@@ -238,7 +238,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                   onClick={() => setActiveStep("settings")}
                   className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-14 rounded-2xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95 flex items-center justify-center gap-2"
                 >
-                  {t.onboarding.next_btn || "Next"}
+                  {t.onboarding.next_btn}
                   <ChevronRight size={20} />
                 </Button>
               ) : (
@@ -249,7 +249,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                     onClick={() => setActiveStep("profile")}
                     className="flex-1 bg-background border-border text-text-primary hover:bg-surface h-14 rounded-2xl font-bold transition-all"
                   >
-                    {t.onboarding.prev_btn || "Back"}
+                    {t.onboarding.prev_btn}
                   </Button>
                   <Button 
                     type="submit" 

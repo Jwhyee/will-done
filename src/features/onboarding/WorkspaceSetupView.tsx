@@ -187,7 +187,7 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-xs font-bold text-text-secondary uppercase tracking-widest">
                         <Layout size={14} />
-                        {t.workspace_setup.roleIntro}
+                        {t.workspace_setup.role_intro}
                       </div>
                       <textarea 
                         {...workspaceForm.register("roleIntro")}
@@ -318,7 +318,7 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
                   onClick={() => setActiveStep("time")}
                   className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-14 rounded-2xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95 flex items-center justify-center gap-2"
                 >
-                  {t.onboarding?.next_btn || "Next"}
+                  {t.workspace_setup.next_btn}
                   <ChevronRight size={20} />
                 </Button>
               ) : (
@@ -329,7 +329,7 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
                     onClick={() => setActiveStep("basic")}
                     className="flex-1 bg-background border-border text-text-primary hover:bg-surface h-14 rounded-2xl font-bold transition-all"
                   >
-                    {t.onboarding?.prev_btn || "Back"}
+                    {t.workspace_setup.prev_btn}
                   </Button>
                   <Button 
                     type="submit" 

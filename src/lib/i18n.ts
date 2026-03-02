@@ -17,6 +17,8 @@ export const translations = {
       day_start_time_label: "하루 시작 시간",
       day_start_time_guide: "설정한 시간 이전의 기록은 전날의 활동으로 집계됩니다.",
       submit_btn: "시작하기",
+      next_btn: "다음",
+      prev_btn: "이전",
     },
     workspace_setup: {
       title_first: "첫 워크스페이스 생성",
@@ -37,6 +39,8 @@ export const translations = {
       role_intro: "직무 소개 (AI 컨텍스트)",
       role_placeholder: "본인의 역할과 주요 업무를 설명해주세요. AI가 회고를 작성할 때 참고합니다.",
       submit_btn: "워크스페이스 생성",
+      next_btn: "다음",
+      prev_btn: "이전",
     },
     sidebar: {
       inbox: "인박스",
@@ -199,6 +203,8 @@ export const translations = {
       day_start_time_label: "Day Start Time",
       day_start_time_guide: "Records before the set time are counted as the previous day's activity.",
       submit_btn: "Get Started",
+      next_btn: "Next",
+      prev_btn: "Back",
     },
     workspace_setup: {
       title_first: "Create Your First Workspace",
@@ -219,6 +225,8 @@ export const translations = {
       role_intro: "Role Introduction (AI Context)",
       role_placeholder: "Describe your role and responsibilities. AI will use this for retrospectives.",
       submit_btn: "Create Workspace",
+      next_btn: "Next",
+      prev_btn: "Back",
     },
     sidebar: {
       inbox: "Inbox",
