@@ -201,6 +201,15 @@ export const translations = {
       no_data_for_label: "해당 기간의 회고가 없습니다.",
       duplicate_error: "이미 해당 기간의 회고가 존재합니다.",
       no_tasks_error: "해당 기간에 완료된 태스크가 없습니다.",
+    },
+    updater: {
+      new_version: "새 버전 알림",
+      update_query: "새로운 버전({version})이 출시되었습니다. 지금 업데이트하시겠습니까?",
+      update_btn: "업데이트",
+      later_btn: "나중에",
+      updating: "업데이트 중...",
+      update_done: "업데이트가 완료되었습니다. 앱을 재시작합니다.",
+      update_error: "업데이트 중 오류가 발생했습니다.",
     }
   },
   en: {
@@ -405,6 +414,15 @@ export const translations = {
       no_data_for_label: "No retrospective found for this period.",
       duplicate_error: "A retrospective for this period already exists.",
       no_tasks_error: "No completed tasks found for the selected period.",
+    },
+    updater: {
+      new_version: "New Version Available",
+      update_query: "A new version ({version}) is available. Would you like to update now?",
+      update_btn: "Update",
+      later_btn: "Later",
+      updating: "Updating...",
+      update_done: "Update complete. Restarting app.",
+      update_error: "An error occurred during the update.",
     }
   }
 };
