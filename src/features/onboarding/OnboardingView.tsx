@@ -94,7 +94,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
     setVerificationStatus('loading');
     try {
       // Use api_key to match Rust command argument name
-      await invoke("fetch_available_models", { api_key: currentApiKey });
+      await invoke("fetch_available_models", { apiKey: currentApiKey });
       setVerificationStatus('success');
       showToast(t.onboarding.api_key_valid, "success");
     } catch (error) {
