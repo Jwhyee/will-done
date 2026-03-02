@@ -100,7 +100,7 @@ export const GlobalSettingsModal = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="px-8 pb-8 space-y-6">
-          <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-1 -mr-1 scrollbar-hide">
+          <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-1 -mr-1 pl-1 -ml-1 scrollbar-hide">
             <div className="space-y-3">
               <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.onboarding.nickname_label}</Label>
               <Input {...register("nickname")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10" />
