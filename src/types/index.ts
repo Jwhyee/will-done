@@ -23,6 +23,7 @@ export interface User {
   geminiApiKey: string | null;
   lang: string;
   isNotificationEnabled: boolean;
+  dayStartTime: string;
 }
 
 export interface Retrospective {

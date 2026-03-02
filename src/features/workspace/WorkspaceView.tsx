@@ -26,8 +26,10 @@ import { useToast } from "@/providers/ToastProvider";
 
 interface WorkspaceViewProps {
   t: any;
+  user: User | null;
   greeting: string;
   currentTime: Date;
+  logicalDate: Date;
   timeline: TimeBlock[];
   inboxTasks: Task[];
   onTaskSubmit: (data: any) => Promise<void>;
@@ -42,8 +44,10 @@ interface WorkspaceViewProps {
 
 export const WorkspaceView = ({
   t,
+  user,
   greeting,
   currentTime,
+  logicalDate,
   timeline,
   inboxTasks,
   onTaskSubmit,
@@ -59,6 +63,7 @@ export const WorkspaceView = ({
   const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
   const [isSplitDelete, setIsSplitDelete] = useState(false);
   const [moveAllConfirm, setMoveAllConfirm] = useState(false);
+  const [exceededConfirm, setExceededConfirm] = useState<{data: any} | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -93,8 +98,48 @@ export const WorkspaceView = ({
   });
 
   const handleTaskSubmit = async (data: TaskFormValues) => {
+    if (!user) return;
+
+    // Calculate expected end time
+    const duration = data.hours * 60 + data.minutes;
+    let startTime = currentTime;
+    
+    if (!data.isUrgent) {
+      const activeBlocks = timeline.filter(b => b.status !== "UNPLUGGED");
+      if (activeBlocks.length > 0) {
+        // Find the last end time in the current timeline
+        const lastBlock = activeBlocks.reduce((prev, current) => 
+          new Date(prev.endTime) > new Date(current.endTime) ? prev : current
+        );
+        const lastEnd = new Date(lastBlock.endTime);
+        if (lastEnd > currentTime) {
+          startTime = lastEnd;
+        }
+      }
+    }
+
+    const endTime = new Date(startTime.getTime() + duration * 60000);
+    
+    // Check if endTime exceeds day_start_time of the logical day
+    const [startH, startM] = user.dayStartTime.split(':').map(Number);
+    const startOfLogicalDay = new Date(startTime);
+    startOfLogicalDay.setHours(startH, startM, 0, 0);
+    
+    if (startTime < startOfLogicalDay) {
+      startOfLogicalDay.setDate(startOfLogicalDay.getDate() - 1);
+    }
+    
+    const endOfLogicalDay = new Date(startOfLogicalDay);
+    endOfLogicalDay.setDate(endOfLogicalDay.getDate() + 1);
+    
+    if (endTime > endOfLogicalDay && !exceededConfirm) {
+      setExceededConfirm({ data });
+      return;
+    }
+
     await onTaskSubmit(data);
     taskForm.reset({ title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false });
+    setExceededConfirm(null);
   };
 
   const handleTaskError = (errors: any) => {
@@ -136,7 +181,7 @@ export const WorkspaceView = ({
           <div className="space-y-1 w-full max-w-2xl">
             <div className="flex items-center space-x-3 mb-1">
               <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted bg-surface/50 px-2 py-0.5 rounded border border-border">
-                {format(currentTime, "yyyy년 M월 d일 (EEE)", { locale: ko })}
+                {format(logicalDate, "yyyy년 M월 d일 (EEE)", { locale: ko })}
               </div>
               <div className="flex items-center space-x-1.5 text-sm font-bold font-mono tracking-tight text-text-secondary">
                 <Clock size={14} className="text-accent" />
@@ -397,6 +442,42 @@ export const WorkspaceView = ({
           }
         }}
       />
+
+      {/* Deadline Exceeded Confirmation */}
+      <Dialog open={!!exceededConfirm} onOpenChange={(open) => !open && setExceededConfirm(null)}>
+        <DialogContent className="sm:max-w-[420px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-8 antialiased">
+          <DialogHeader className="space-y-4">
+            <DialogTitle className="text-lg font-bold tracking-tight text-text-primary flex items-center gap-3">
+              <AlertCircle className="text-warning" size={20} />
+              {t.main.deadline_exceeded.title}
+            </DialogTitle>
+            <DialogDescription className="text-text-secondary text-sm leading-relaxed whitespace-pre-wrap">
+              {t.main.deadline_exceeded.message.replace("{time}", user?.dayStartTime || "04:00")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-6 flex flex-col gap-3">
+            <Button 
+              onClick={() => exceededConfirm && handleTaskSubmit(exceededConfirm.data)}
+              className="w-full bg-accent text-text-primary hover:bg-accent/80 font-bold h-12 rounded-xl transition-all active:scale-95"
+            >
+              {t.main.deadline_exceeded.continue}
+            </Button>
+            <Button 
+              variant="ghost"
+              onClick={async () => {
+                if (exceededConfirm) {
+                  await onTaskSubmit({ ...exceededConfirm.data, isInbox: true });
+                  taskForm.reset({ title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false });
+                  setExceededConfirm(null);
+                }
+              }}
+              className="w-full bg-surface text-text-secondary hover:bg-border hover:text-text-primary font-bold h-12 rounded-xl transition-all"
+            >
+              {t.main.deadline_exceeded.to_inbox}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -38,7 +38,8 @@ export const SettingsView = ({
       nickname: user.nickname,
       geminiApiKey: user.geminiApiKey || "",
       lang: user.lang,
-      isNotificationEnabled: user.isNotificationEnabled
+      isNotificationEnabled: user.isNotificationEnabled,
+      dayStartTime: user.dayStartTime,
     }
   });
 
@@ -67,7 +68,8 @@ export const SettingsView = ({
       nickname: user.nickname,
       geminiApiKey: user.geminiApiKey || "",
       lang: user.lang,
-      isNotificationEnabled: user.isNotificationEnabled
+      isNotificationEnabled: user.isNotificationEnabled,
+      dayStartTime: user.dayStartTime,
     });
   }, [user, userForm]);
 
@@ -77,7 +79,8 @@ export const SettingsView = ({
         nickname: data.nickname, 
         geminiApiKey: data.geminiApiKey || null,
         lang: data.lang,
-        isNotificationEnabled: data.isNotificationEnabled
+        isNotificationEnabled: data.isNotificationEnabled,
+        dayStartTime: data.dayStartTime,
       });
       await onUserUpdate(updatedUser);
       showToast(t.main.toast.profile_updated, "success");
@@ -179,6 +182,12 @@ export const SettingsView = ({
                     <option value="ko">한국어 (Korean)</option>
                     <option value="en">English</option>
                   </select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.onboarding.day_start_time_label}</Label>
+                  <Input type="time" {...userForm.register("dayStartTime")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium [color-scheme:dark]" />
+                  <p className="text-xs text-text-secondary leading-relaxed">{t.onboarding.day_start_time_guide}</p>
                 </div>
 
                 <div className="space-y-3 pt-4">

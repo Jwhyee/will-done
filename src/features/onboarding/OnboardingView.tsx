@@ -30,13 +30,14 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
     nickname: z.string().min(1, t.onboarding.nickname_required).max(20),
     geminiApiKey: z.string(),
     isNotificationEnabled: z.boolean(),
+    dayStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "HH:mm format required"),
   });
 
   type UserFormValues = z.infer<typeof userSchema>;
 
   const userForm = useForm<UserFormValues>({ 
     resolver: zodResolver(userSchema),
-    defaultValues: { nickname: "", geminiApiKey: "", isNotificationEnabled: false }
+    defaultValues: { nickname: "", geminiApiKey: "", isNotificationEnabled: false, dayStartTime: "04:00" }
   });
 
   const onUserSubmit = async (data: UserFormValues) => {
@@ -44,7 +45,8 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
       nickname: data.nickname, 
       geminiApiKey: data.geminiApiKey || null,
       lang: getLang(),
-      isNotificationEnabled: data.isNotificationEnabled
+      isNotificationEnabled: data.isNotificationEnabled,
+      dayStartTime: data.dayStartTime,
     });
     const u = await invoke<User>("get_user");
     onComplete(u);
@@ -82,6 +84,12 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
               <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
               <Input type="password" {...userForm.register("geminiApiKey")} placeholder={t.onboarding.api_key_placeholder} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10" />
               <p className="text-xs text-text-secondary leading-relaxed">{t.onboarding.api_key_guide}</p>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.onboarding.day_start_time_label}</Label>
+              <Input type="time" {...userForm.register("dayStartTime")} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10" />
+              <p className="text-xs text-text-secondary leading-relaxed">{t.onboarding.day_start_time_guide}</p>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-background border border-border rounded-xl">

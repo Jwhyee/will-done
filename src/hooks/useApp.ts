@@ -28,7 +28,22 @@ export function useApp() {
   const [timeline, setTimeline] = useState<TimeBlock[]>([]);
   const [inboxTasks, setInboxTasks] = useState<Task[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedDate] = useState<Date>(new Date());
+  
+  const logicalDate = useMemo(() => {
+    if (!user) return currentTime;
+    const [startH, startM] = user.dayStartTime.split(':').map(Number);
+    const now = new Date(currentTime);
+    const boundary = new Date(now);
+    boundary.setHours(startH, startM, 0, 0);
+    
+    const boundaryTime = boundary.getTime();
+    if (currentTime.getTime() < boundaryTime) {
+      now.setDate(now.getDate() - 1);
+    }
+    return now;
+  }, [currentTime, user]);
+
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [transitionBlock, setTransitionBlock] = useState<TimeBlock | null>(null);
   const [retrospectiveOpen, setRetrospectiveOpen] = useState(false);
   const [activeRetrospective, setActiveRetrospective] = useState<Retrospective | null>(null);
@@ -46,15 +61,21 @@ export function useApp() {
     try {
       const g = await invoke<string>("get_greeting", { workspaceId: activeWorkspaceId, lang });
       setGreeting(g);
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
-      const list = await invoke<TimeBlock[]>("get_timeline", { workspaceId: activeWorkspaceId, date: dateStr });
+      
+      const targetDate = selectedDate || logicalDate;
+      const dateStr = format(targetDate, "yyyy-MM-dd");
+      
+      const list = await invoke<TimeBlock[]>("get_timeline", { 
+        workspaceId: activeWorkspaceId, 
+        date: selectedDate ? dateStr : undefined
+      });
       const inbox = await invoke<Task[]>("get_inbox", { workspaceId: activeWorkspaceId });
       
       const completedDuration = await invoke<number>("get_today_completed_duration", { workspaceId: activeWorkspaceId });
       setTodayCompletedDuration(completedDuration);
 
       const now = new Date();
-      const isToday = dateStr === format(now, "yyyy-MM-dd");
+      const isToday = dateStr === format(logicalDate, "yyyy-MM-dd");
 
       if (isToday) {
         const active = list.find(b => b.status === "NOW");
@@ -220,7 +241,7 @@ export function useApp() {
           workspaceId: activeWorkspaceId,
           ...data,
           planningMemo: data.planningMemo || null,
-          isInbox: false
+          isInbox: data.isInbox || false
         } 
       });
       fetchMainData();

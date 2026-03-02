@@ -14,6 +14,8 @@ export const translations = {
       api_key_guide: "* 이 키는 AI 자동 회고 기능에 사용됩니다. 설정에서 나중에 추가할 수 있습니다.",
       notification_label: "데스크탑 알림 활성화",
       notification_guide: "업무 종료 시각에 맞춰 알림을 보내드립니다.",
+      day_start_time_label: "하루 시작 시간",
+      day_start_time_guide: "설정한 시간 이전의 기록은 전날의 활동으로 집계됩니다.",
       submit_btn: "시작하기",
     },
     workspace_setup: {
@@ -85,6 +87,12 @@ export const translations = {
         description: "정말로 이 태스크를 삭제하시겠습니까?",
         btn: "삭제",
         cancel: "취소",
+      },
+      deadline_exceeded: {
+        title: "마감 시간 초과 안내",
+        message: "해당 업무는 설정된 하루 마감 시간({time})을 초과하여 다음 날로 넘어가게 됩니다. 그래도 현재 타임라인에 이어서 등록하시겠습니까?\\n(아니오를 누를 경우 대기 중인 인박스로 이동합니다.)",
+        continue: "예 (Continue)",
+        to_inbox: "아니오 (To Inbox)",
       },
       delete_split_confirm: {
         title: "분할된 태스크 삭제",
@@ -175,6 +183,8 @@ export const translations = {
       api_key_guide: "* This key is used for AI-generated retrospectives. You can add it later in settings.",
       notification_label: "Enable Desktop Notifications",
       notification_guide: "We will notify you when your tasks are finished.",
+      day_start_time_label: "Day Start Time",
+      day_start_time_guide: "Records before the set time are counted as the previous day's activity.",
       submit_btn: "Get Started",
     },
     workspace_setup: {
@@ -246,6 +256,12 @@ export const translations = {
         description: "Are you sure you want to delete this task?",
         btn: "Delete",
         cancel: "Cancel",
+      },
+      deadline_exceeded: {
+        title: "Deadline Exceeded",
+        message: "This task will exceed your set day end time ({time}) and carry over to the next day. Do you still want to add it to the current timeline?\\n(Choosing No will move it to the Inbox.)",
+        continue: "Yes (Continue)",
+        to_inbox: "No (To Inbox)",
       },
       delete_split_confirm: {
         title: "Delete Split Task",

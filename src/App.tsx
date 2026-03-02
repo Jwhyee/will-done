@@ -176,8 +176,10 @@ function AppContent() {
           >
             <WorkspaceView
               t={t}
+              user={user}
               greeting={greeting}
               currentTime={currentTime}
+              logicalDate={logicalDate}
               timeline={timeline}
               inboxTasks={inboxTasks}
               onTaskSubmit={onTaskSubmit}
