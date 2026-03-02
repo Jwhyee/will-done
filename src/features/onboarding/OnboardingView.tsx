@@ -7,7 +7,9 @@ import {
   ChevronRight, 
   ChevronLeft, 
   Info, 
-  ExternalLink 
+  ExternalLink,
+  Loader2,
+  CheckCircle2
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { User } from "@/types";
 import { getLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/providers/ToastProvider";
 
 interface OnboardingViewProps {
   t: any;
@@ -31,6 +34,8 @@ interface OnboardingViewProps {
 
 export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const { showToast } = useToast();
 
   const userSchema = z.object({
     nickname: z.string().min(1, t.onboarding.nickname_required).max(20),
@@ -53,6 +58,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
 
   const { watch, setValue, handleSubmit, formState: { errors } } = userForm;
   const nickname = watch("nickname");
+  const apiKey = watch("geminiApiKey");
 
   const onUserSubmit = async (data: UserFormValues) => {
     await invoke("save_user", { 
@@ -78,6 +84,23 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
     }
   };
 
+  const handleVerifyApiKey = async () => {
+    if (!apiKey) {
+      nextStep();
+      return;
+    }
+    
+    setVerificationStatus('loading');
+    try {
+      await invoke("fetch_available_models", { apiKey });
+      setVerificationStatus('success');
+      showToast(t.onboarding.api_key_valid, "success");
+    } catch (error) {
+      console.error(error);
+      setVerificationStatus('error');
+    }
+  };
+
   const nextStep = () => {
     if (currentStep < 4) setCurrentStep(prev => prev + 1);
   };
@@ -91,8 +114,14 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
       e.preventDefault();
       if (currentStep === 1 && nickname) {
         nextStep();
-      } else if (currentStep < 4) {
+      } else if (currentStep === 2) {
         nextStep();
+      } else if (currentStep === 3) {
+        if (!apiKey || verificationStatus === 'success') {
+          nextStep();
+        } else if (verificationStatus !== 'loading') {
+          handleVerifyApiKey();
+        }
       } else if (currentStep === 4) {
         handleSubmit(onUserSubmit)();
       }
@@ -214,13 +243,33 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                     </button>
                   </div>
                   <div className="space-y-4">
-                    <Input 
-                      type="password"
-                      {...userForm.register("geminiApiKey")} 
-                      autoFocus
-                      placeholder={t.onboarding.api_key_placeholder} 
-                      className="bg-background border-border text-text-primary h-16 rounded-2xl px-6 font-mono focus:ring-2 focus:ring-text-primary/10 transition-all"
-                    />
+                    <div className="relative">
+                      <Input 
+                        type="password"
+                        {...userForm.register("geminiApiKey")} 
+                        autoFocus
+                        onChange={(e) => {
+                          userForm.register("geminiApiKey").onChange(e);
+                          if (verificationStatus === 'success' || verificationStatus === 'error') {
+                            setVerificationStatus('idle');
+                          }
+                        }}
+                        placeholder={t.onboarding.api_key_placeholder} 
+                        className={cn(
+                          "bg-background border-border text-text-primary h-16 rounded-2xl px-6 font-mono focus:ring-2 focus:ring-text-primary/10 transition-all",
+                          verificationStatus === 'success' && "border-success focus:ring-success/10",
+                          verificationStatus === 'error' && "border-danger focus:ring-danger/10"
+                        )}
+                      />
+                      {verificationStatus === 'success' && (
+                        <CheckCircle2 size={20} className="absolute right-5 top-1/2 -translate-y-1/2 text-success" />
+                      )}
+                    </div>
+                    {verificationStatus === 'error' && (
+                      <p className="text-sm text-danger font-bold flex items-center gap-1.5 pl-1">
+                        <AlertCircle size={16}/> {t.onboarding.api_key_invalid}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -277,7 +326,41 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                   <ChevronLeft size={24} />
                 </Button>
               )}
-              {currentStep < 4 ? (
+              {currentStep === 3 ? (
+                <Button 
+                  type="button"
+                  disabled={verificationStatus === 'loading'}
+                  onClick={verificationStatus === 'success' || !apiKey ? nextStep : handleVerifyApiKey}
+                  className={cn(
+                    "flex-1 h-16 rounded-2xl font-black text-xl transition-all shadow-xl shadow-black/10 active:scale-[0.98] group",
+                    verificationStatus === 'success' || !apiKey 
+                      ? "bg-text-primary text-background hover:bg-zinc-200" 
+                      : "bg-surface text-text-primary border border-border hover:bg-surface-elevated"
+                  )}
+                >
+                  {verificationStatus === 'loading' ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      {t.onboarding.api_key_verifying}
+                    </>
+                  ) : !apiKey ? (
+                    <>
+                      {t.onboarding.skip_btn}
+                      <ChevronRight size={24} className="group-hover:translate-x-0.5 transition-transform" />
+                    </>
+                  ) : verificationStatus === 'success' ? (
+                    <>
+                      {t.onboarding.next_btn}
+                      <ChevronRight size={24} className="group-hover:translate-x-0.5 transition-transform" />
+                    </>
+                  ) : (
+                    <>
+                      {t.onboarding.api_key_verify}
+                      <ChevronRight size={24} className="group-hover:translate-x-0.5 transition-transform" />
+                    </>
+                  )}
+                </Button>
+              ) : currentStep < 4 ? (
                 <Button 
                   type="button"
                   disabled={currentStep === 1 && !nickname}
