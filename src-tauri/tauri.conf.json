@@ -14,7 +14,11 @@
       {
         "title": "will-done",
         "width": 1000,
-        "height": 750
+        "height": 750,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "theme": "Dark",
+        "decorations": true
       }
     ],
     "security": {
