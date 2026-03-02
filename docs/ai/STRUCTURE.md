@@ -14,8 +14,9 @@
   - `ui/`: shadcn/ui 기반 원자적 컴포넌트 (버튼, 다이얼로그, 툴팁, 시트 등).
 - `features/`: 도메인별 핵심 비즈니스 뷰 및 컴포넌트.
   - `onboarding/`: 사용자 초기 설정 (`OnboardingView`) 및 워크스페이스 생성 뷰 (`WorkspaceSetupView`).
-  - `workspace/`: 메인 타임라인 (`WorkspaceView`) 및 태스크 관리 컴포넌트 (`SortableItem`, `InboxItem`).
-    - `components/`: `TimePicker`, `TransitionModal`.
+  - `workspace/`: 메인 타임라인 (`WorkspaceView`).
+    - `components/`: `TimePicker`, `TransitionModal`, `DroppableArea`, `InboxItem`, `SortableItem`, `TaskForm`, `WorkspaceDialogs`, `WorkspaceHeader`, `WorkspaceInbox`, `WorkspaceTimeline`.
+    - `hooks/`: `useWorkspace.ts`.
   - `retrospective/`: 과거 수행 내역 조회 및 AI 회고 생성 뷰 (`RetrospectiveView`).
     - `components/`: `DateSelector`, `Stepper`.
     - `utils.ts`: 기간 계산 및 포맷팅 유틸리티.
