@@ -5,9 +5,11 @@ import { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TaskForm } from "./TaskForm";
+import { User } from "@/types";
 
 interface WorkspaceHeaderProps {
   t: any;
+  user: User | null;
   greeting: string;
   currentTime: Date;
   logicalDate: Date;
@@ -22,6 +24,7 @@ interface WorkspaceHeaderProps {
 
 export const WorkspaceHeader = ({
   t,
+  user,
   greeting,
   currentTime,
   logicalDate,
@@ -33,6 +36,8 @@ export const WorkspaceHeader = ({
   onOpenInbox,
   onOpenRetrospective,
 }: WorkspaceHeaderProps) => {
+  const isRetroEnabled = !!user?.geminiApiKey;
+
   return (
     <header className="px-8 pt-8 pb-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border select-none">
       <div className="flex items-center justify-between relative z-50">
@@ -89,17 +94,23 @@ export const WorkspaceHeader = ({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onOpenRetrospective}
-                  className="h-10 w-10 rounded-xl hover:bg-surface-elevated text-text-muted hover:text-text-primary"
-                >
-                  <Sparkles size={20} className="text-warning" />
-                </Button>
+                <div className="inline-block">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onOpenRetrospective}
+                    disabled={!isRetroEnabled}
+                    className="h-10 w-10 rounded-xl hover:bg-surface-elevated text-text-muted hover:text-text-primary disabled:opacity-30 disabled:hover:bg-transparent"
+                  >
+                    <Sparkles size={20} className={isRetroEnabled ? "text-warning" : "text-text-muted"} />
+                  </Button>
+                </div>
               </TooltipTrigger>
               <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                {t.sidebar?.retrospective || "회고"}
+                {isRetroEnabled 
+                  ? (t.header?.retrospective || "회고")
+                  : (t.header?.retro_disabled_tooltip || "Google AI API 키를 설정해야 회고가 가능합니다")
+                }
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

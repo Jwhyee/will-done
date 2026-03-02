@@ -35,6 +35,10 @@ export const translations = {
       next_btn: "다음",
       prev_btn: "이전",
     },
+    header: {
+      retrospective: "회고",
+      retro_disabled_tooltip: "Google AI API 키를 설정해야 회고가 가능합니다",
+    },
     workspace_setup: {
       welcome: "환영합니다!",
       empty_desc: "아직 워크스페이스가 없습니다.\n좌측 사이드바의 + 버튼 혹은 아래 워크스페이스 생성하기 버튼을 눌러 첫 번째 워크스페이스를 생성하고 업무를 시작해보세요.",
@@ -247,6 +251,10 @@ export const translations = {
       submit_btn: "Get Started",
       next_btn: "Next",
       prev_btn: "Back",
+    },
+    header: {
+      retrospective: "Retrospective",
+      retro_disabled_tooltip: "Please set the Google AI API key to enable retrospectives",
     },
     workspace_setup: {
       welcome: "Welcome!",

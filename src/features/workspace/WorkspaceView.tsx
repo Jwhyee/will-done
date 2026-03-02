@@ -109,6 +109,7 @@ export const WorkspaceView = ({
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background relative">
       <WorkspaceHeader
         t={t}
+        user={user}
         greeting={greeting}
         currentTime={currentTime}
         logicalDate={logicalDate}
