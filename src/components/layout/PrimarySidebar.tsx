@@ -24,13 +24,7 @@ export const PrimarySidebar = ({
   return (
     <TooltipProvider delayDuration={0}>
       <aside className="w-14 border-r border-border bg-background flex flex-col items-center pt-8 pb-4 space-y-4 shrink-0 shadow-2xl z-20 select-none relative">
-        {/* Global Drag Handle Layer (Top 32px) */}
-        <div
-          data-tauri-drag-region
-          className="absolute top-0 left-0 right-0 h-8 z-[50] select-none cursor-grab active:cursor-grabbing"
-        />
-
-        <div className="flex-1 flex flex-col items-center space-y-4 w-full relative z-10">
+        <div className="flex-1 flex flex-col items-center space-y-4 w-full relative z-50">
           {workspaces.map((ws) => (
             <div key={ws.id} className="relative group">
               <Tooltip>

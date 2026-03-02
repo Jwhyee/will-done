@@ -66,12 +66,6 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
 
   return (
     <div className="flex-1 flex items-center justify-center p-8 relative h-screen">
-      {/* Global Drag Handle Layer (Top 32px) */}
-      <div
-        data-tauri-drag-region
-        className="absolute top-0 left-0 right-0 h-8 z-[50] select-none cursor-grab active:cursor-grabbing"
-      />
-
       <Dialog open={true}>
         <DialogContent className="sm:max-w-[425px] bg-surface-elevated border-border text-text-primary shadow-2xl [&>button]:hidden rounded-2xl p-8 border-t-border/50 antialiased">
           <DialogHeader className="space-y-3">

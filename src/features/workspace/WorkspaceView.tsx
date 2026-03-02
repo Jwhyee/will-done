@@ -74,12 +74,6 @@ export const WorkspaceView = ({
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background relative">
-      {/* Global Drag Handle Layer (Top 32px) */}
-      <div
-        data-tauri-drag-region
-        className="absolute top-0 left-0 right-0 h-8 z-[50] select-none cursor-grab active:cursor-grabbing"
-      />
-
       <WorkspaceHeader
         t={t}
         greeting={greeting}

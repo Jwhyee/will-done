@@ -89,12 +89,6 @@ export const WorkspaceSetupView = ({ t, isFirstWorkspace, onComplete, onCancel }
 
   return (
     <div className="flex-1 flex items-center justify-center p-8 relative h-screen">
-      {/* Global Drag Handle Layer (Top 32px) */}
-      <div
-        data-tauri-drag-region
-        className="absolute top-0 left-0 right-0 h-8 z-[50] select-none cursor-grab active:cursor-grabbing"
-      />
-
       <Dialog 
         open={true} 
         onOpenChange={(open) => {

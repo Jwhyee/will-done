@@ -35,7 +35,7 @@ export const WorkspaceHeader = ({
 }: WorkspaceHeaderProps) => {
   return (
     <header className="px-8 pt-8 pb-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border select-none">
-      <div className="flex items-center justify-between relative z-20">
+      <div className="flex items-center justify-between relative z-50">
         <div className="space-y-1 w-full max-w-2xl">
           <div className="flex items-center space-x-3 mb-1">
             <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted bg-surface/50 px-2 py-0.5 rounded border border-border">
