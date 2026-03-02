@@ -154,11 +154,13 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                   transition={{ duration: 0.3 }}
                   className="space-y-8 flex-1 flex flex-col justify-center"
                 >
-                  <div className="space-y-4">
-                    <span className="text-4xl">👋</span>
-                    <h1 className="text-3xl font-black tracking-tight text-text-primary whitespace-pre-line leading-tight">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-text-primary leading-tight">
                       {t.onboarding.step1_title}
                     </h1>
+                    <h3 className="text-xl font-medium text-text-secondary">
+                      {t.onboarding.step1_subtitle}
+                    </h3>
                   </div>
                   <div className="space-y-4">
                     <Input 
@@ -185,12 +187,14 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                   transition={{ duration: 0.3 }}
                   className="space-y-8 flex-1 flex flex-col justify-center"
                 >
-                  <div className="space-y-4">
-                    <span className="text-4xl">🌙</span>
-                    <h1 className="text-3xl font-black tracking-tight text-text-primary whitespace-pre-line leading-tight">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-text-primary leading-tight">
                       {t.onboarding.step2_title.replace("{nickname}", nickname)}
                     </h1>
-                    <p className="text-text-secondary text-sm font-medium leading-relaxed">
+                    <h3 className="text-xl font-medium text-text-secondary">
+                      {t.onboarding.step2_subtitle}
+                    </h3>
+                    <p className="text-text-muted text-xs font-medium leading-relaxed mt-2">
                       {t.onboarding.day_start_time_guide}
                     </p>
                   </div>
@@ -214,9 +218,8 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                   transition={{ duration: 0.3 }}
                   className="space-y-8 flex-1 flex flex-col justify-center"
                 >
-                  <div className="space-y-4 relative">
-                    <div className="flex items-start justify-between">
-                      <span className="text-4xl">✨</span>
+                  <div className="space-y-2 relative">
+                    <div className="absolute -top-12 right-0">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -230,13 +233,16 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                         </Tooltip>
                       </TooltipProvider>
                     </div>
-                    <h1 className="text-3xl font-black tracking-tight text-text-primary whitespace-pre-line leading-tight">
+                    <h1 className="text-3xl font-bold tracking-tight text-text-primary leading-tight">
                       {t.onboarding.step3_title}
                     </h1>
+                    <h3 className="text-xl font-medium text-text-secondary">
+                      {t.onboarding.step3_subtitle}
+                    </h3>
                     <button 
                       type="button"
                       onClick={openGoogleAIStudio}
-                      className="flex items-center gap-1.5 text-text-secondary hover:text-text-primary text-sm font-bold transition-colors group"
+                      className="flex items-center gap-1.5 text-text-muted hover:text-text-primary text-sm font-bold transition-colors group mt-2"
                     >
                       {t.onboarding.api_key_guide}
                       <ExternalLink size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -283,12 +289,14 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                   transition={{ duration: 0.3 }}
                   className="space-y-8 flex-1 flex flex-col justify-center"
                 >
-                  <div className="space-y-4">
-                    <span className="text-4xl">🔔</span>
-                    <h1 className="text-3xl font-black tracking-tight text-text-primary whitespace-pre-line leading-tight">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-text-primary leading-tight">
                       {t.onboarding.step4_title}
                     </h1>
-                    <p className="text-text-secondary text-sm font-medium leading-relaxed">
+                    <h3 className="text-xl font-medium text-text-secondary">
+                      {t.onboarding.step4_subtitle}
+                    </h3>
+                    <p className="text-text-muted text-xs font-medium leading-relaxed mt-2">
                       {t.onboarding.step4_description}
                     </p>
                   </div>
@@ -386,8 +394,8 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                 <div 
                   key={step}
                   className={cn(
-                    "h-1.5 rounded-full transition-all duration-300",
-                    step === currentStep ? "w-8 bg-text-primary" : "w-1.5 bg-border"
+                    "h-2 rounded-full transition-all duration-300",
+                    step === currentStep ? "w-8 bg-text-primary" : "w-2 bg-border"
                   )}
                 />
               ))}
