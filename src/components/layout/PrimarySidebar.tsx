@@ -62,7 +62,9 @@ export const PrimarySidebar = ({
             <TooltipTrigger asChild>
               <button 
                 onClick={onAddWorkspace}
-                className="w-10 h-10 rounded-xl bg-surface-elevated border border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:border-text-secondary transition-all duration-300"
+                className={`w-10 h-10 rounded-xl bg-surface-elevated border border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:border-text-secondary transition-all duration-300 ${
+                  workspaces.length === 0 ? "animate-pulse ring-2 ring-text-primary/20" : ""
+                }`}
               >
                 <Plus size={20} />
               </button>

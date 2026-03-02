@@ -48,6 +48,7 @@ export function useApp() {
   const [retrospectiveOpen, setRetrospectiveOpen] = useState(false);
   const [activeRetrospective, setActiveRetrospective] = useState<Retrospective | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isWorkspaceCreateModalOpen, setIsWorkspaceCreateModalOpen] = useState(false);
   const [todayCompletedDuration, setTodayCompletedDuration] = useState<number>(0);
   const lastNotifiedBlockId = useRef<number | null>(null);
   
@@ -125,12 +126,10 @@ export function useApp() {
       const wsList = await invoke<Workspace[]>("get_workspaces");
       setWorkspaces(wsList);
 
-      if (wsList.length === 0) {
-        setView("workspace_setup");
-      } else {
+      if (wsList.length > 0) {
         setActiveWorkspaceId(wsList[0].id);
-        setView("main");
       }
+      setView("main");
     } catch (error) {
       console.error("Init failed:", error);
     }
@@ -303,6 +302,8 @@ export function useApp() {
     activeRetrospective,
     setActiveRetrospective,
     activeId,
+    isWorkspaceCreateModalOpen,
+    setIsWorkspaceCreateModalOpen,
     todayCompletedDuration,
     t,
     lang,

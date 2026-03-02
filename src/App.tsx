@@ -37,7 +37,7 @@ import { Workspace, User } from "@/types";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PrimarySidebar } from "@/components/layout/PrimarySidebar";
 import { OnboardingView } from "@/features/onboarding/OnboardingView";
-import { WorkspaceSetupView } from "@/features/onboarding/WorkspaceSetupView";
+import { WorkspaceCreateModal } from "@/features/workspace/components/WorkspaceCreateModal";
 import { WorkspaceView } from "@/features/workspace/WorkspaceView";
 import { RetrospectiveView } from "@/features/retrospective/RetrospectiveView";
 import { GlobalSettingsModal } from "@/components/settings/GlobalSettingsModal";
@@ -70,6 +70,8 @@ function AppContent() {
     activeRetrospective,
     setActiveRetrospective,
     activeId,
+    isWorkspaceCreateModalOpen,
+    setIsWorkspaceCreateModalOpen,
     t,
     fetchMainData,
     handleDragStart,
@@ -100,21 +102,7 @@ function AppContent() {
   const renderView = () => {
     switch (view) {
       case "onboarding":
-        return <OnboardingView t={t} onComplete={(u) => { setUser(u); setView("workspace_setup"); }} />;
-      case "workspace_setup":
-        return (
-          <WorkspaceSetupView 
-            t={t} 
-            isFirstWorkspace={workspaces.length === 0} 
-            onComplete={async (id) => {
-              const wsList = await invoke<Workspace[]>("get_workspaces");
-              setWorkspaces(wsList);
-              setActiveWorkspaceId(id);
-              setView("main");
-            }} 
-            onCancel={() => setView("main")}
-          />
-        );
+        return <OnboardingView t={t} onComplete={(u) => { setUser(u); setView("main"); }} />;
       case "retrospective":
         return (activeWorkspaceId && user) ? (
           <RetrospectiveView 
@@ -137,7 +125,7 @@ function AppContent() {
                 workspaces={workspaces}
                 activeWorkspaceId={activeWorkspaceId}
                 onSelectWorkspace={(id) => { setActiveWorkspaceId(id); setView("main"); }}
-                onAddWorkspace={() => setView("workspace_setup")}
+                onAddWorkspace={() => setIsWorkspaceCreateModalOpen(true)}
                 onOpenSettings={() => setIsGlobalSettingsOpen(true)}
                 onOpenWorkspaceSettings={(id) => { 
                   setSettingsWorkspaceId(id); 
@@ -150,6 +138,7 @@ function AppContent() {
             <WorkspaceView
               t={t}
               user={user}
+              workspacesCount={workspaces.length}
               greeting={greeting}
               currentTime={currentTime}
               logicalDate={logicalDate}
@@ -182,6 +171,7 @@ function AppContent() {
                 }
               }}
               onOpenRetrospective={() => setView("retrospective")}
+              onCreateWorkspace={() => setIsWorkspaceCreateModalOpen(true)}
               transitionBlock={transitionBlock}
               setTransitionBlock={setTransitionBlock}
             />
@@ -267,7 +257,6 @@ function AppContent() {
           const wsList = await invoke<Workspace[]>("get_workspaces");
           setWorkspaces(wsList);
           if (wsList.length === 0) {
-            setView("workspace_setup");
             setActiveWorkspaceId(null);
           } else if (activeWorkspaceId === id) {
             setActiveWorkspaceId(wsList[0].id);
@@ -275,6 +264,20 @@ function AppContent() {
         }}
         workspaceCount={workspaces.length}
         t={t}
+      />
+
+      {/* Workspace Create Modal */}
+      <WorkspaceCreateModal
+        t={t}
+        isOpen={isWorkspaceCreateModalOpen}
+        onClose={() => setIsWorkspaceCreateModalOpen(false)}
+        onSuccess={async (id) => {
+          const wsList = await invoke<Workspace[]>("get_workspaces");
+          setWorkspaces(wsList);
+          setActiveWorkspaceId(id);
+          setIsWorkspaceCreateModalOpen(false);
+        }}
+        isFirst={workspaces.length === 0}
       />
 
       {/* Retrospective Content Modal */}
