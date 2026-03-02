@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Clock, Send, Zap, AlertCircle } from "lucide-react";
+import { Clock, Send, Zap, AlertCircle, Inbox, Sparkles } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -17,9 +17,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { TimeBlock, Task } from "@/types";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TimeBlock, Task, User } from "@/types";
 import { SortableItem } from "./components/SortableItem";
 import { DroppableArea } from "./components/DroppableArea";
+import { InboxItem } from "./components/InboxItem";
 import { TimePicker } from "./components/TimePicker";
 import { TransitionModal } from "./components/TransitionModal";
 import { useToast } from "@/providers/ToastProvider";
@@ -38,6 +46,8 @@ interface WorkspaceViewProps {
   onDeleteTask: (taskId: number) => Promise<void>;
   onHandleSplitTaskDeletion: (taskId: number, keepPast: boolean) => Promise<void>;
   onMoveAllToTimeline: () => Promise<void>;
+  onMoveToTimeline: (taskId: number) => Promise<void>;
+  onOpenRetrospective: () => void;
   transitionBlock: TimeBlock | null;
   setTransitionBlock: (block: TimeBlock | null) => void;
 }
@@ -56,6 +66,8 @@ export const WorkspaceView = ({
   onDeleteTask,
   onHandleSplitTaskDeletion,
   onMoveAllToTimeline,
+  onMoveToTimeline,
+  onOpenRetrospective,
   transitionBlock,
   setTransitionBlock,
 }: WorkspaceViewProps) => {
@@ -64,6 +76,7 @@ export const WorkspaceView = ({
   const [isSplitDelete, setIsSplitDelete] = useState(false);
   const [moveAllConfirm, setMoveAllConfirm] = useState(false);
   const [exceededConfirm, setExceededConfirm] = useState<{data: any} | null>(null);
+  const [isInboxOpen, setIsInboxOpen] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -205,6 +218,45 @@ export const WorkspaceView = ({
               </div>
             </div>
           </div>
+
+          <div className="flex items-center space-x-2 self-start pt-2">
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsInboxOpen(true)}
+                    className="h-10 w-10 rounded-xl hover:bg-surface-elevated text-text-muted hover:text-text-primary relative"
+                  >
+                    <Inbox size={20} />
+                    {inboxTasks.length > 0 && (
+                      <span className="absolute top-2 right-2 flex h-2 w-2 items-center justify-center rounded-full bg-accent" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
+                  {t.sidebar?.inbox || "인박스"}
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onOpenRetrospective}
+                    className="h-10 w-10 rounded-xl hover:bg-surface-elevated text-text-muted hover:text-text-primary"
+                  >
+                    <Sparkles size={20} className="text-warning" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
+                  {t.sidebar?.retrospective || "회고"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
         
         {/* Task Input Form */}
@@ -305,6 +357,58 @@ export const WorkspaceView = ({
           )}
         </div>
       </ScrollArea>
+
+      {/* Inbox Sheet */}
+      <Sheet open={isInboxOpen} onOpenChange={setIsInboxOpen}>
+        <SheetContent className="bg-surface border-l border-border p-0 w-[350px] sm:max-w-[350px]">
+          <div className="flex flex-col h-full">
+            <SheetHeader className="p-6 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-lg font-bold text-text-primary flex items-center space-x-2">
+                  <Inbox size={20} className="text-accent" />
+                  <span>{t.sidebar?.inbox || "인박스"}</span>
+                </SheetTitle>
+                {inboxTasks.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setMoveAllConfirm(true)}
+                    className="text-accent hover:text-accent/80 font-bold text-xs"
+                  >
+                    {t.main?.move_all?.btn || "전체 이동"}
+                  </Button>
+                )}
+              </div>
+            </SheetHeader>
+            
+            <ScrollArea className="flex-1 px-4 py-4">
+              <DroppableArea id="inbox" className="space-y-3 min-h-[100px]">
+                <SortableContext 
+                  items={inboxTasks.map(t => `inbox-${t.id}`)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {inboxTasks.length === 0 ? (
+                    <div className="p-8 border border-dashed border-border bg-background/20 rounded-2xl text-center mt-4">
+                      <p className="text-sm text-text-secondary font-bold leading-relaxed">
+                        {t.sidebar?.no_tasks || "인박스가 비어있습니다."}
+                      </p>
+                    </div>
+                  ) : (
+                    inboxTasks.map((task) => (
+                      <InboxItem 
+                        key={task.id} 
+                        task={task} 
+                        onMoveToTimeline={onMoveToTimeline}
+                        onDelete={onDeleteTask}
+                      />
+                    ))
+                  )}
+                </SortableContext>
+              </DroppableArea>
+            </ScrollArea>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Deletion Confirmation */}
       <Dialog open={!!deleteTaskId} onOpenChange={(open) => {
