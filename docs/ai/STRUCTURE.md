@@ -40,18 +40,21 @@
 
 ## 2. UI Layout Hierarchy
 
-애플리케이션은 `AppContent` 내의 `view` 상태에 따라 전체 화면을 전환합니다.
+애플리케이션은 `AppContent` 내의 `view` 상태에 따라 전체 화면을 전환하며, **프레임리스 오버레이(Overlay) 타이틀 바** 디자인을 적용하여 모던한 데스크톱 경험을 제공합니다.
 
+- **Window**: `titleBarStyle: Overlay` 적용. 다크 테마 강제 및 창 제어 버튼(신호등) 유지.
 - **Root**: `App` (`AppProvider` -> `DndContext`)
   - **Loading**: 초기 `get_user` 및 `get_workspaces` 호출 중 노출.
   - **Onboarding**: 유저 정보가 없을 때 강제 진입. 닉네임/언어 설정 모달.
   - **WorkspaceSetup**: 워크스페이스가 없을 때 진입. 워크스페이스 이름, 집중 시간, 역할 설정.
   - **Main View** (`MainLayout` 기반):
-    - `PrimarySidebar` (L1): 워크스페이스 아이콘 리스트 (56px/w-14), 추가 버튼, 그리고 최하단에 전역 설정(톱니바퀴) 버튼 배치. 각 워크스페이스 아이콘 호버 시 워크스페이스 설정 진입용 작은 톱니바퀴 아이콘 노출.
+    - `PrimarySidebar` (L1): 워크스페이스 아이콘 리스트 (56px/w-14), 추가 버튼, 그리고 최하단에 전역 설정(톱니바퀴) 버튼 배치. 
+      - **Overlay Design**: 상단에 macOS 신호등 공간 확보(`pt-10`) 및 드래그 영역(`data-tauri-drag-region`) 설정.
     - `WorkspaceView` (Content): `PrimarySidebar` 우측의 모든 공간을 차지하는 메인 작업 영역.
       - **Header Actions**: 우측 상단에 **인박스(📥)**와 **회고(✨)** 버튼 배치. 
-        - **인박스**: 클릭 시 우측에서 `Sheet`(shadcn/ui)가 슬라이드되어 나오며 인박스 태스크 목록 노출. 타임라인의 맥락을 유지하며 태스크 관리 가능.
+        - **인박스**: 클릭 시 우측에서 `Sheet`(shadcn/ui)가 슬라이드되어 나오며 인박스 태스크 목록 노출. **숫자 뱃지**를 통해 미처리 태스크 개수 실시간 표시.
         - **회고**: 클릭 시 회고 뷰(`RetrospectiveView`)로 전환.
+      - **Overlay Design**: 헤더 전체에 드래그 영역(`data-tauri-drag-region`) 적용 및 상단 여백(`pt-10`) 확보.
       - **Logical Date & Header**: 실시간 시계와 논리적 날짜 표시. 현재 시간이 설정 시간 이전이면 전날의 날짜를 노출하여 업무 연속성 보장.
       - **Daily Progress Bar**: 인사말 하단 배치(h-1.5), 논리적 날짜 기준 완료율 계산.
       - **Task Input Form**: 입력 영역에 subtle background 및 border 추가로 어포던스 강화.
