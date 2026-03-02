@@ -65,6 +65,7 @@ export const WorkspaceDialogs = ({
               </DialogHeader>
               <div className="mt-6 flex flex-col gap-3">
                 <Button
+                  autoFocus
                   onClick={async () => {
                     if (deleteTaskId) await onSplitDeleteConfirm(deleteTaskId, false);
                   }}
@@ -110,6 +111,7 @@ export const WorkspaceDialogs = ({
                   {t.main.delete_confirm.cancel}
                 </Button>
                 <Button
+                  autoFocus
                   onClick={async () => {
                     if (deleteTaskId) await onDeleteConfirm(deleteTaskId);
                   }}
@@ -144,6 +146,7 @@ export const WorkspaceDialogs = ({
               {t.main.move_all.cancel}
             </Button>
             <Button
+              autoFocus
               onClick={onMoveAllConfirm}
               className="flex-1 bg-accent text-text-primary hover:bg-accent/80 font-bold rounded-xl"
             >
@@ -170,6 +173,7 @@ export const WorkspaceDialogs = ({
           </DialogHeader>
           <div className="mt-6 flex flex-col gap-3">
             <Button
+              autoFocus
               onClick={() => exceededConfirm && onExceededContinue(exceededConfirm.data)}
               className="w-full bg-accent text-text-primary hover:bg-accent/80 font-bold h-12 rounded-xl transition-all active:scale-95"
             >
