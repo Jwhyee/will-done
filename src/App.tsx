@@ -39,8 +39,9 @@ import { PrimarySidebar } from "@/components/layout/PrimarySidebar";
 import { OnboardingView } from "@/features/onboarding/OnboardingView";
 import { WorkspaceSetupView } from "@/features/onboarding/WorkspaceSetupView";
 import { WorkspaceView } from "@/features/workspace/WorkspaceView";
-import { SettingsView } from "@/features/settings/SettingsView";
 import { RetrospectiveView } from "@/features/retrospective/RetrospectiveView";
+import { GlobalSettingsModal } from "@/components/settings/GlobalSettingsModal";
+import { WorkspaceSettingsModal } from "@/components/settings/WorkspaceSettingsModal";
 import { InboxItem } from "@/features/workspace/components/InboxItem";
 import { SortableItem } from "@/features/workspace/components/SortableItem";
 
@@ -77,7 +78,9 @@ function AppContent() {
     onTransition,
   } = useApp();
 
-  const [settingsTab, setSettingsTab] = useState<"profile" | "workspace">("profile");
+  const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
+  const [isWorkspaceSettingsOpen, setIsWorkspaceSettingsOpen] = useState(false);
+  const [settingsWorkspaceId, setSettingsWorkspaceId] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -125,25 +128,6 @@ function AppContent() {
             }}
           />
         ) : null;
-      case "settings":
-        return (activeWorkspaceId && user) ? (
-          <SettingsView 
-            user={user}
-            workspaceId={activeWorkspaceId} 
-            t={t} 
-            initialTab={settingsTab}
-            onClose={() => setView("main")} 
-            onUserUpdate={async (updatedUser?: User) => {
-              const u = updatedUser || await invoke<User>("get_user");
-              setUser(u);
-            }}
-            onWorkspaceUpdate={async () => {
-              fetchMainData();
-              const wsList = await invoke<Workspace[]>("get_workspaces");
-              setWorkspaces(wsList);
-            }}
-          />
-        ) : null;
       case "main":
       default:
         return (
@@ -154,11 +138,10 @@ function AppContent() {
                 activeWorkspaceId={activeWorkspaceId}
                 onSelectWorkspace={(id) => { setActiveWorkspaceId(id); setView("main"); }}
                 onAddWorkspace={() => setView("workspace_setup")}
-                onOpenSettings={() => { setSettingsTab("profile"); setView("settings"); }}
+                onOpenSettings={() => setIsGlobalSettingsOpen(true)}
                 onOpenWorkspaceSettings={(id) => { 
-                  setActiveWorkspaceId(id); 
-                  setSettingsTab("workspace"); 
-                  setView("settings"); 
+                  setSettingsWorkspaceId(id); 
+                  setIsWorkspaceSettingsOpen(true); 
                 }}
                 t={t}
               />
@@ -252,6 +235,36 @@ function AppContent() {
           )
         ) : null}
       </DragOverlay>
+
+      {/* Global Settings Modal */}
+      {user && (
+        <GlobalSettingsModal
+          user={user}
+          isOpen={isGlobalSettingsOpen}
+          onClose={() => setIsGlobalSettingsOpen(false)}
+          onUserUpdate={async (updatedUser?: User) => {
+            const u = updatedUser || await invoke<User>("get_user");
+            setUser(u);
+          }}
+          t={t}
+        />
+      )}
+
+      {/* Workspace Settings Modal */}
+      <WorkspaceSettingsModal
+        workspaceId={settingsWorkspaceId}
+        isOpen={isWorkspaceSettingsOpen}
+        onClose={() => {
+          setIsWorkspaceSettingsOpen(false);
+          setSettingsWorkspaceId(null);
+        }}
+        onWorkspaceUpdate={async () => {
+          fetchMainData();
+          const wsList = await invoke<Workspace[]>("get_workspaces");
+          setWorkspaces(wsList);
+        }}
+        t={t}
+      />
 
       {/* Retrospective Content Modal */}
       <Dialog open={retrospectiveOpen} onOpenChange={setRetrospectiveOpen}>

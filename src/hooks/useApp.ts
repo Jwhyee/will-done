@@ -17,7 +17,7 @@ import { useToast } from "@/providers/ToastProvider";
 import { translations, getLang, type Lang } from "@/lib/i18n";
 import { TimeBlock, Task, User, Workspace, Retrospective } from "@/types";
 
-export type ViewState = "loading" | "onboarding" | "workspace_setup" | "main" | "retrospective" | "settings";
+export type ViewState = "loading" | "onboarding" | "workspace_setup" | "main" | "retrospective";
 
 export function useApp() {
   const [view, setView] = useState<ViewState>("loading");
