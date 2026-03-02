@@ -19,6 +19,7 @@ interface SettingsViewProps {
   onClose: () => void;
   onUserUpdate: (updatedUser?: User) => Promise<void>;
   onWorkspaceUpdate: () => void;
+  initialTab?: "profile" | "workspace";
 }
 
 export const SettingsView = ({ 
@@ -28,8 +29,9 @@ export const SettingsView = ({
   onClose,
   onUserUpdate,
   onWorkspaceUpdate,
+  initialTab = "profile",
 }: SettingsViewProps) => {
-  const [tab, setTab] = useState<"profile" | "workspace">("profile");
+  const [tab, setTab] = useState<"profile" | "workspace">(initialTab);
   const { showToast } = useToast();
 
   // User Form
