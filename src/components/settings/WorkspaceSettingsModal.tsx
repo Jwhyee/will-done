@@ -51,7 +51,7 @@ export const WorkspaceSettingsModal = ({
       if (isOpen && workspaceId) {
         try {
           const ws = await invoke<any>("get_workspace", { id: workspaceId });
-          const ut = await invoke<any[]>("get_unpluggedTimes", { workspaceId });
+          const ut = await invoke<any[]>("get_unplugged_times", { workspaceId });
           reset({
             name: ws.name,
             coreTimeStart: ws.coreTimeStart || "",
