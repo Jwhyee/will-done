@@ -12,6 +12,15 @@ export default {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+      keyframes: {
+        breathing: {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.8', boxShadow: '0 0 0 0 rgba(255, 255, 255, 0)' },
+          '50%': { transform: 'scale(1.05)', opacity: '1', boxShadow: '0 0 20px 4px rgba(255, 255, 255, 0.2)' },
+        }
+      },
+      animation: {
+        breathing: 'breathing 3s ease-in-out infinite',
+      },
   		colors: {
   			background: 'var(--background)',
   			surface: 'var(--surface)',

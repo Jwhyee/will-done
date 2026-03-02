@@ -143,8 +143,8 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
           </div>
         </DialogHeader>
         
-        <form onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-8 py-4 scrollbar-hide">
+        <form onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="flex-1 flex flex-col">
+          <div className="flex-1 overflow-y-auto px-8 py-4 scrollbar-hide min-h-[360px]">
             <AnimatePresence mode="wait">
               {activeStep === "basic" ? (
                 <motion.div

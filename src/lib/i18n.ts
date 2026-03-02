@@ -37,7 +37,7 @@ export const translations = {
     },
     workspace_setup: {
       welcome: "환영합니다!",
-      empty_desc: "아직 워크스페이스가 없습니다.\n좌측 사이드바의 + 버튼을 눌러 첫 번째 워크스페이스를 생성하고 업무를 시작해보세요.",
+      empty_desc: "아직 워크스페이스가 없습니다.\n좌측 사이드바의 + 버튼 혹은 아래 워크스페이스 생성하기 버튼을 눌러 첫 번째 워크스페이스를 생성하고 업무를 시작해보세요.",
       create_btn: "워크스페이스 생성하기",
       title_first: "첫 워크스페이스 생성",
       title_new: "새 워크스페이스 추가",
@@ -241,7 +241,7 @@ export const translations = {
     },
     workspace_setup: {
       welcome: "Welcome!",
-      empty_desc: "You don't have any workspaces yet.\nClick the + button in the left sidebar to create your first workspace and start your tasks.",
+      empty_desc: "You don't have any workspaces yet.\nClick the + button in the left sidebar or the Create Workspace button below to start your tasks.",
       create_btn: "Create Workspace",
       title_first: "Create Your First Workspace",
       title_new: "Add New Workspace",
