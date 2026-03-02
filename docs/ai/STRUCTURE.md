@@ -102,8 +102,13 @@
 
 ### A. 최초 진입 및 온보딩 (Onboarding Flow)
 - **[Trigger]**: 앱 실행 시 `get_user` 결과가 `null`인 경우.
-- **[Frontend State]**: `view` 상태가 `"onboarding"`으로 변경. `OnboardingView` 내 `Dialog` 오픈.
-- **[Backend Command]**: 유저가 닉네임/언어 입력 후 제출 시 `save_user` 호출. SQLite `users` 테이블에 유저 정보 저장.
+- **[Frontend State]**: `view` 상태가 `"onboarding"`으로 변경.
+- **[Flow Details]**:
+    1. **닉네임 입력**: 사용자 이름 설정.
+    2. **하루 시작 시간**: 논리적 날짜 계산을 위한 기준 시간 설정.
+    3. **API Key 설정 & 검증**: Google AI Studio API Key 입력 및 실시간 검증(`fetch_available_models`). 유효하지 않은 키는 에러 메시지를 노출하며, 빈 값은 `건너뛰기` 가능.
+    4. **알림 설정**: 시스템 알림 권한 요청.
+- **[Backend Command]**: 유저가 최종 제출 시 `save_user` 호출. SQLite `users` 테이블에 유저 정보 저장.
 - **[UI Feedback]**: 성공 시 `onComplete` 콜백 실행 -> `view`가 `"workspace_setup"`으로 변경되며 워크스페이스 생성 화면으로 전환.
 
 ### B. 워크스페이스 생성 및 설정 (Workspace Setup Flow)
