@@ -9,6 +9,7 @@ pub struct User {
     pub lang: String,
     pub last_successful_model: Option<String>,
     pub is_notification_enabled: bool,
+    pub day_start_time: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]

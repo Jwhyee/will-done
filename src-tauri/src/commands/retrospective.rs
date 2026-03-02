@@ -28,8 +28,9 @@ pub async fn generate_retrospective(
     let start_dt = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d").map_err(|e| AppError::DateParse(e.to_string()))?;
     let end_dt = NaiveDate::parse_from_str(&end_date, "%Y-%m-%d").map_err(|e| AppError::DateParse(e.to_string()))?;
 
-    let start_of_range = start_dt.and_hms_opt(0, 0, 0).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
-    let end_of_range = end_dt.and_hms_opt(23, 59, 59).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let day_start_time = &user.day_start_time;
+    let start_of_range = NaiveDateTime::parse_from_str(&format!("{}T{}", start_date, day_start_time), "%Y-%m-%dT%H:%M").unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let end_of_range = (NaiveDateTime::parse_from_str(&format!("{}T{}", end_date, day_start_time), "%Y-%m-%dT%H:%M").unwrap() + chrono::Duration::days(1) - chrono::Duration::seconds(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
 
     let blocks = database::retrospective::get_completed_task_blocks(&state.pool, workspace_id, &start_of_range, &end_of_range).await?;
 

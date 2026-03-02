@@ -3,10 +3,17 @@ use chrono::{NaiveDateTime, Duration, NaiveTime, NaiveDate, Local};
 use crate::models::{Task, TimeBlock, UnpluggedTime, AddTaskInput, TaskTransitionInput};
 use crate::error::Result;
 
-pub async fn get_today_completed_duration(pool: &SqlitePool, workspace_id: i64) -> Result<i64> {
-    let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
-    let start_of_day = format!("{}T00:00:00", today);
-    let end_of_day = format!("{}T23:59:59", today);
+pub async fn get_today_completed_duration(pool: &SqlitePool, workspace_id: i64, day_start_time: &str) -> Result<i64> {
+    let now = Local::now();
+    let current_time = now.format("%H:%M").to_string();
+    let logical_date = if current_time < day_start_time.to_string() {
+        now.date_naive() - Duration::days(1)
+    } else {
+        now.date_naive()
+    };
+
+    let start_of_day = NaiveDateTime::parse_from_str(&format!("{}T{}", logical_date.format("%Y-%m-%d"), day_start_time), "%Y-%m-%dT%H:%M").unwrap();
+    let end_of_day = start_of_day + Duration::days(1) - Duration::seconds(1);
 
     let row: (Option<i64>,) = sqlx::query_as(
         "SELECT SUM((strftime('%s', end_time) - strftime('%s', start_time)) / 60) 
@@ -14,24 +21,24 @@ pub async fn get_today_completed_duration(pool: &SqlitePool, workspace_id: i64) 
          WHERE workspace_id = ?1 AND status IN ('DONE', 'PENDING') AND start_time >= ?2 AND start_time <= ?3"
     )
     .bind(workspace_id)
-    .bind(start_of_day)
-    .bind(end_of_day)
+    .bind(start_of_day.format("%Y-%m-%dT%H:%M:%S").to_string())
+    .bind(end_of_day.format("%Y-%m-%dT%H:%M:%S").to_string())
     .fetch_one(pool)
     .await?;
 
     Ok(row.0.unwrap_or(0))
 }
 
-pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: NaiveDate) -> Result<Vec<TimeBlock>> {
-    let start_of_day = target_date.and_hms_opt(0, 0, 0).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
-    let end_of_day = target_date.and_hms_opt(23, 59, 59).unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
+pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: NaiveDate, day_start_time: &str) -> Result<Vec<TimeBlock>> {
+    let start_of_day = NaiveDateTime::parse_from_str(&format!("{}T{}", target_date.format("%Y-%m-%d"), day_start_time), "%Y-%m-%dT%H:%M").unwrap();
+    let end_of_day = start_of_day + Duration::days(1) - Duration::seconds(1);
 
     let mut blocks = sqlx::query_as::<_, TimeBlock>(
         "SELECT * FROM time_blocks WHERE workspace_id = ?1 AND start_time >= ?2 AND start_time <= ?3 ORDER BY start_time ASC"
     )
     .bind(workspace_id)
-    .bind(start_of_day)
-    .bind(end_of_day)
+    .bind(start_of_day.format("%Y-%m-%dT%H:%M:%S").to_string())
+    .bind(end_of_day.format("%Y-%m-%dT%H:%M:%S").to_string())
     .fetch_all(pool)
     .await?;
 
@@ -41,13 +48,25 @@ pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: Nai
         .await?;
 
     for ut in unplugged {
+        let ut_start_time = NaiveTime::parse_from_str(&ut.start_time, "%H:%M").unwrap();
+        let ut_end_time = NaiveTime::parse_from_str(&ut.end_time, "%H:%M").unwrap();
+        
+        // Unplugged time could be on the target_date or the next day if it's before day_start_time
+        let mut ut_start_dt = target_date.and_time(ut_start_time);
+        let mut ut_end_dt = target_date.and_time(ut_end_time);
+
+        if ut_start_time < NaiveTime::parse_from_str(day_start_time, "%H:%M").unwrap() {
+            ut_start_dt += Duration::days(1);
+            ut_end_dt += Duration::days(1);
+        }
+
         blocks.push(TimeBlock {
             id: -1,
             task_id: None,
             workspace_id,
             title: ut.label,
-            start_time: target_date.and_time(NaiveTime::parse_from_str(&ut.start_time, "%H:%M").unwrap()).format("%Y-%m-%dT%H:%M:%S").to_string(),
-            end_time: target_date.and_time(NaiveTime::parse_from_str(&ut.end_time, "%H:%M").unwrap()).format("%Y-%m-%dT%H:%M:%S").to_string(),
+            start_time: ut_start_dt.format("%Y-%m-%dT%H:%M:%S").to_string(),
+            end_time: ut_end_dt.format("%Y-%m-%dT%H:%M:%S").to_string(),
             status: "UNPLUGGED".to_string(),
             review_memo: None,
             is_urgent: false,
@@ -57,6 +76,7 @@ pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: Nai
     blocks.sort_by(|a, b| a.start_time.cmp(&b.start_time));
     Ok(blocks)
 }
+
 
 pub async fn get_inbox(pool: &SqlitePool, workspace_id: i64) -> Result<Vec<Task>> {
     let list = sqlx::query_as::<_, Task>(
@@ -95,7 +115,7 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
         return Ok(());
     }
 
-    // 3. 자정 넘기는지 체크 (미리 계산)
+    // 3. 자정 넘기기 체크 제거
     let duration = (input.hours * 60 + input.minutes) as i64;
     
     let current_start = if input.is_urgent {
@@ -114,12 +134,12 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
         }
     };
 
-    let end_dt = current_start + Duration::minutes(duration);
-    if end_dt.date() > current_start.date() {
-        // 자정을 넘기면 스케줄링하지 않고 인박스에 둠
-        tx.commit().await?;
-        return Ok(());
-    }
+    // let end_dt = current_start + Duration::minutes(duration);
+    // if end_dt.date() > current_start.date() {
+    //     // 자정을 넘기면 스케줄링하지 않고 인박스에 둠
+    //     tx.commit().await?;
+    //     return Ok(());
+    // }
 
     // 4. 긴급 업무 여부에 따른 처리
     if input.is_urgent {
@@ -238,10 +258,10 @@ pub async fn move_all_to_timeline(pool: &SqlitePool, workspace_id: i64) -> Resul
 
         let duration = if task.estimated_minutes > 0 { task.estimated_minutes as i64 } else { 30 };
         
-        let end_dt = current_start + Duration::minutes(duration);
-        if end_dt.date() > current_start.date() {
-            break;
-        }
+        // let end_dt = current_start + Duration::minutes(duration);
+        // if end_dt.date() > current_start.date() {
+        //     break;
+        // }
 
         schedule_task_blocks(&mut tx, workspace_id, task.id, &task.title, current_start, duration, false).await?;
     }

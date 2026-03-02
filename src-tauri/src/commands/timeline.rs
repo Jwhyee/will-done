@@ -6,17 +6,27 @@ use crate::error::{Result, AppError};
 
 #[tauri::command]
 pub async fn get_today_completed_duration(state: State<'_, DbState>, workspace_id: i64) -> Result<i64> {
-    database::timeline::get_today_completed_duration(&state.pool, workspace_id).await
+    let user = database::user::get_user(&state.pool).await?.ok_or(AppError::NotFound("User not found".to_string()))?;
+    database::timeline::get_today_completed_duration(&state.pool, workspace_id, &user.day_start_time).await
 }
 
 #[tauri::command]
 pub async fn get_timeline(state: State<'_, DbState>, workspace_id: i64, date: Option<String>) -> Result<Vec<TimeBlock>> {
+    let user = database::user::get_user(&state.pool).await?.ok_or(AppError::NotFound("User not found".to_string()))?;
+    let day_start_time = user.day_start_time;
+    
     let target_date = if let Some(d) = date {
         NaiveDate::parse_from_str(&d, "%Y-%m-%d").map_err(|e| AppError::DateParse(e.to_string()))?
     } else {
-        Local::now().date_naive()
+        let now = Local::now();
+        let current_time = now.format("%H:%M").to_string();
+        if current_time < day_start_time {
+            now.date_naive() - chrono::Duration::days(1)
+        } else {
+            now.date_naive()
+        }
     };
-    database::timeline::get_timeline(&state.pool, workspace_id, target_date).await
+    database::timeline::get_timeline(&state.pool, workspace_id, target_date, &day_start_time).await
 }
 
 #[tauri::command]
