@@ -103,19 +103,22 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
     }
   };
 
-  const handleStep3Click = () => {
+  const handleStep3Click = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (!apiKey || verificationStatus === 'success') {
-      nextStep();
+      nextStep(e);
     } else {
       handleVerifyApiKey();
     }
   };
 
-  const nextStep = () => {
+  const nextStep = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (currentStep < 4) setCurrentStep(prev => prev + 1);
   };
 
-  const prevStep = () => {
+  const prevStep = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (currentStep > 1) setCurrentStep(prev => prev - 1);
   };
 
