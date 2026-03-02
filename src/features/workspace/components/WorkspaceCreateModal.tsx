@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -76,6 +76,20 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
     name: "unpluggedTimes",
   });
 
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      workspaceForm.reset({
+        name: "",
+        coreTimeStart: "",
+        coreTimeEnd: "",
+        roleIntro: "",
+        unpluggedTimes: []
+      });
+      setActiveStep("basic");
+    }
+  }, [isOpen, workspaceForm]);
+
   const onWorkspaceSubmit = async (data: WorkspaceFormValues) => {
     try {
       const sanitizedData = {
@@ -96,7 +110,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[560px] h-fit max-h-[90vh] bg-surface-elevated border-border text-text-primary shadow-2xl flex flex-col rounded-3xl p-0 border-t-border/50 overflow-hidden antialiased">
+      <DialogContent className="sm:max-w-[560px] h-[640px] bg-surface-elevated border-border text-text-primary shadow-2xl flex flex-col rounded-3xl p-0 border-t-border/50 overflow-hidden antialiased">
         <DialogHeader className="p-8 pb-4 shrink-0 space-y-4 text-left">
           <div className="space-y-2">
             <DialogTitle className="text-3xl font-black tracking-tighter text-text-primary leading-none">
@@ -143,8 +157,8 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
           </div>
         </DialogHeader>
         
-        <form onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto px-8 py-4 scrollbar-hide min-h-[360px]">
+        <form onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-8 py-4 scrollbar-hide">
             <AnimatePresence mode="wait">
               {activeStep === "basic" ? (
                 <motion.div
@@ -182,7 +196,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                     <textarea 
                       {...workspaceForm.register("roleIntro")}
                       placeholder={t.workspace_setup.role_placeholder}
-                      className="w-full min-h-[120px] bg-background border-border rounded-2xl p-5 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-text-muted font-medium leading-relaxed shadow-inner resize-none"
+                      className="w-full min-h-[160px] bg-background border-border rounded-2xl p-5 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-text-muted font-medium leading-relaxed shadow-inner resize-none"
                     />
                   </div>
                 </motion.div>
@@ -301,7 +315,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
             </AnimatePresence>
           </div>
 
-          <div className="p-8 border-t border-border bg-surface-elevated shrink-0">
+          <div className="p-8 border-t border-border bg-surface-elevated shrink-0 mt-auto">
             {activeStep === "basic" ? (
               <Button 
                 type="button"
