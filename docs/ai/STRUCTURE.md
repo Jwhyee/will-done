@@ -107,6 +107,10 @@
 - **Cross-Platform Release**: GitHub Actions를 사용하여 태그(`v*`) 푸시 시 자동으로 아티팩트(DMG, EXE, AppImage 등) 생성 및 Draft 릴리스 생성.
 - **Auto-Updater**: Tauri Updater 플러그인을 사용하여 최신 버전 확인 및 백그라운드 다운로드/설치 지원. `TAURI_SIGNING_PUBLIC_KEY`를 통한 바이너리 서명 검증 적용.
 
+### 🛠️ Developer Utilities (Dev Mode Only)
+- **CLI Database Control**: 개발 환경(`debug_assertions`)에서 터미널 인자를 통해 데이터베이스를 제어할 수 있습니다.
+  - `npm run tauri dev -- -- clear`: 모든 테이블(`users`, `workspaces`, `tasks`, `time_blocks`, `retrospectives`, `unplugged_times`)의 데이터를 삭제합니다.
+  - `npm run tauri dev -- -- init`: 데이터베이스를 초기화(`clear`)한 후, 테스트용 유저("TEST"), 워크스페이스("HOME"), 그리고 어제와 오늘의 완료된 업무 데이터(긴급 업무로 인한 분할 시나리오 포함)를 시딩합니다.
 ---
 
 ## 4. User Action Flow (Detailed)
