@@ -85,19 +85,29 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
   };
 
   const handleVerifyApiKey = async () => {
-    if (!apiKey) {
+    const currentApiKey = watch("geminiApiKey");
+    if (!currentApiKey) {
       nextStep();
       return;
     }
     
     setVerificationStatus('loading');
     try {
-      await invoke("fetch_available_models", { apiKey });
+      // Use api_key to match Rust command argument name
+      await invoke("fetch_available_models", { api_key: currentApiKey });
       setVerificationStatus('success');
       showToast(t.onboarding.api_key_valid, "success");
     } catch (error) {
       console.error(error);
       setVerificationStatus('error');
+    }
+  };
+
+  const handleStep3Click = () => {
+    if (!apiKey || verificationStatus === 'success') {
+      nextStep();
+    } else {
+      handleVerifyApiKey();
     }
   };
 
@@ -117,11 +127,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
       } else if (currentStep === 2) {
         nextStep();
       } else if (currentStep === 3) {
-        if (!apiKey || verificationStatus === 'success') {
-          nextStep();
-        } else if (verificationStatus !== 'loading') {
-          handleVerifyApiKey();
-        }
+        handleStep3Click();
       } else if (currentStep === 4) {
         handleSubmit(onUserSubmit)();
       }
@@ -252,14 +258,12 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                     <div className="relative">
                       <Input 
                         type="password"
-                        {...userForm.register("geminiApiKey")} 
-                        autoFocus
-                        onChange={(e) => {
-                          userForm.register("geminiApiKey").onChange(e);
-                          if (verificationStatus === 'success' || verificationStatus === 'error') {
-                            setVerificationStatus('idle');
+                        {...userForm.register("geminiApiKey", {
+                          onChange: () => {
+                            if (verificationStatus !== 'idle') setVerificationStatus('idle');
                           }
-                        }}
+                        })} 
+                        autoFocus
                         placeholder={t.onboarding.api_key_placeholder} 
                         className={cn(
                           "bg-background border-border text-text-primary h-16 rounded-2xl px-6 font-mono focus:ring-2 focus:ring-text-primary/10 transition-all",
@@ -335,7 +339,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                 <Button 
                   type="button"
                   disabled={verificationStatus === 'loading'}
-                  onClick={verificationStatus === 'success' || !apiKey ? nextStep : handleVerifyApiKey}
+                  onClick={handleStep3Click}
                   className={cn(
                     "flex-1 h-16 rounded-2xl font-black text-xl transition-all shadow-xl shadow-black/10 active:scale-[0.98] group",
                     verificationStatus === 'success' || !apiKey 
