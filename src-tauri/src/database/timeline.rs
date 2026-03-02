@@ -194,10 +194,33 @@ pub async fn move_to_inbox(pool: &SqlitePool, block_id: i64) -> Result<()> {
         .await?;
 
     if let Some(task_id) = block.task_id {
-        sqlx::query("DELETE FROM time_blocks WHERE task_id = ?1")
+        // 1. 해당 태스크의 모든 블록 가져오기 (뒤에서부터 처리하기 위해 DESC 정렬)
+        let blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE task_id = ?1 ORDER BY start_time DESC")
             .bind(task_id)
-            .execute(&mut *tx)
+            .fetch_all(&mut *tx)
             .await?;
+
+        if !blocks.is_empty() {
+            let workspace_id = blocks[0].workspace_id;
+
+            // 2. 각 블록이 차지하던 시간만큼 이후의 WILL 블록들을 앞으로 당김
+            for b in &blocks {
+                let start = NaiveDateTime::parse_from_str(&b.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+                let end = NaiveDateTime::parse_from_str(&b.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+                let duration = (end - start).num_minutes();
+
+                // 해당 블록 이후의 WILL 블록들을 duration만큼 앞으로 당김 (-duration)
+                // 자기 자신의 블록들도 (아직 삭제 전이라) 같이 당겨질 수 있으므로 주의가 필요하지만,
+                // task_id가 같은 블록들은 어차피 삭제할 것이므로 상관없음.
+                shift_future_blocks(&mut tx, workspace_id, end, -duration).await?;
+            }
+
+            // 3. 블록 삭제
+            sqlx::query("DELETE FROM time_blocks WHERE task_id = ?1")
+                .bind(task_id)
+                .execute(&mut *tx)
+                .await?;
+        }
     }
 
     tx.commit().await?;
@@ -727,5 +750,67 @@ mod tests {
         // - 새로운 태스크들이 실제로 생성되었는지 확인
         let task_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM tasks").fetch_one(&pool).await.unwrap();
         assert_eq!(task_count.0, 2);
+    }
+
+    #[tokio::test]
+    async fn test_move_to_inbox_pull_up() {
+        let pool = setup_db().await;
+        
+        // 1. 워크스페이스 생성
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // 2. 세 개의 태스크 생성 (T1, T2, T3)
+        // T1: 09:00 - 10:00
+        // T2: 10:00 - 11:00
+        // T3: 11:00 - 12:00
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (3, 1, 'T3')").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'T1', '2026-03-01T09:00:00', '2026-03-01T10:00:00', 'DONE')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'T2', '2026-03-01T10:00:00', '2026-03-01T11:00:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 3, 1, 'T3', '2026-03-01T11:00:00', '2026-03-01T12:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // 3. T2를 인박스로 이동 (ID 11)
+        move_to_inbox(&pool, 11).await.unwrap();
+
+        // 4. T3가 앞으로 당겨졌는지 확인
+        // 기대: T3 (ID 12)의 start_time이 10:00:00, end_time이 11:00:00이 되어야 함
+        let t3_block: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 12").fetch_one(&pool).await.unwrap();
+        
+        assert_eq!(t3_block.start_time, "2026-03-01T10:00:00");
+        assert_eq!(t3_block.end_time, "2026-03-01T11:00:00");
+    }
+
+    #[tokio::test]
+    async fn test_move_to_inbox_split_task_pull_up() {
+        let pool = setup_db().await;
+        
+        // 1. 워크스페이스 생성
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // 2. 태스크 생성
+        // T1: 09:00 - 09:30 (WILL), 10:00 - 10:30 (WILL) -> Split task
+        // T2: 10:30 - 11:30 (WILL)
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'T1', '2026-03-01T09:00:00', '2026-03-01T09:30:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 1, 1, 'T1', '2026-03-01T10:00:00', '2026-03-01T10:30:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 2, 1, 'T2', '2026-03-01T10:30:00', '2026-03-01T11:30:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // 3. T1을 인박스로 이동 (ID 10 또는 11 중 아무 블록이나 선택)
+        move_to_inbox(&pool, 10).await.unwrap();
+
+        // 4. T2가 앞으로 당겨졌는지 확인
+        // T1이 차지하던 시간: 30분 + 30분 = 60분
+        // T2는 원래 10:30 - 11:30
+        // T1 첫 블록 (09:00-09:30) 삭제 시 T2는 10:00-11:00이 됨
+        // T1 두 번째 블록 (10:00-10:30) 삭제 시 T2는 09:30-10:30이 됨
+        
+        let t2_block: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 12").fetch_one(&pool).await.unwrap();
+        
+        assert_eq!(t2_block.start_time, "2026-03-01T09:30:00");
+        assert_eq!(t2_block.end_time, "2026-03-01T10:30:00");
     }
 }
