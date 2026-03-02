@@ -15,6 +15,7 @@ interface SortableItemProps {
   onDelete: (id: number) => void;
   hoverTaskId: number | null;
   setHoverTaskId: (id: number | null) => void;
+  isPastView: boolean;
 }
 
 const formatDisplayTime = (isoString: string) => {
@@ -31,7 +32,8 @@ export const SortableItem = ({
   onMoveToInbox, 
   onDelete, 
   hoverTaskId, 
-  setHoverTaskId 
+  setHoverTaskId,
+  isPastView
 }: SortableItemProps) => {
   const taskBlocks = block.taskId ? timeline.filter((b) => b.taskId === block.taskId) : [];
   const blockIndexInTask = taskBlocks.findIndex((b) => b.id === block.id);
@@ -130,7 +132,7 @@ export const SortableItem = ({
           <div className="flex items-center space-x-3">
             {!(isSplit && !isLastOfTask) && (
               <TooltipProvider>
-                {!isNow && !isDone && (
+                {!isNow && !isDone && !isPastView && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button 

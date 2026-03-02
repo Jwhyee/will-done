@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { Rocket, Plus } from "lucide-react";
 import { TimeBlock, Task, User } from "@/types";
 import { TransitionModal } from "./components/TransitionModal";
@@ -15,8 +16,11 @@ interface WorkspaceViewProps {
   greeting: string;
   currentTime: Date;
   logicalDate: Date;
+  selectedDate: Date | null;
+  onDateChange: (date: Date | null) => void;
   timeline: TimeBlock[];
   inboxTasks: Task[];
+  activeWorkspaceId: number | null;
   onTaskSubmit: (data: any) => Promise<void>;
   onTransition: (block: TimeBlock, action: string, extraMinutes?: number, reviewMemo?: string) => Promise<void>;
   onMoveToInbox: (blockId: number) => Promise<void>;
@@ -37,8 +41,11 @@ export const WorkspaceView = ({
   greeting,
   currentTime,
   logicalDate,
+  selectedDate,
+  onDateChange,
   timeline,
   inboxTasks,
+  activeWorkspaceId,
   onTaskSubmit,
   onTransition,
   onMoveToInbox,
@@ -77,6 +84,7 @@ export const WorkspaceView = ({
   });
 
   const dailyProgress = calculateProgress();
+  const isPastView = !!selectedDate && format(selectedDate, "yyyy-MM-dd") !== format(logicalDate, "yyyy-MM-dd");
 
   if (workspacesCount === 0) {
     return (
@@ -113,6 +121,9 @@ export const WorkspaceView = ({
         greeting={greeting}
         currentTime={currentTime}
         logicalDate={logicalDate}
+        selectedDate={selectedDate}
+        onDateChange={onDateChange}
+        activeWorkspaceId={activeWorkspaceId}
         dailyProgress={dailyProgress}
         inboxTasksCount={inboxTasks.length}
         taskForm={taskForm}
@@ -120,6 +131,7 @@ export const WorkspaceView = ({
         onTaskError={handleTaskError}
         onOpenInbox={() => setIsInboxOpen(true)}
         onOpenRetrospective={onOpenRetrospective}
+        isPastView={isPastView}
       />
 
       <WorkspaceTimeline
@@ -136,6 +148,7 @@ export const WorkspaceView = ({
         onMoveAllConfirm={() => setMoveAllConfirm(true)}
         hoverTaskId={hoverTaskId}
         setHoverTaskId={setHoverTaskId}
+        isPastView={isPastView}
       />
 
       <WorkspaceInbox

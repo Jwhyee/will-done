@@ -17,6 +17,7 @@ interface WorkspaceTimelineProps {
   onMoveAllConfirm: () => void;
   hoverTaskId: number | null;
   setHoverTaskId: (id: number | null) => void;
+  isPastView: boolean;
 }
 
 export const WorkspaceTimeline = ({
@@ -30,6 +31,7 @@ export const WorkspaceTimeline = ({
   onMoveAllConfirm,
   hoverTaskId,
   setHoverTaskId,
+  isPastView,
 }: WorkspaceTimelineProps) => {
   return (
     <ScrollArea className="flex-1 px-8">
@@ -77,6 +79,7 @@ export const WorkspaceTimeline = ({
                   }}
                   hoverTaskId={hoverTaskId}
                   setHoverTaskId={setHoverTaskId}
+                  isPastView={isPastView}
                 />
               ))}
             </SortableContext>

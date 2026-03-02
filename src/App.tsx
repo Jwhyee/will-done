@@ -63,6 +63,8 @@ function AppContent() {
     inboxTasks,
     currentTime,
     logicalDate,
+    selectedDate,
+    setSelectedDate,
     transitionBlock,
     setTransitionBlock,
     retrospectiveOpen,
@@ -90,6 +92,8 @@ function AppContent() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const isPastView = !!selectedDate && selectedDate.toDateString() !== logicalDate.toDateString();
 
   if (view === "loading") {
     return (
@@ -142,8 +146,11 @@ function AppContent() {
               greeting={greeting}
               currentTime={currentTime}
               logicalDate={logicalDate}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
               timeline={timeline}
               inboxTasks={inboxTasks}
+              activeWorkspaceId={activeWorkspaceId}
               onTaskSubmit={onTaskSubmit}
               onTransition={onTransition}
               onMoveToInbox={async (blockId) => {
@@ -220,6 +227,7 @@ function AppContent() {
                 onDelete={() => {}}
                 hoverTaskId={null}
                 setHoverTaskId={() => {}}
+                isPastView={isPastView}
               />
             </div>
           )
