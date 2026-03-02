@@ -1,9 +1,13 @@
-import { format } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, isSameDay } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Clock, Inbox, Sparkles } from "lucide-react";
+import { Clock, Inbox, Sparkles, Calendar as CalendarIcon, RotateCcw } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
+import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { TaskForm } from "./TaskForm";
 import { User } from "@/types";
 
@@ -13,6 +17,9 @@ interface WorkspaceHeaderProps {
   greeting: string;
   currentTime: Date;
   logicalDate: Date;
+  selectedDate: Date | null;
+  onDateChange: (date: Date | null) => void;
+  activeWorkspaceId: number | null;
   dailyProgress: number;
   inboxTasksCount: number;
   taskForm: UseFormReturn<any>;
@@ -20,6 +27,7 @@ interface WorkspaceHeaderProps {
   onTaskError: (errors: any) => void;
   onOpenInbox: () => void;
   onOpenRetrospective: () => void;
+  isPastView: boolean;
 }
 
 export const WorkspaceHeader = ({
@@ -28,6 +36,9 @@ export const WorkspaceHeader = ({
   greeting,
   currentTime,
   logicalDate,
+  selectedDate,
+  onDateChange,
+  activeWorkspaceId,
   dailyProgress,
   inboxTasksCount,
   taskForm,
@@ -35,17 +46,79 @@ export const WorkspaceHeader = ({
   onTaskError,
   onOpenInbox,
   onOpenRetrospective,
+  isPastView,
 }: WorkspaceHeaderProps) => {
+  const [activeDates, setActiveDates] = useState<string[]>([]);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const isRetroEnabled = !!user?.geminiApiKey;
+
+  const viewDate = selectedDate || logicalDate;
+
+  useEffect(() => {
+    if (activeWorkspaceId) {
+      invoke<string[]>("get_active_dates", { workspaceId: activeWorkspaceId })
+        .then(setActiveDates)
+        .catch(console.error);
+    }
+  }, [activeWorkspaceId]);
+
+  const disabledDays = (date: Date) => {
+    // Disable future dates beyond today
+    if (date > logicalDate && !isSameDay(date, logicalDate)) return true;
+    
+    // If not today, only allow dates in activeDates
+    if (isSameDay(date, logicalDate)) return false;
+    
+    const dateStr = format(date, "yyyy-MM-dd");
+    return !activeDates.includes(dateStr);
+  };
 
   return (
     <header className="px-8 pt-8 pb-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border select-none">
       <div className="flex items-center justify-between relative z-50">
         <div className="space-y-1 w-full max-w-2xl">
           <div className="flex items-center space-x-3 mb-1">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted bg-surface/50 px-2 py-0.5 rounded border border-border">
-              {format(logicalDate, "yyyy년 M월 d일 (EEE)", { locale: ko })}
-            </div>
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-surface-elevated cursor-pointer transition-all active:scale-95 group border border-transparent hover:border-border/50">
+                  <div className={`text-[11px] font-bold uppercase tracking-wider transition-colors ${isPastView ? 'text-accent' : 'text-text-primary'}`}>
+                    {format(viewDate, "yyyy년 M월 d일 (EEE)", { locale: ko })}
+                  </div>
+                  <CalendarIcon size={12} className={`transition-colors ${isPastView ? 'text-accent' : 'text-text-muted group-hover:text-text-primary'}`} />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-surface-elevated border-border shadow-2xl rounded-2xl overflow-hidden" align="start">
+                <Calendar
+                  mode="single"
+                  selected={viewDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      onDateChange(isSameDay(date, logicalDate) ? null : date);
+                      setIsCalendarOpen(false);
+                    }
+                  }}
+                  disabled={disabledDays}
+                  initialFocus
+                  locale={ko}
+                  className="p-3"
+                />
+                <div className="p-2 border-t border-border bg-surface/50">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2 text-xs font-bold text-text-secondary hover:text-text-primary hover:bg-surface-elevated rounded-lg h-9"
+                    onClick={() => {
+                      onDateChange(null);
+                      setIsCalendarOpen(false);
+                    }}
+                  >
+                    <RotateCcw size={14} />
+                    {t.main?.go_to_today || "오늘로 이동"}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <div className="flex items-center space-x-1.5 text-sm font-bold font-mono tracking-tight text-text-secondary">
               <Clock size={14} className="text-accent" />
               <span>{format(currentTime, "HH:mm:ss")}</span>
@@ -117,7 +190,9 @@ export const WorkspaceHeader = ({
         </div>
       </div>
 
-      <TaskForm t={t} taskForm={taskForm} onSubmit={onTaskSubmit} onError={onTaskError} />
+      {!isPastView && (
+        <TaskForm t={t} taskForm={taskForm} onSubmit={onTaskSubmit} onError={onTaskError} />
+      )}
     </header>
   );
 };

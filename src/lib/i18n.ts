@@ -146,6 +146,7 @@ export const translations = {
         btn: "모두 이동",
         cancel: "취소",
       },
+      go_to_today: "오늘로 이동",
       tooltip: {
         edit: "수정",
         delete: "삭제",
@@ -363,6 +364,7 @@ export const translations = {
         btn: "Move All",
         cancel: "Cancel",
       },
+      go_to_today: "Go to Today",
       tooltip: {
         edit: "Edit",
         delete: "Delete",
