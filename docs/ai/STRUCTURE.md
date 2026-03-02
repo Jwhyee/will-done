@@ -13,9 +13,9 @@
   - `layout/`: `MainLayout`, `PrimarySidebar` (워크스페이스 및 설정).
   - `ui/`: shadcn/ui 기반 원자적 컴포넌트 (버튼, 다이얼로그, 툴팁, 시트 등).
 - `features/`: 도메인별 핵심 비즈니스 뷰 및 컴포넌트.
-  - `onboarding/`: 사용자 초기 설정 (`OnboardingView`) 및 워크스페이스 생성 뷰 (`WorkspaceSetupView`).
+  - `onboarding/`: 사용자 초기 설정 (`OnboardingView`).
   - `workspace/`: 메인 타임라인 (`WorkspaceView`).
-    - `components/`: `TimePicker`, `TransitionModal`, `DroppableArea`, `InboxItem`, `SortableItem`, `TaskForm`, `WorkspaceDialogs`, `WorkspaceHeader`, `WorkspaceInbox`, `WorkspaceTimeline`.
+    - `components/`: `WorkspaceCreateModal`, `TimePicker`, `TransitionModal`, `DroppableArea`, `InboxItem`, `SortableItem`, `TaskForm`, `WorkspaceDialogs`, `WorkspaceHeader`, `WorkspaceInbox`, `WorkspaceTimeline`.
     - `hooks/`: `useWorkspace.ts`.
   - `retrospective/`: 과거 수행 내역 조회 및 AI 회고 생성 뷰 (`RetrospectiveView`).
     - `components/`: `DateSelector`, `Stepper`.
@@ -46,12 +46,13 @@
 - **Window**: `titleBarStyle: Overlay` 적용. 다크 테마 강제 및 창 제어 버튼(신호등) 유지.
 - **Root**: `App` (`AppProvider` -> `DndContext`)
   - **Loading**: 초기 `get_user` 및 `get_workspaces` 호출 중 노출. 상단 전용 드래그 레이어(`h-8`) 적용.
-  - **Onboarding**: 유저 정보가 없을 때 강제 진입. **[1. 닉네임 / 2. 하루 시작 시간 / 3. API Key / 4. 알림 설정]**의 4단계 대화형 멀티 스텝 구조를 적용. `h-fit` 속성을 통해 콘텐츠의 양에 따라 유동적으로 조절되는 카드 컨테이너를 사용하며, 타이틀(h1)과 서브타이틀(h3)의 위계를 분리하여 시각적 명확성을 높임. 하단에는 화이트 캡슐 및 징크 도트 형태의 커스텀 인디케이터를 통해 진행 상태를 직관적으로 제공함. 배경에 드래그 레이어(`h-8`) 적용.
-  - **WorkspaceSetup**: 워크스페이스가 없을 때 진입. **[1. 기본 정보 / 2. 시간 및 역할]**의 2단계 스텝 구조와 하단 고정 생성 버튼을 적용. 배경에 드래그 레이어(`h-8`) 적용.
+  - **Onboarding**: 유저 정보가 없을 때 강제 진입. **[1. 닉네임 / 2. 하루 시작 시간 / 3. API Key / 4. 알림 설정]**의 4단계 대화형 멀티 스텝 구조를 적용. `h-fit` 속성을 통해 콘텐츠의 양에 따라 유동적으로 조절되는 카드 컨테이너를 사용하며, 타이틀(h1)과 서브타이틀(h3)의 위계를 분리하여 시각적 명확성을 높임. 하단에는 화이트 캡슐 및 징크 도트 형태의 커스텀 인디케이터를 통해 진행 상태를 직관적으로 제공함. 배경에 드래그 레이어(`h-8`) 적용. 완료 시 즉시 `Main View`로 진입함.
   - **Main View** (`MainLayout` 기반):
     - `PrimarySidebar` (L1): 워크스페이스 아이콘 리스트 (56px/w-14), 추가 버튼, 그리고 최하단에 전역 설정(톱니바퀴) 버튼 배치. 
       - **Overlay Design**: 상단에 macOS 신호등 공간 충분히 확보(`pt-8`) 및 전용 드래그 레이어(`h-8`) 설정.
+      - **Empty State Hint**: 워크스페이스가 하나도 없을 경우, 추가(`+`) 버튼에 `animate-pulse` 효과를 주어 사용자의 액션을 유도함.
     - `WorkspaceView` (Content): `PrimarySidebar` 우측의 모든 공간을 차지하는 메인 작업 영역.
+      - **Empty State**: 활성화된 워크스페이스가 없을 경우 중앙에 환영 메시지와 로켓 아이콘, 그리고 `워크스페이스 생성하기` 버튼을 노출하여 초기 진입 장벽을 낮춤.
       - **Header Actions**: 우측 상단에 **인박스(📥)**와 **회고(✨)** 버튼 배치. 
         - **인박스**: 클릭 시 우측에서 `Sheet`(shadcn/ui)가 슬라이드되어 나오며 인박스 태스크 목록 노출. **숫자 뱃지**를 통해 미처리 태스크 개수 실시간 표시.
         - **회고**: 클릭 시 회고 뷰(`RetrospectiveView`)로 전환.
@@ -64,6 +65,7 @@
         - **종료 임박 강조**: 마감 시간이 지난 태스크는 `animate-breathing` 효과 적용.
         - **스타일 통일**: 분절된 블록의 테두리를 모두 실선(Solid)으로 통일.
       - `Modals`: 
+        - **WorkspaceCreateModal**: **[1. 기본 정보 / 2. 시간 및 역할]**의 2단계 스텝 구조를 가진 워크스페이스 생성 전용 모달. `h-fit` 컨테이너를 사용하여 콤팩트한 UI 제공.
         - **TransitionModal**: '완료 처리'와 '연장 처리'를 분리하는 **탭(Tab) 기반 인터페이스**.
         - 삭제 확인, 인박스 전체 이동 확인.
       - **Retrospective View**: AI 회고 생성 및 조회 뷰. 콤팩트한 디자인과 단계별 선택 아키텍처 적용. 상단 전용 드래그 레이어(`h-8`) 및 여백(`pt-8`) 확보.
@@ -109,13 +111,13 @@
     3. **API Key 설정 & 검증**: Google AI Studio API Key 입력 및 실시간 검증(`fetch_available_models`). 유효하지 않은 키는 에러 메시지를 노출하며, 빈 값은 `건너뛰기` 가능.
     4. **알림 설정**: 시스템 알림 권한 요청.
 - **[Backend Command]**: 유저가 최종 제출 시 `save_user` 호출. SQLite `users` 테이블에 유저 정보 저장.
-- **[UI Feedback]**: 성공 시 `onComplete` 콜백 실행 -> `view`가 `"workspace_setup"`으로 변경되며 워크스페이스 생성 화면으로 전환.
+- **[UI Feedback]**: 성공 시 `onComplete` 콜백 실행 -> `view`가 `"main"`으로 변경되며 메인 화면의 Empty State로 진입.
 
-### B. 워크스페이스 생성 및 설정 (Workspace Setup Flow)
-- **[Trigger]**: 온보딩 완료 직후 또는 `PrimarySidebar` 중앙 `+` 버튼 클릭.
-- **[Frontend State]**: `view` 상태가 `"workspace_setup"`으로 변경.
+### B. 워크스페이스 생성 및 설정 (Workspace Creation Flow)
+- **[Trigger]**: 온보딩 완료 후 Empty State의 중앙 버튼 또는 `PrimarySidebar` 중앙 `+` 버튼 클릭.
+- **[Frontend State]**: `isWorkspaceCreateModalOpen` 상태가 `true`로 변경되어 `WorkspaceCreateModal` 오픈.
 - **[Backend Command]**: `create_workspace` 호출. `workspaces` 테이블과 `unplugged_times` 테이블에 트랜잭션으로 저장.
-- **[UI Feedback]**: 성공 시 `view`가 `"main"`으로 변경되고 해당 워크스페이스가 활성화됨.
+- **[UI Feedback]**: 성공 시 모달이 닫히고, 즉시 워크스페이스 목록을 갱신한 뒤 생성된 워크스페이스를 활성화하여 타임라인 뷰로 전환됨.
 
 ### C. 프로필/설정 변경 (Settings Flow)
 - **[Trigger]**: 
