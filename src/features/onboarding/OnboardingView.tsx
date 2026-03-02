@@ -227,13 +227,19 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                   transition={{ duration: 0.3 }}
                   className="space-y-8 flex-1 flex flex-col justify-center"
                 >
-                  <div className="space-y-2 relative">
-                    <div className="absolute -top-12 right-0">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-text-primary leading-tight">
+                      {t.onboarding.step3_title}
+                    </h1>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-medium text-text-secondary">
+                        {t.onboarding.step3_subtitle}
+                      </h3>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button type="button" className="p-2 text-text-muted hover:text-text-primary transition-colors">
-                              <Info size={20} />
+                            <button type="button" className="p-1 text-text-muted hover:text-text-primary transition-colors">
+                              <Info size={18} />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-[200px] p-3 text-xs font-bold leading-relaxed bg-surface-elevated border-border shadow-xl">
@@ -242,16 +248,10 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                         </Tooltip>
                       </TooltipProvider>
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-text-primary leading-tight">
-                      {t.onboarding.step3_title}
-                    </h1>
-                    <h3 className="text-xl font-medium text-text-secondary">
-                      {t.onboarding.step3_subtitle}
-                    </h3>
                     <button 
                       type="button"
                       onClick={openGoogleAIStudio}
-                      className="flex items-center gap-1.5 text-text-muted hover:text-text-primary text-sm font-bold transition-colors group mt-2"
+                      className="flex items-center gap-1.5 text-text-muted hover:text-text-primary text-sm font-bold transition-colors group pt-1"
                     >
                       {t.onboarding.api_key_guide}
                       <ExternalLink size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
