@@ -1,5 +1,5 @@
 use tauri::State;
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::NaiveDateTime;
 use crate::models::{Retrospective, DbState, GeminiModel, GeminiModelsResponse, GeminiRequest, GeminiContent, GeminiPart, GeminiSystemInstruction, GeminiResponse};
 use crate::database;
 use crate::error::{Result, AppError};
@@ -25,12 +25,14 @@ pub async fn generate_retrospective(
     let workspace = database::workspace::get_workspace(&state.pool, workspace_id).await?.ok_or(AppError::NotFound("Workspace not found".to_string()))?;
     let role_intro = workspace.role_intro.unwrap_or_else(|| "A professional worker".to_string());
 
-    let start_dt = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d").map_err(|e| AppError::DateParse(e.to_string()))?;
-    let end_dt = NaiveDate::parse_from_str(&end_date, "%Y-%m-%d").map_err(|e| AppError::DateParse(e.to_string()))?;
-
     let day_start_time = &user.day_start_time;
-    let start_of_range = NaiveDateTime::parse_from_str(&format!("{}T{}", start_date, day_start_time), "%Y-%m-%dT%H:%M").unwrap().format("%Y-%m-%dT%H:%M:%S").to_string();
-    let end_of_range = (NaiveDateTime::parse_from_str(&format!("{}T{}", end_date, day_start_time), "%Y-%m-%dT%H:%M").unwrap() + chrono::Duration::days(1) - chrono::Duration::seconds(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
+    let start_of_range = NaiveDateTime::parse_from_str(&format!("{}T{}", start_date, day_start_time), "%Y-%m-%dT%H:%M")
+        .map_err(|e| AppError::DateParse(e.to_string()))?
+        .format("%Y-%m-%dT%H:%M:%S").to_string();
+    let end_of_range = (NaiveDateTime::parse_from_str(&format!("{}T{}", end_date, day_start_time), "%Y-%m-%dT%H:%M")
+        .map_err(|e| AppError::DateParse(e.to_string()))?
+        + chrono::Duration::days(1) - chrono::Duration::seconds(1))
+        .format("%Y-%m-%dT%H:%M:%S").to_string();
 
     let blocks = database::retrospective::get_completed_task_blocks(&state.pool, workspace_id, &start_of_range, &end_of_range).await?;
 
