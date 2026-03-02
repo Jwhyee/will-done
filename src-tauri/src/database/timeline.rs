@@ -648,7 +648,7 @@ mod tests {
         add_task_at(&pool, input, now_dt).await.unwrap();
 
         // 5. 결과 검증
-        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap()).await.unwrap();
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
         
         /* 기대하는 결과:
            - T1 (Block A): 18:00 - 18:10 (PENDING)

@@ -55,6 +55,9 @@ pub fn run() {
                 }
                 let pool = SqlitePool::connect(&db_url).await.expect("failed to connect to database");
                 
+                // Enable foreign keys
+                sqlx::query("PRAGMA foreign_keys = ON").execute(&pool).await.ok();
+                
                 // Migrations
                 sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT, is_notification_enabled BOOLEAN NOT NULL DEFAULT 0, day_start_time TEXT NOT NULL DEFAULT '04:00')").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE users ADD COLUMN lang TEXT NOT NULL DEFAULT 'en'").execute(&pool).await.ok();
@@ -84,6 +87,7 @@ pub fn run() {
             commands::workspace::get_workspaces,
             commands::workspace::get_workspace,
             commands::workspace::update_workspace,
+            commands::workspace::delete_workspace,
             commands::workspace::get_unplugged_times,
             commands::timeline::get_greeting,
             commands::timeline::add_task,

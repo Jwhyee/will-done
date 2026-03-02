@@ -34,3 +34,8 @@ pub async fn update_workspace(
 ) -> Result<()> {
     database::workspace::update_workspace(&state.pool, id, input).await
 }
+
+#[tauri::command]
+pub async fn delete_workspace(state: State<'_, DbState>, id: i64) -> Result<()> {
+    database::workspace::delete_workspace(&state.pool, id).await
+}

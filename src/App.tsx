@@ -263,6 +263,17 @@ function AppContent() {
           const wsList = await invoke<Workspace[]>("get_workspaces");
           setWorkspaces(wsList);
         }}
+        onWorkspaceDelete={async (id) => {
+          const wsList = await invoke<Workspace[]>("get_workspaces");
+          setWorkspaces(wsList);
+          if (wsList.length === 0) {
+            setView("workspace_setup");
+            setActiveWorkspaceId(null);
+          } else if (activeWorkspaceId === id) {
+            setActiveWorkspaceId(wsList[0].id);
+          }
+        }}
+        workspaceCount={workspaces.length}
         t={t}
       />
 

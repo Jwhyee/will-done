@@ -96,6 +96,14 @@ pub async fn update_workspace(
     Ok(())
 }
 
+pub async fn delete_workspace(pool: &SqlitePool, id: i64) -> Result<()> {
+    sqlx::query("DELETE FROM workspaces WHERE id = ?1")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,5 +130,29 @@ mod tests {
 
         let ws = sqlx::query_as::<_, Workspace>("SELECT * FROM workspaces WHERE id = ?1").bind(workspace_id).fetch_one(&pool).await.unwrap();
         assert_eq!(ws.name, "Test Workspace");
+    }
+
+    #[tokio::test]
+    async fn test_delete_workspace_cascade() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, estimated_minutes INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.unwrap();
+
+        // 1. Create workspace
+        let ws_id = sqlx::query("INSERT INTO workspaces (name) VALUES (?1)").bind("To Delete").execute(&pool).await.unwrap().last_insert_rowid();
+        
+        // 2. Create task
+        sqlx::query("INSERT INTO tasks (workspace_id, title) VALUES (?1, ?2)").bind(ws_id).bind("Task in WS").execute(&pool).await.unwrap();
+        
+        // 3. Delete workspace
+        delete_workspace(&pool, ws_id).await.unwrap();
+        
+        // 4. Verify cascade
+        let ws_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM workspaces").fetch_one(&pool).await.unwrap();
+        let task_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM tasks").fetch_one(&pool).await.unwrap();
+        
+        assert_eq!(ws_count.0, 0);
+        assert_eq!(task_count.0, 0);
     }
 }

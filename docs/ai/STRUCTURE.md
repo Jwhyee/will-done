@@ -80,7 +80,8 @@
 - **설정 권한 분리**: 전역 설정(PrimarySidebar 하단 톱니바퀴)은 `GlobalSettingsModal`을 통해, 워크스페이스별 설정(사이드바 아이콘 호버)은 `WorkspaceSettingsModal`을 통해 각각 독립적으로 관리.
 
 ### 🏢 Workspace & Archive
-- `create_workspace` / `update_workspace`: 워크스페이스 설정 및 Unplugged Time 관리.
+- `create_workspace` / `update_workspace` / `delete_workspace`: 워크스페이스 설정, Unplugged Time 관리 및 삭제.
+- **삭제 안전 장치**: 워크스페이스 삭제 시 'Danger Zone'을 통해 확인을 거치며, 실수 방지를 위해 워크스페이스 이름을 직접 입력해야 함. 최소 하나의 워크스페이스는 유지되어야 함. 연쇄 삭제(Cascade Delete)를 통해 관련 태스크 및 회고 데이터 자동 정리.
 
 ### ⏳ Timeline Engine (Scheduling)
 - `get_timeline`: `day_start_time`을 기준으로 논리적 날짜에 해당하는 블록들만 쿼리.
