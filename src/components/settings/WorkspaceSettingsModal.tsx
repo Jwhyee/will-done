@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useForm, useFieldArray } from "react-hook-form";
-import { Plus, X, AlertTriangle } from "lucide-react";
+import { Plus, X, AlertTriangle, Settings2, Clock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/providers/ToastProvider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface WorkspaceSettingsModalProps {
   workspaceId: number | null;
@@ -128,7 +129,7 @@ export const WorkspaceSettingsModal = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-[500px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-2xl p-0 overflow-hidden antialiased">
+        <DialogContent className="sm:max-w-[500px] h-[640px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-2xl p-0 flex flex-col overflow-hidden antialiased">
           <DialogHeader className="p-8 pb-4 shrink-0 space-y-1.5">
             <DialogTitle className="text-2xl font-black tracking-tighter text-text-primary leading-none">
               {t.sidebar.workspace}
@@ -138,82 +139,125 @@ export const WorkspaceSettingsModal = ({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="px-8 pb-8 space-y-6">
-            <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-1 -mr-1 scrollbar-hide">
-              <div className="space-y-3">
-                <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
-                <Input {...register("name")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10" />
-              </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
+            <Tabs defaultValue="basic" className="flex-1 flex flex-col overflow-hidden px-8">
+              <TabsList className="w-full h-11 bg-surface border border-border/50 p-1 mb-6 shrink-0">
+                <TabsTrigger value="basic" className="flex-1 gap-2">
+                  <Settings2 size={14} />
+                  {t.sidebar.workspace_tab_basic}
+                </TabsTrigger>
+                <TabsTrigger value="time" className="flex-1 gap-2">
+                  <Clock size={14} />
+                  {t.sidebar.workspace_tab_time}
+                </TabsTrigger>
+                <TabsTrigger value="advanced" className="flex-1 gap-2">
+                  <ShieldAlert size={14} />
+                  {t.sidebar.workspace_tab_advanced}
+                </TabsTrigger>
+              </TabsList>
 
-              <div className="space-y-4">
-                <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <Input type="time" {...register("coreTimeStart")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium [color-scheme:dark] focus:ring-1 focus:ring-white/10" />
-                  <Input type="time" {...register("coreTimeEnd")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium [color-scheme:dark] focus:ring-1 focus:ring-white/10" />
-                </div>
-              </div>
+              <div className="flex-1 overflow-hidden">
+                <TabsContent value="basic" className="h-full m-0 outline-none data-[state=inactive]:hidden">
+                  <ScrollArea className="h-full pr-4">
+                    <div className="space-y-6 pb-6">
+                      <div className="space-y-3">
+                        <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.name_label}</Label>
+                        <Input {...register("name")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10" />
+                      </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => append({ label: "", startTime: "12:00", endTime: "13:00" })} 
-                    className="border-border bg-surface hover:bg-border text-text-secondary font-bold rounded-lg h-8 px-3"
-                  >
-                    <Plus size={14} className="mr-2" /> {t.workspace_setup.add_unplugged}
-                  </Button>
-                </div>
-                <div className="space-y-3">
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="p-4 bg-surface border border-border rounded-xl space-y-3 relative">
-                      <button type="button" onClick={() => remove(index)} className="absolute top-3 right-3 text-text-muted hover:text-danger transition-colors">
-                        <X size={14} />
-                      </button>
-                      <Input {...register(`unpluggedTimes.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-background border-border h-10 rounded-lg px-3 text-sm" />
-                      <div className="grid grid-cols-2 gap-3">
-                        <Input type="time" {...register(`unpluggedTimes.${index}.startTime` as const)} className="bg-background border-border h-10 rounded-lg text-sm [color-scheme:dark]" />
-                        <Input type="time" {...register(`unpluggedTimes.${index}.endTime` as const)} className="bg-background border-border h-10 rounded-lg text-sm [color-scheme:dark]" />
+                      <div className="space-y-3">
+                        <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.role_intro}</Label>
+                        <textarea 
+                          {...register("roleIntro")}
+                          placeholder={t.workspace_setup.role_placeholder}
+                          className="w-full min-h-[200px] bg-surface border border-border rounded-xl p-4 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-text-muted font-medium leading-relaxed resize-none"
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </ScrollArea>
+                </TabsContent>
 
-              <div className="space-y-3">
-                <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.roleIntro}</Label>
-                <textarea 
-                  {...register("roleIntro")}
-                  placeholder={t.workspace_setup.role_placeholder}
-                  className="w-full min-h-[100px] bg-surface border border-border rounded-xl p-4 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-text-muted font-medium leading-relaxed resize-none"
-                />
-              </div>
+                <TabsContent value="time" className="h-full m-0 outline-none data-[state=inactive]:hidden">
+                  <ScrollArea className="h-full pr-4">
+                    <div className="space-y-6 pb-6">
+                      <div className="space-y-4">
+                        <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.core_time}</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Input type="time" {...register("coreTimeStart")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium [color-scheme:dark] focus:ring-1 focus:ring-white/10" />
+                          <Input type="time" {...register("coreTimeEnd")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium [color-scheme:dark] focus:ring-1 focus:ring-white/10" />
+                        </div>
+                      </div>
 
-              <Separator className="bg-border/50 my-6" />
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.workspace_setup.unplugged_time}</Label>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => append({ label: "", startTime: "12:00", endTime: "13:00" })} 
+                            className="border-border bg-surface hover:bg-border text-text-secondary font-bold rounded-lg h-8 px-3"
+                          >
+                            <Plus size={14} className="mr-2" /> {t.workspace_setup.add_unplugged}
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
+                          {fields.map((field, index) => (
+                            <div key={field.id} className="p-4 bg-surface border border-border rounded-xl space-y-3 relative">
+                              <button type="button" onClick={() => remove(index)} className="absolute top-3 right-3 text-text-muted hover:text-danger transition-colors">
+                                <X size={14} />
+                              </button>
+                              <Input {...register(`unpluggedTimes.${index}.label` as const)} placeholder={t.workspace_setup.unplugged_label_placeholder} className="bg-background border-border h-10 rounded-lg px-3 text-sm" />
+                              <div className="grid grid-cols-2 gap-3">
+                                <Input type="time" {...register(`unpluggedTimes.${index}.startTime` as const)} className="bg-background border-border h-10 rounded-lg text-sm [color-scheme:dark]" />
+                                <Input type="time" {...register(`unpluggedTimes.${index}.endTime` as const)} className="bg-background border-border h-10 rounded-lg text-sm [color-scheme:dark]" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
 
-              <div className="space-y-4 pt-2">
-                <Label className="text-xs font-bold text-danger uppercase tracking-widest">Danger Zone</Label>
-                <div className="p-5 border border-danger/20 bg-danger/5 rounded-2xl space-y-3">
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    {t.sidebar.workspace_delete_desc || "워크스페이스 삭제 시 모든 데이터가 영구적으로 삭제됩니다."}
-                  </p>
-                  <Button 
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setIsDeleteConfirmOpen(true)}
-                    className="w-full bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 font-bold h-11 rounded-xl transition-all active:scale-95"
-                  >
-                    {t.sidebar.workspace_delete_btn || "워크스페이스 삭제"}
-                  </Button>
-                </div>
+                <TabsContent value="advanced" className="h-full m-0 outline-none data-[state=inactive]:hidden">
+                  <ScrollArea className="h-full pr-4">
+                    <div className="space-y-6 pb-6 pt-2">
+                      <div className="space-y-4">
+                        <Label className="text-xs font-bold text-danger uppercase tracking-widest flex items-center gap-2">
+                          <ShieldAlert size={14} />
+                          Danger Zone
+                        </Label>
+                        <div className="p-6 border border-danger/30 bg-danger/5 rounded-2xl space-y-4 shadow-inner">
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-bold text-text-primary">
+                              {t.sidebar.workspace_delete_confirm_title}
+                            </h4>
+                            <p className="text-xs text-text-secondary leading-relaxed">
+                              {t.sidebar.workspace_delete_desc}
+                            </p>
+                          </div>
+                          <Button 
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setIsDeleteConfirmOpen(true)}
+                            className="w-full bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 font-bold h-12 rounded-xl transition-all active:scale-95"
+                          >
+                            {t.sidebar.workspace_delete_btn}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
               </div>
+            </Tabs>
+
+            <div className="p-8 pt-4 bg-surface-elevated shrink-0 border-t border-border/50">
+              <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">
+                {t.sidebar.save_changes}
+              </Button>
             </div>
-
-            <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">
-              {t.sidebar.save_changes}
-            </Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -224,17 +268,17 @@ export const WorkspaceSettingsModal = ({
           <DialogHeader className="space-y-4">
             <DialogTitle className="text-lg font-bold tracking-tight text-text-primary flex items-center gap-3">
               <AlertTriangle className="text-danger" size={20} />
-              {t.sidebar.workspace_delete_confirm_title || "워크스페이스 삭제"}
+              {t.sidebar.workspace_delete_confirm_title}
             </DialogTitle>
             <DialogDescription className="text-text-secondary text-sm leading-relaxed">
-              {t.sidebar.workspace_delete_confirm_desc || "이 워크스페이스를 삭제하시겠습니까? 삭제 시 해당 워크스페이스에서 작성한 모든 태스크, 타임라인 기록, AI 회고 데이터가 영구히 삭제되며 복구할 수 없습니다."}
+              {t.sidebar.workspace_delete_confirm_desc}
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-6 space-y-4">
             <div className="space-y-3">
               <Label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">
-                {(t.sidebar.workspace_delete_input_label || "확인을 위해 워크스페이스 이름을 입력하세요: {name}").replace("{name}", targetWorkspaceName)}
+                {(t.sidebar.workspace_delete_input_label || "").replace("{name}", targetWorkspaceName)}
               </Label>
               <Input 
                 value={deleteInput}
@@ -253,14 +297,14 @@ export const WorkspaceSettingsModal = ({
                 }}
                 className="flex-1 bg-surface text-text-secondary hover:bg-border hover:text-text-primary font-bold rounded-xl h-12"
               >
-                {t.sidebar.cancel || "취소"}
+                {t.sidebar.cancel}
               </Button>
               <Button
                 disabled={deleteInput !== targetWorkspaceName}
                 onClick={handleDeleteWorkspace}
                 className="flex-1 bg-danger text-text-primary hover:bg-danger/80 font-bold rounded-xl h-12 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale"
               >
-                {t.sidebar.workspace_delete_confirm_btn || "삭제"}
+                {t.sidebar.workspace_delete_confirm_btn}
               </Button>
             </div>
           </div>
