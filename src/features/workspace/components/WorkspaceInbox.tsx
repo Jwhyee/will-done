@@ -41,7 +41,7 @@ export const WorkspaceInbox = ({
                   variant="ghost"
                   size="sm"
                   onClick={onMoveAllConfirm}
-                  className="text-accent hover:text-accent/80 font-bold text-xs"
+                  className="text-accent hover:text-accent hover:bg-accent/10 font-bold text-xs transition-all duration-200 hover:scale-[1.02]"
                 >
                   {t.main?.move_all?.btn || "전체 이동"}
                 </Button>
