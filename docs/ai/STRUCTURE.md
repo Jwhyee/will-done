@@ -95,7 +95,7 @@
 - `add_task`: 태스크 생성 및 자동 스케줄링. 스마트 라우팅을 통한 마감 시간 초과 업무 인박스 유도.
 - `get_today_completed_duration`: 논리적 날짜 기준 완료 업무 합산 시간 계산.
 - `process_task_transition`: 업무 종료 시나리오 처리 (`COMPLETE_NOW`, `DELAY` 등).
-- `move_to_inbox` / `move_to_timeline`: 타임라인과 인박스 간의 데이터 상태 전환.
+- `move_to_inbox` / `move_to_timeline`: 타임라인과 인박스 간의 데이터 상태 전환. 인박스 이동 시 해당 태스크가 차지하던 시간만큼 이후의 일정을 앞으로 당김(Pull up).
 - `move_all_to_timeline`: 인박스의 모든 태스크를 현재 타임라인 마지막 시점 이후로 일괄 스케줄링.
 
 ### ✨ AI Retrospective (Gemini Multi-Model Fallback)
@@ -175,6 +175,7 @@
 - **[Trigger]**: `WorkspaceView` 헤더 우측의 `Inbox(📥)` 버튼 클릭.
 - **[Frontend State]**: `isInboxOpen` 상태 `true` 변경 -> `Sheet` 오버레이 오픈.
 - **[Action]**:
+  - **인박스로 이동**: 타임라인 내 업무의 `Inbox` 아이콘 클릭 시 해당 업무가 차지하던 시간만큼 이후의 `WILL` 일정들을 앞으로 당김(Pull up).
   - **개별 이동**: 인박스 아이템의 `Send` 버튼 클릭 시 현재 타임라인 마지막 시점 뒤로 배정.
   - **전체 이동**: `전체 이동` 버튼 클릭 시 인박스의 모든 태스크를 일괄 스케줄링.
   - **삭제**: 인박스 아이템의 `X` 버튼 클릭으로 태스크 삭제.
