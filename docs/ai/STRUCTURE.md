@@ -50,8 +50,9 @@
   - `PrimarySidebar` (L1): 워크스페이스 아이콘 리스트 (56px/w-14) 및 추가 버튼.
   - `SecondarySidebar` (L2): 인박스/설정/회고 (200px). 접기/펼치기 지원.
   - `WorkspaceView` (Content):
-    - `Header`: 실시간 시계(HH:mm:ss, text-sm), 지능형 인사말(#D1D5DB), **태스크 완료율 진행바(Daily Progress Bar)** (인사말 하단 배치, h-1.5, 시간 기준 계산), 태스크 입력 폼.
-    - `Task Input Form`: 입력 영역에 subtle background 및 border 추가로 어포던스 강화. 제목 입력창과 본문 입력창 사이 간격 확보(`mt-2`). 0분 등록 시 **"수행 시간을 설정해주세요."** 토스트 알림 및 차단 로직 적용. 하단 좌측에 Time Picker와 긴급 토글, 우측에 등록 버튼 배치.
+    - **Logical Date & Header**: 실시간 시계(HH:mm:ss, text-sm)와 함께 사용자가 설정한 `dayStartTime`(기본 04:00)에 따른 **논리적 날짜(Logical Date)**를 헤더에 표시. 현재 시간이 설정 시간 이전이면 전날의 날짜를 노출하여 업무 연속성 보장.
+    - **Daily Progress Bar**: 인사말 하단 배치(h-1.5), 논리적 날짜 기준 완료율 계산.
+    - **Task Input Form**: 입력 영역에 subtle background 및 border 추가로 어포던스 강화. 제목 입력창과 본문 입력창 사이 간격 확보(`mt-2`). 0분 등록 시 **"수행 시간을 설정해주세요."** 토스트 알림 및 차단 로직 적용. 하단 좌측에 Time Picker와 긴급 토글, 우측에 등록 버튼 배치. **스마트 라우팅** 기능을 통해 신규 등록 업무의 종료 예정 시간이 논리적 하루 마감 시간을 초과할 경우 컨펌 다이얼로그 팝업.
     - `Timeline`: 컨테이너 상단 여백 확보(`pt-10`) 및 좌측 여백 확장(`pl-28 ml-4`)을 통해 레이아웃 안정성 확보. 시간 레이블을 인디케이터(Dot)의 완전한 좌측(`-left-28`)으로 이동시켜 수직 실선이 텍스트를 관통하는 버그 수정. 인디케이터와 시간 레이블은 태스크 카드의 첫 번째 줄과 수직으로 정렬됨.
     - `SortableItem`: 태스크 제목(15px SemiBold), 상태/시간 범위(12px), 액션 아이콘 간격(12px). 버튼 기본 가시성 상향 및 호버 시 `surface-elevated` 스케일 업 애니메이션 적용. 
       - **타임라인 인디케이터**: Dot(`-left-12`)과 시간 레이블(`-left-28`)을 side-by-side로 배치. 수직 실선은 Dot들을 연결하며 텍스트와 겹치지 않음.
@@ -94,14 +95,15 @@
     - `SecondarySidebar`: 인박스 태스크 관리, 워크스페이스 설정/회고 바로가기, 접기/펼치기 토글 기능.
 
     ### ⏳ Timeline Engine (Scheduling)
-    - `add_task`: 태스크 생성 및 자동 스케줄링. 긴급 업무 삽입 시 기존 업무를 PENDING으로 분할하고 이후 일정을 정확히 타임 시프트함.
-    - `get_today_completed_duration`: 오늘 완료된 업무의 총 합산 시간을 분 단위로 계산하여 건강 관리 알림에 활용.
+    - `get_timeline`: `day_start_time`을 기준으로 논리적 날짜에 해당하는 블록들만 쿼리. (예: 04:00 시작 설정 시, 당일 04:00부터 익일 04:00까지를 하나의 타임라인으로 간주)
+    - `add_task`: 태스크 생성 및 자동 스케줄링. 자정(00:00) 하드코딩된 제한을 제거하고 논리적 날짜 내에서 자유로운 스케줄링 지원. 긴급 업무 삽입 시 기존 업무를 PENDING으로 분할하고 이후 일정을 정확히 타임 시프트함.
+    - `get_today_completed_duration`: 논리적 날짜 기준 완료 업무 합산 시간 계산. 건강 관리 알림에 활용.
     - `schedule_task_blocks`: Unplugged Time 회피 및 블록 분할 로직.
     - `shift_future_blocks`: 업무 시간 변동 시 이후 모든 `WILL` 블록 밀기.
     - `reorder_blocks`: Dnd-kit의 `arrayMove` 결과를 DB에 반영하고 시간 재계산.
     - `process_task_transition`: 업무 종료 시나리오 처리 (`COMPLETE_NOW`, `DELAY` 등). 분할된 태스크의 경우 마지막 블록이 완료될 때 전체 블록의 상태를 `DONE`으로 동기화. 2시간마다 건강 관리 토스트 알림 발생.
     - `move_to_inbox` / `move_to_timeline`: 타임라인과 인박스 간의 데이터 상태 전환.
-    - `move_all_to_timeline`: 인박스의 모든 태스크를 현재 타임라인 마지막 시점 이후로 일괄 스케줄링.
+    - `move_all_to_timeline`: 인박스의 모든 태스크를 현재 타임라인 마지막 시점 이후로 일괄 스케줄링. (자정 제한 없음)
     - `handle_split_task_deletion`: 분할된 태스크 삭제 시 "전체 삭제" 또는 "이전 블록 유지(완료 처리)" 분기 처리.
 
     ### ✨ AI Retrospective (Gemini Multi-Model Fallback)
@@ -144,10 +146,13 @@
     - **[UI Feedback]**: 성공 시 `ToastProvider`를 통해 `"프로필이 업데이트되었습니다."` 또는 `"워크스페이스가 업데이트되었습니다."` 메시지 노출. `onUserUpdate` 콜백을 통해 전역 유저 상태 갱신.
 
     ### D. 쾌속 업무 입력 (Task Entry Flow)
-    - **[Trigger]**: `WorkspaceView` 상단 폼에서 제목, 시간(Time Picker) 입력 후 `Enter` 또는 `추가` 버튼 클릭.
-    - **[Frontend State]**: `taskForm.handleSubmit` 실행. 입력 데이터 검증(Zod).
-    - **[Backend Command]**: `add_task` 호출. 마지막 태스크 종료 시점부터 자동 배정. 언플러그드 타임 중복 시 블록 쪼개기 수행.
-    - **[UI Feedback]**: `fetchMainData`를 통해 타임라인 리렌더링. 입력 폼 초기화.
+    - **[Trigger]**: `WorkspaceView` 상단 폼에서 제목, 시간 입력 후 제출.
+    - **[Frontend State]**: `handleTaskSubmit` 실행. `(마지막 종료 시간 + 소요 시간)`이 `dayStartTime`을 초과하는지 검증.
+    - **[Smart Routing]**: 초과 시 컨펌 다이얼로그 오픈.
+      - **[Yes (Continue)]**: 타임라인에 그대로 추가 (`isInbox: false`).
+      - **[No (To Inbox)]**: 인박스 아이템으로 생성 (`isInbox: true`).
+    - **[Backend Command]**: `add_task` 호출. 
+    - **[UI Feedback]**: 타임라인/인박스 리렌더링. 입력 폼 초기화.
 
     ### E. 🔥 긴급 업무 입력 및 타임 시프트 (Urgent Task Flow)
     - **[Trigger]**: 태스크 입력 시 `🔥 Urgent` 체크박스 활성화 후 추가.
@@ -173,6 +178,7 @@
       - `date-fns`를 통해 선택된 기간의 실제 `startDate`, `endDate` 및 `dateLabel` 계산.
       - `isGenerating` 상태 `true` 변경 (로딩 스피너 및 안내 문구 노출).
     - **[Backend Command]**: `generate_retrospective` 호출. 
+      - 선택된 기간의 시작/종료 날짜에 `day_start_time` 오프셋을 적용하여 정확한 논리적 기간의 데이터를 수집.
       - 앞서 설명한 **모델 Fallback 엔진**을 통해 최적의 Gemini 모델로 회고 생성.
       - 유저의 `role_intro`와 태스크 리스트(`planning/review memo` 포함)를 기반으로 고품질 마크다운 생성.
     - **[UI Feedback]**: 생성 완료 후 데스크탑 알림 발송. 마크다운 결과가 담긴 `Dialog` 모달 오픈.
