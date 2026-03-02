@@ -84,7 +84,7 @@ CRITICAL RULE: Regardless of the instructions above, you MUST generate the final
     }
 
     // 2. Fetch available models and filter/sort
-    let available_models = fetch_available_models(&client, &api_key).await.unwrap_or_default();
+    let available_models = internal_fetch_available_models(&api_key).await.unwrap_or_default();
     let mut filtered_models = available_models.into_iter()
         .filter(|m| m.supported_generation_methods.contains(&"generateContent".to_string()))
         .collect::<Vec<_>>();
@@ -186,12 +186,33 @@ fn build_task_summary(blocks: Vec<(String, Option<String>, Option<String>, Strin
     task_summary
 }
 
-async fn fetch_available_models(client: &reqwest::Client, api_key: &str) -> Result<Vec<GeminiModel>> {
+#[tauri::command]
+pub async fn fetch_available_models(
+    state: State<'_, DbState>,
+    api_key: Option<String>,
+) -> Result<Vec<GeminiModel>> {
+    // Use provided api_key or fall back to DB
+    let key = if let Some(k) = api_key {
+        k
+    } else {
+        let user = database::user::get_user(&state.pool).await?.ok_or(AppError::NotFound("User not found".to_string()))?;
+        user.gemini_api_key.ok_or(AppError::InvalidInput("Gemini API Key is missing.".to_string()))?
+    };
+
+    internal_fetch_available_models(&key).await
+}
+
+async fn internal_fetch_available_models(api_key: &str) -> Result<Vec<GeminiModel>> {
+    let client = reqwest::Client::new();
     let url = format!("https://generativelanguage.googleapis.com/v1/models?key={}", api_key);
     let res = client.get(url).send().await?;
+    
     if !res.status().is_success() {
-        return Err(AppError::Network(res.error_for_status().unwrap_err()));
+        let status = res.status();
+        let err_text = res.text().await.unwrap_or_default();
+        return Err(AppError::Internal(format!("API Error ({}): {}", status, err_text)));
     }
+    
     let data: GeminiModelsResponse = res.json().await?;
     Ok(data.models)
 }

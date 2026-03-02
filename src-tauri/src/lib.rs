@@ -118,7 +118,8 @@ pub fn run() {
             commands::timeline::get_today_completed_duration,
             commands::retrospective::generate_retrospective,
             commands::retrospective::get_saved_retrospectives,
-            commands::retrospective::get_latest_saved_retrospective
+            commands::retrospective::get_latest_saved_retrospective,
+            commands::retrospective::fetch_available_models
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
