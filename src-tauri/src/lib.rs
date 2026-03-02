@@ -57,6 +57,19 @@ pub fn run() {
                 
                 // Enable foreign keys
                 sqlx::query("PRAGMA foreign_keys = ON").execute(&pool).await.ok();
+
+                // Clear data in dev mode (debug_assertions)
+                #[cfg(debug_assertions)]
+                {
+                    println!("Dev mode detected: Clearing database...");
+                    sqlx::query("DELETE FROM retrospectives").execute(&pool).await.ok();
+                    sqlx::query("DELETE FROM time_blocks").execute(&pool).await.ok();
+                    sqlx::query("DELETE FROM tasks").execute(&pool).await.ok();
+                    sqlx::query("DELETE FROM unplugged_times").execute(&pool).await.ok();
+                    sqlx::query("DELETE FROM workspaces").execute(&pool).await.ok();
+                    sqlx::query("DELETE FROM users").execute(&pool).await.ok();
+                    println!("Database cleared.");
+                }
                 
                 // Migrations
                 sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT, is_notification_enabled BOOLEAN NOT NULL DEFAULT 0, day_start_time TEXT NOT NULL DEFAULT '04:00')").execute(&pool).await.ok();
