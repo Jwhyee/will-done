@@ -189,7 +189,7 @@ export const WorkspaceView = ({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
       {/* Header */}
-      <header className="px-8 py-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border">
+      <header data-tauri-drag-region className="px-8 pt-10 pb-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border select-none">
         <div className="flex items-center justify-between">
           <div className="space-y-1 w-full max-w-2xl">
             <div className="flex items-center space-x-3 mb-1">
@@ -229,9 +229,11 @@ export const WorkspaceView = ({
                     onClick={() => setIsInboxOpen(true)}
                     className="h-10 w-10 rounded-xl hover:bg-surface-elevated text-text-muted hover:text-text-primary relative"
                   >
-                    <Inbox size={20} />
+                    <Inbox size={24} />
                     {inboxTasks.length > 0 && (
-                      <span className="absolute top-2 right-2 flex h-2 w-2 items-center justify-center rounded-full bg-accent" />
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white ring-2 ring-background">
+                        {inboxTasks.length}
+                      </span>
                     )}
                   </Button>
                 </TooltipTrigger>

@@ -23,7 +23,7 @@ export const PrimarySidebar = ({
 }: PrimarySidebarProps) => {
   return (
     <TooltipProvider delayDuration={0}>
-      <aside className="w-14 border-r border-border bg-background flex flex-col items-center py-4 space-y-4 shrink-0 shadow-2xl z-20">
+      <aside data-tauri-drag-region className="w-14 border-r border-border bg-background flex flex-col items-center pt-10 pb-4 space-y-4 shrink-0 shadow-2xl z-20 select-none">
         <div className="flex-1 flex flex-col items-center space-y-4 w-full">
           {workspaces.map((ws) => (
             <div key={ws.id} className="relative group">
