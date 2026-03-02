@@ -88,10 +88,23 @@
 ### ✨ AI Retrospective (Gemini Multi-Model Fallback)
 - `generate_retrospective`: 기간별 데이터 수집 및 모델 Fallback 엔진을 통한 AI 회고 생성.
 - `get_saved_retrospectives`: 과거 생성 내역 조회.
+- `get_active_dates`: 실제 태스크 기록이 있는 날짜 목록을 반환하여 프론트엔드에서 선택 가능한 날짜를 제한하는 데 활용.
 
 ---
 
 ## 4. User Action Flow (Detailed)
+
+### A. 최초 진입 및 온보딩 (Onboarding Flow)
+- **[Trigger]**: 앱 실행 시 `get_user` 결과가 `null`인 경우.
+- **[Frontend State]**: `view` 상태가 `"onboarding"`으로 변경. `OnboardingView` 내 `Dialog` 오픈.
+- **[Backend Command]**: 유저가 닉네임/언어 입력 후 제출 시 `save_user` 호출. SQLite `users` 테이블에 유저 정보 저장.
+- **[UI Feedback]**: 성공 시 `onComplete` 콜백 실행 -> `view`가 `"workspace_setup"`으로 변경되며 워크스페이스 생성 화면으로 전환.
+
+### B. 워크스페이스 생성 및 설정 (Workspace Setup Flow)
+- **[Trigger]**: 온보딩 완료 직후 또는 `PrimarySidebar` 중앙 `+` 버튼 클릭.
+- **[Frontend State]**: `view` 상태가 `"workspace_setup"`으로 변경.
+- **[Backend Command]**: `create_workspace` 호출. `workspaces` 테이블과 `unplugged_times` 테이블에 트랜잭션으로 저장.
+- **[UI Feedback]**: 성공 시 `view`가 `"main"`으로 변경되고 해당 워크스페이스가 활성화됨.
 
 ### C. 프로필/설정 변경 (Settings Flow)
 - **[Trigger]**: 
@@ -99,12 +112,71 @@
   - **워크스페이스 설정**: `PrimarySidebar` 워크스페이스 아이콘 호버 시 나타나는 톱니바퀴 클릭 -> 워크스페이스 탭 활성화 상태로 진입.
 - **[Frontend State]**: `view` 상태가 `"settings"`로 변경. `initialTab` 프롭에 따라 초기 탭 결정.
 - **[Backend Command]**: `save_user`(프로필) 또는 `update_workspace`(워크스페이스) 호출.
+- **[UI Feedback]**: 성공 시 토스트 메시지 노출 및 전역 상태 동기화.
 
-### G. AI 회고 진입 (AI Retrospective Entry)
-- **[Trigger]**: `WorkspaceView` 헤더 우측의 `Sparkles(✨)` 버튼 클릭.
-- **[Frontend State]**: `view`가 `"retrospective"`로 변경.
+### D. 쾌속 업무 입력 (Task Entry Flow)
+- **[Trigger]**: `WorkspaceView` 상단 폼에서 제목, 예상 시간(Time Picker) 입력 후 `Enter` 또는 `추가` 버튼 클릭.
+- **[Frontend State]**: 입력 데이터 검증(Zod). `onTaskSubmit` 호출.
+- **[Backend Command]**: `add_task` 호출. 마지막 태스크 종료 시점부터 자동 배정. 언플러그드 타임 중복 시 블록 쪼개기 수행.
+- **[UI Feedback]**: 타임라인 리렌더링 및 입력 폼 초기화.
 
-### J. 인박스 관리 (Inbox Management Flow)
+### E. 🔥 긴급 업무 입력 및 타임 시프트 (Urgent Task Flow)
+- **[Trigger]**: 태스크 입력 시 `🔥 Urgent` 체크박스 활성화 후 추가.
+- **[Frontend State]**: `isUrgent: true` 상태로 백엔드 전송.
+- **[Backend Command]**: `add_task` 내 긴급 로직 실행.
+  1. 현재 진행 중인(`NOW`) 블록을 `PENDING` 상태로 변경하고 종료 시간을 '현재'로 자름.
+  2. 긴급 업무를 즉시(`now`) 시작하도록 삽입.
+  3. `shift_future_blocks`를 호출하여 중단된 업무의 남은 분량과 이후 모든 일정을 긴급 업무 시간만큼 뒤로 밀기.
+- **[UI Feedback]**: 타임라인에 붉은색 강조 표시와 함께 중단된 업무(Pending)와 시프트된 일정들이 즉시 리렌더링됨.
+
+### F. 스마트 라우팅 (Smart Routing Flow)
+- **[Trigger]**: 태스크 추가 시 종료 예정 시간이 유저가 설정한 `dayStartTime`(논리적 마감 시간)을 초과할 경우.
+- **[UI Feedback]**: "마감 시간 초과" 다이얼로그 팝업.
+  - **계속하기**: 무시하고 타임라인에 추가.
+  - **인박스로 이동**: 타임라인 대신 인박스(Inbox)에 태스크 저장.
+
+### G. 업무 종료 및 분기 처리 (Task Transition Flow)
+- **[Trigger]**: 타임라인 내 `NOW` 상태 블록의 `Pencil` 아이콘 클릭 또는 종료 시간 도래 시 자동 팝업.
+- **[Frontend State]**: `TransitionModal` 오픈. **완료(Complete)**와 **연장(Extension)** 탭 중 선택.
+- **[Backend Command]**: `process_task_transition` 호출.
+  - **완료**: 실제 완료 시점으로 시간을 고정하고 리뷰 메모 저장. 이후 일정 당김/밀기.
+  - **연장**: 지정된 분만큼 현재 블록 연장 및 이후 일정 밀기.
+- **[UI Feedback]**: 모달 닫힘. 타임라인 리렌더링. 2시간 집중 시 건강 관리 알림 토스트 노출.
+
+### H. 워크스페이스 전환 (Workspace Switching Flow)
+- **[Trigger]**: `PrimarySidebar`에서 다른 워크스페이스 아이콘 클릭.
+- **[Frontend State]**: `activeWorkspaceId` 상태 업데이트.
+- **[Backend Command]**: 새로운 워크스페이스 ID로 인사말, 타임라인, 인박스 데이터 재호출.
+- **[UI Feedback]**: 해당 워크스페이스의 컨텍스트로 전체 화면 리렌더링.
+
+### I. 인박스 관리 (Inbox Management Flow)
 - **[Trigger]**: `WorkspaceView` 헤더 우측의 `Inbox(📥)` 버튼 클릭.
 - **[Frontend State]**: `isInboxOpen` 상태 `true` 변경 -> `Sheet` 오버레이 오픈.
-- **[UI Feedback]**: 타임라인을 가리지 않고 인박스 아이템 확인 및 타임라인 이동(`Send`) 버튼 사용 가능.
+- **[Action]**:
+  - **개별 이동**: 인박스 아이템의 `Send` 버튼 클릭 시 현재 타임라인 마지막 시점 뒤로 배정.
+  - **전체 이동**: `전체 이동` 버튼 클릭 시 인박스의 모든 태스크를 일괄 스케줄링.
+  - **삭제**: 인박스 아이템의 `X` 버튼 클릭으로 태스크 삭제.
+- **[UI Feedback]**: 타임라인을 가리지 않고 오버레이를 통해 태스크 관리 가능.
+
+### J. AI 회고 진입 및 조회 (AI Retrospective Flow)
+- **[Trigger]**: `WorkspaceView` 헤더 우측의 `Sparkles(✨)` 버튼 클릭.
+- **[Frontend State]**: `view`가 `"retrospective"`로 변경.
+- **[Action]**:
+  - **생성**: 기간(일/주/월) 및 날짜 선택 -> `회고 생성하기` 클릭 -> AI 엔진(Fallback 포함) 가동 -> 결과 모달 노출.
+  - **조회**: `회고 조회` 탭 -> 과거 생성된 회고 리스트 확인 및 마크다운 렌더링.
+- **[UI Feedback]**: 생성 완료 시 데스크탑 알림 발송.
+
+### K. 태스크 삭제 및 분할 처리 (Task Deletion Flow)
+- **[Trigger]**: 타임라인 블록의 `X` 버튼 클릭.
+- **[UI Feedback]**: 확인 다이얼로그 팝업.
+  - **일반 태스크**: 단순 삭제 확인.
+  - **분할된 태스크**: "전체 삭제" 또는 "이전 기록 유지(완료 처리)" 분기 선택.
+- **[Backend Command]**: `delete_task` 또는 `handle_split_task_deletion` 호출.
+
+### L. 자동 상태 전환 및 동기화 (Auto-Transition Flow)
+- **[Trigger]**: `App` 내 1초 주기 타이머와 `fetchMainData`에 의한 실시간 체크.
+- **[Logic]**:
+  - 현재 `NOW` 블록이 없고 다음 `WILL` 블록의 시작 시간이 되었을 때 -> `update_block_status` 호출하여 `NOW`로 승격.
+  - `NOW` 블록의 종료 시간이 지났을 때 -> `TransitionModal` 자동 팝업 및 알림 발송.
+- **[UI Feedback]**: 별도의 조작 없이도 업무 상태가 실시간으로 강조 및 전환됨.
+
