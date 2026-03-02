@@ -11,7 +11,7 @@ export const translations = {
       step2_title: "🌙 반가워요, {nickname}님!",
       step2_subtitle: "보통 하루 일과를 언제 마무리하시나요?",
       step3_title: "✨ 똑똑한 AI 회고 준비",
-      step3_subtitle: "자동 회고 작성을 위해 API Key가 필요해요.",
+      step3_subtitle: "회고 작성을 위해 API Key가 필요해요.",
       step3_security_tooltip: "키는 안전하게 데스크톱에만 보관되며, 직접 프로젝트에 결제 설정을 하지 않는 이상 과금 우려가 전혀 없습니다.",
       step4_title: "🔔 거의 다 왔어요!",
       step4_subtitle: "중요한 업무 알림을 챙겨드릴게요.",
@@ -125,7 +125,7 @@ export const translations = {
       },
       deadline_exceeded: {
         title: "마감 시간 초과 안내",
-        message: "해당 업무는 설정된 하루 마감 시간({time})을 초과하여 다음 날로 넘어가게 됩니다. 그래도 현재 타임라인에 이어서 등록하시겠습니까?\\n(아니오를 누를 경우 대기 중인 인박스로 이동합니다.)",
+        message: "해당 업무는 설정된 하루 마감 시간({time})을 초과하여 다음 날로 넘어가게 됩니다. 그래도 현재 타임라인에 이어서 등록하시겠습니까?\n(아니오를 누를 경우 대기 중인 인박스로 이동합니다.)",
         continue: "예 (Continue)",
         to_inbox: "아니오 (To Inbox)",
       },
