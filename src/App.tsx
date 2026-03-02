@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -35,7 +36,6 @@ import { Workspace, User } from "@/types";
 // Layout & Features
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PrimarySidebar } from "@/components/layout/PrimarySidebar";
-import { SecondarySidebar } from "@/components/layout/SecondarySidebar";
 import { OnboardingView } from "@/features/onboarding/OnboardingView";
 import { WorkspaceSetupView } from "@/features/onboarding/WorkspaceSetupView";
 import { WorkspaceView } from "@/features/workspace/WorkspaceView";
@@ -76,6 +76,8 @@ function AppContent() {
     onTaskSubmit,
     onTransition,
   } = useApp();
+
+  const [settingsTab, setSettingsTab] = useState<"profile" | "workspace">("profile");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -129,6 +131,7 @@ function AppContent() {
             user={user}
             workspaceId={activeWorkspaceId} 
             t={t} 
+            initialTab={settingsTab}
             onClose={() => setView("main")} 
             onUserUpdate={async (updatedUser?: User) => {
               const u = updatedUser || await invoke<User>("get_user");
@@ -151,29 +154,15 @@ function AppContent() {
                 activeWorkspaceId={activeWorkspaceId}
                 onSelectWorkspace={(id) => { setActiveWorkspaceId(id); setView("main"); }}
                 onAddWorkspace={() => setView("workspace_setup")}
+                onOpenSettings={() => { setSettingsTab("profile"); setView("settings"); }}
+                onOpenWorkspaceSettings={(id) => { 
+                  setActiveWorkspaceId(id); 
+                  setSettingsTab("workspace"); 
+                  setView("settings"); 
+                }}
+                t={t}
               />
             }
-            sidebar2={(isCollapsed, setIsCollapsed) => (
-              <SecondarySidebar
-                t={t}
-                user={user}
-                inboxTasks={inboxTasks}
-                onMoveToTimeline={async (taskId) => {
-                  if (activeWorkspaceId) {
-                    await invoke("move_to_timeline", { taskId, workspaceId: activeWorkspaceId });
-                    fetchMainData();
-                  }
-                }}
-                onDeleteTask={async (id) => {
-                  await invoke("delete_task", { id });
-                  fetchMainData();
-                }}
-                onOpenSettings={() => setView("settings")}
-                onOpenRetrospective={() => setView("retrospective")}
-                isCollapsed={isCollapsed}
-                setIsCollapsed={setIsCollapsed}
-              />
-            )}
           >
             <WorkspaceView
               t={t}
@@ -203,6 +192,13 @@ function AppContent() {
                   fetchMainData();
                 }
               }}
+              onMoveToTimeline={async (taskId) => {
+                if (activeWorkspaceId) {
+                  await invoke("move_to_timeline", { taskId, workspaceId: activeWorkspaceId });
+                  fetchMainData();
+                }
+              }}
+              onOpenRetrospective={() => setView("retrospective")}
               transitionBlock={transitionBlock}
               setTransitionBlock={setTransitionBlock}
             />
@@ -235,7 +231,7 @@ function AppContent() {
               />
             </div>
           ) : (
-            <div className="w-[calc(100vw-350px)] opacity-90 scale-105">
+            <div className="w-[calc(100vw-56px)] opacity-90 scale-105">
               <SortableItem 
                 block={timeline.find(b => b.id.toString() === activeId)!}
                 timeline={timeline}
