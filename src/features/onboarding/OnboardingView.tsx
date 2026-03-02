@@ -140,7 +140,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-surface-elevated border border-border/50 rounded-[2.5rem] shadow-2xl shadow-black/20 overflow-hidden flex flex-col min-h-[520px] relative z-50"
+        className="max-w-md w-full bg-surface-elevated border border-border/50 rounded-[2.5rem] shadow-2xl shadow-black/20 overflow-hidden flex flex-col h-fit relative z-50"
       >
         <form onSubmit={handleSubmit(onUserSubmit)} onKeyDown={handleKeyDown} className="flex-1 flex flex-col">
           <div className="flex-1 p-10 flex flex-col">
@@ -296,9 +296,6 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                     <h3 className="text-xl font-medium text-text-secondary">
                       {t.onboarding.step4_subtitle}
                     </h3>
-                    <p className="text-text-muted text-xs font-medium leading-relaxed mt-2">
-                      {t.onboarding.step4_description}
-                    </p>
                   </div>
                   <div 
                     className="flex items-center justify-between p-6 bg-background border border-border rounded-2xl cursor-pointer hover:border-text-primary/20 transition-all group"
@@ -388,14 +385,14 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
               )}
             </div>
             
-            {/* Step Indicators */}
-            <div className="flex justify-center gap-2 mt-8">
+            {/* Step Indicator */}
+            <div className="flex items-center justify-center gap-2 mt-8">
               {[1, 2, 3, 4].map((step) => (
-                <div 
+                <div
                   key={step}
                   className={cn(
                     "h-2 rounded-full transition-all duration-300",
-                    step === currentStep ? "w-8 bg-text-primary" : "w-2 bg-border"
+                    currentStep === step ? "w-8 bg-white" : "w-2 bg-zinc-600"
                   )}
                 />
               ))}

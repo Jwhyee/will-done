@@ -14,7 +14,7 @@ export const translations = {
       step3_subtitle: "Google AI Studio API Key가 필요해요.",
       step3_security_tooltip: "키는 안전하게 데스크톱에만 보관되며, 직접 프로젝트에 결제 설정을 하지 않는 이상 과금 우려가 전혀 없습니다.",
       step4_title: "🔔 거의 다 왔어요!",
-      step4_subtitle: "회고 및 업무 종료 알림을 챙겨드릴게요.",
+      step4_subtitle: "중요한 업무 알림을 챙겨드릴게요.",
       step4_description: "회고 완성 및 태스크 종료 시간에 맞춰서 알림을 보내드릴게요.",
       nickname_label: "닉네임 (필수)",
       nickname_placeholder: "당신의 이름을 입력해주세요.",
