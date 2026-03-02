@@ -45,9 +45,9 @@
 
 - **Window**: `titleBarStyle: Overlay` 적용. 다크 테마 강제 및 창 제어 버튼(신호등) 유지.
 - **Root**: `App` (`AppProvider` -> `DndContext`)
-  - **Loading**: 초기 `get_user` 및 `get_workspaces` 호출 중 노출.
-  - **Onboarding**: 유저 정보가 없을 때 강제 진입. 닉네임/언어 설정 모달.
-  - **WorkspaceSetup**: 워크스페이스가 없을 때 진입. 워크스페이스 이름, 집중 시간, 역할 설정.
+  - **Loading**: 초기 `get_user` 및 `get_workspaces` 호출 중 노출. 상단 전용 드래그 레이어(`h-8`) 적용.
+  - **Onboarding**: 유저 정보가 없을 때 강제 진입. 닉네임/언어 설정 모달. 배경에 드래그 레이어(`h-8`) 적용.
+  - **WorkspaceSetup**: 워크스페이스가 없을 때 진입. 워크스페이스 이름, 집중 시간, 역할 설정. 배경에 드래그 레이어(`h-8`) 적용.
   - **Main View** (`MainLayout` 기반):
     - `PrimarySidebar` (L1): 워크스페이스 아이콘 리스트 (56px/w-14), 추가 버튼, 그리고 최하단에 전역 설정(톱니바퀴) 버튼 배치. 
       - **Overlay Design**: 상단에 macOS 신호등 공간 충분히 확보(`pt-8`) 및 전용 드래그 레이어(`h-8`) 설정.
@@ -66,8 +66,8 @@
       - `Modals`: 
         - **TransitionModal**: '완료 처리'와 '연장 처리'를 분리하는 **탭(Tab) 기반 인터페이스**.
         - 삭제 확인, 인박스 전체 이동 확인.
-      - **Retrospective View**: AI 회고 생성 및 조회 뷰. 콤팩트한 디자인과 단계별 선택 아키텍처 적용.
-      - **Settings View**: 사이드바 기반 탭 전환 (프로필 / 워크스페이스).
+      - **Retrospective View**: AI 회고 생성 및 조회 뷰. 콤팩트한 디자인과 단계별 선택 아키텍처 적용. 상단 전용 드래그 레이어(`h-8`) 및 여백(`pt-8`) 확보.
+      - **Settings View**: 사이드바 기반 탭 전환 (프로필 / 워크스페이스). 상단 전용 드래그 레이어(`h-8`) 및 여백(`pt-8`) 확보.
 
 ---
 
