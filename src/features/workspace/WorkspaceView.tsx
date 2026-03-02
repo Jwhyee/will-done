@@ -187,10 +187,18 @@ export const WorkspaceView = ({
   const dailyProgress = calculateProgress();
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background relative">
+      {/* Dedicated Global Drag Handle Layer (Top 48px) */}
+      <div 
+        data-tauri-drag-region 
+        className="absolute top-0 left-0 right-0 h-12 z-[50] pointer-events-none select-none"
+      >
+        <div data-tauri-drag-region className="w-full h-full pointer-events-auto bg-transparent" />
+      </div>
+
       {/* Header */}
-      <header data-tauri-drag-region className="px-8 pt-10 pb-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border select-none">
-        <div className="flex items-center justify-between">
+      <header className="px-8 pt-12 pb-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-10 border-b border-border select-none">
+        <div className="flex items-center justify-between relative z-20">
           <div className="space-y-1 w-full max-w-2xl">
             <div className="flex items-center space-x-3 mb-1">
               <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted bg-surface/50 px-2 py-0.5 rounded border border-border">
