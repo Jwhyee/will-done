@@ -24,13 +24,11 @@ export const PrimarySidebar = ({
   return (
     <TooltipProvider delayDuration={0}>
       <aside className="w-14 border-r border-border bg-background flex flex-col items-center pt-8 pb-4 space-y-4 shrink-0 shadow-2xl z-20 select-none relative">
-        {/* Sidebar Drag Handle (Top 32px) */}
-        <div 
-          data-tauri-drag-region 
-          className="absolute top-0 left-0 right-0 h-8 z-[50] pointer-events-none select-none"
-        >
-          <div data-tauri-drag-region className="w-full h-full pointer-events-auto bg-transparent" />
-        </div>
+        {/* Global Drag Handle Layer (Top 32px) */}
+        <div
+          data-tauri-drag-region
+          className="absolute top-0 left-0 right-0 h-8 z-[50] select-none cursor-grab active:cursor-grabbing"
+        />
 
         <div className="flex-1 flex flex-col items-center space-y-4 w-full relative z-10">
           {workspaces.map((ws) => (
