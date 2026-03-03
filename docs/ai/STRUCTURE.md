@@ -151,7 +151,7 @@
 - **[Frontend State]**: `EditTaskModal`에서 변경된 제목, 설명, 목표 시간을 바탕으로 `handleEditTaskSubmit` 호출.
 - **[Backend Command]**: `update_task` 호출. 
   - `DONE` 상태의 경우 리뷰 메모만 수정 가능. 
-  - `NOW` 및 `WILL` 상태의 경우 목표 시간이 초기값 대비 증감되었을 때 해당 블록의 종료 시간을 수정하고, 증감분만큼 `shift_future_blocks`를 트리거하여 전체 타임라인을 당기거나 밀어냄. 또한, 태스크 생성 시 작성한 **'계획(Planning Memo)'** 내용을 수정할 수 있으며, `TimePicker`를 통해 직관적으로 목표 시간을 조정함.
+  - `NOW` 및 `WILL` 상태의 경우 목표 시간이 초기값 대비 증감되었을 때 해당 블록의 종료 시간을 수정하고, 증감분만큼 `shift_future_blocks`를 트리거하여 전체 타임라인을 당기거나 밀어냄. 또한, 태스크 생성 시 작성한 **'계획(Planning Memo)'** 내용을 수정할 수 있으며, 모달 오픈 시 기존에 저장된 계획 내용이 자동으로 채워져(Pre-fill) 나타납니다. `TimePicker`를 통해 직관적으로 목표 시간을 조정함.
 - **[UI Feedback]**: 모달 닫힘. 전체 타임라인 즉각적인 리렌더링 및 후속 일정 재배치 시각화.
 
 ### E. 🔥 긴급 업무 입력 및 타임 시프트 (Urgent Task Flow)
