@@ -243,7 +243,7 @@ export function useApp() {
           isInbox: data.isInbox || false
         }
       });
-      fetchMainData();
+      await fetchMainData();
     } catch (error) {
       console.error("Task add failed:", error);
     }
