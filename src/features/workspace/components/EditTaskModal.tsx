@@ -7,8 +7,10 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { TimePicker } from "./TimePicker";
 import { TimeBlock } from "@/types";
 
 interface EditTaskModalProps {
@@ -17,7 +19,7 @@ interface EditTaskModalProps {
     onClose: () => void;
     onEditTaskSubmit: (blockId: number, data: {
         title: string;
-        description: string;
+        planningMemo: string;
         hours: number;
         minutes: number;
         reviewMemo: string;
@@ -34,7 +36,7 @@ export const EditTaskModal = ({
 
     const editSchema = z.object({
         title: z.string().min(1, t.main?.toast?.set_title || "태스크 제목을 입력해주세요."),
-        description: z.string().optional(),
+        planningMemo: z.string().optional(),
         hours: z.number().min(0).max(23),
         minutes: z.number().min(0).max(59),
         reviewMemo: z.string().optional(),
@@ -47,7 +49,7 @@ export const EditTaskModal = ({
 
     const form = useForm<EditFormValues>({
         resolver: zodResolver(editSchema),
-        defaultValues: { title: "", description: "", hours: 0, minutes: 30, reviewMemo: "" },
+        defaultValues: { title: "", planningMemo: "", hours: 0, minutes: 30, reviewMemo: "" },
     });
 
     useEffect(() => {
@@ -67,7 +69,7 @@ export const EditTaskModal = ({
 
             form.reset({
                 title: editTaskBlock.title || "",
-                description: "", // In models we have planning_memo on Task, but for now we'll just allow editing if backend supports it. For now leaving empty as per UI.
+                planningMemo: (editTaskBlock as any).planningMemo || "",
                 hours: h,
                 minutes: m,
                 reviewMemo: editTaskBlock.reviewMemo || "",
@@ -80,7 +82,7 @@ export const EditTaskModal = ({
     const onSubmit = async (data: EditFormValues) => {
         await onEditTaskSubmit(editTaskBlock.id, {
             title: data.title,
-            description: data.description || "",
+            planningMemo: data.planningMemo || "",
             hours: data.hours,
             minutes: data.minutes,
             reviewMemo: data.reviewMemo || "",
@@ -91,13 +93,16 @@ export const EditTaskModal = ({
     return (
         <Dialog open={!!editTaskBlock} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-[440px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-6 antialiased">
-                <DialogHeader>
+                <DialogHeader className="space-y-1">
                     <DialogTitle className="text-xl font-black tracking-tighter text-text-primary">
-                        {t.main?.tooltip?.edit || "태스크 수정"}
+                        태스크 수정
                     </DialogTitle>
+                    <DialogDescription className="text-text-secondary text-[11px] font-medium">
+                        <span className="text-accent font-bold">[{editTaskBlock.title}]</span>의 내용을 수정합니다.
+                    </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-2">
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-text-secondary">제목</label>
                         <input
@@ -108,25 +113,29 @@ export const EditTaskModal = ({
                     </div>
 
                     {!isDone && (
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-text-secondary">목표 시간</label>
-                            <div className="flex gap-2 items-center">
-                                <input
-                                    type="number"
-                                    {...form.register("hours", { valueAsNumber: true })}
-                                    className="w-20 bg-background border border-border rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent text-center"
-                                    placeholder="0"
+                        <>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-text-secondary">목표 시간</label>
+                                <TimePicker
+                                    hours={form.watch("hours")}
+                                    minutes={form.watch("minutes")}
+                                    onChange={(h, m) => {
+                                        form.setValue("hours", h);
+                                        form.setValue("minutes", m);
+                                    }}
+                                    t={t}
                                 />
-                                <span className="text-sm font-bold text-text-muted">시간</span>
-                                <input
-                                    type="number"
-                                    {...form.register("minutes", { valueAsNumber: true })}
-                                    className="w-20 bg-background border border-border rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent text-center"
-                                    placeholder="30"
-                                />
-                                <span className="text-sm font-bold text-text-muted">분</span>
                             </div>
-                        </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-text-secondary">계획</label>
+                                <textarea
+                                    {...form.register("planningMemo")}
+                                    className="w-full h-24 bg-background border border-border rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+                                    placeholder="업무 계획을 수정해주세요."
+                                />
+                            </div>
+                        </>
                     )}
 
                     {isDone && (

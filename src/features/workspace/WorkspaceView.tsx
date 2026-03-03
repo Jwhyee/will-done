@@ -215,6 +215,7 @@ export const WorkspaceView = ({
             await onTransition(transitionBlock, action, extra, memo);
           }
         }}
+        currentTime={currentTime}
       />
 
       <EditTaskModal

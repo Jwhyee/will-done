@@ -7,6 +7,7 @@ export interface TimeBlock {
   endTime: string;
   status: "DONE" | "NOW" | "WILL" | "UNPLUGGED" | "PENDING";
   reviewMemo: string | null;
+  planningMemo: string | null;
   isUrgent: boolean;
 }
 

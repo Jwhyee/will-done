@@ -256,7 +256,7 @@ export function useApp() {
         input: {
           blockId,
           title: data.title,
-          description: data.description,
+          description: data.planningMemo,
           hours: data.hours,
           minutes: data.minutes,
           reviewMemo: data.reviewMemo,
