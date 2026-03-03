@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, X, AlertCircle, ChevronRight, Layout, Clock } from "lucide-react";
+import { Plus, X, AlertCircle, ChevronRight, Layout, Clock, Info } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,6 +12,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -62,12 +68,12 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
 
   const workspaceForm = useForm<WorkspaceFormValues>({
     resolver: zodResolver(workspaceSchema),
-    defaultValues: { 
-      name: "", 
-      coreTimeStart: "", 
-      coreTimeEnd: "", 
+    defaultValues: {
+      name: "",
+      coreTimeStart: "",
+      coreTimeEnd: "",
       roleIntro: "",
-      unpluggedTimes: [] 
+      unpluggedTimes: []
     }
   });
 
@@ -126,8 +132,8 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
               onClick={() => setActiveStep("basic")}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all",
-                activeStep === "basic" 
-                  ? "bg-surface-elevated text-text-primary shadow-sm" 
+                activeStep === "basic"
+                  ? "bg-surface-elevated text-text-primary shadow-sm"
                   : "text-text-muted hover:text-text-secondary"
               )}
             >
@@ -135,15 +141,15 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                 "w-5 h-5 rounded-full flex items-center justify-center text-[10px] border transition-colors",
                 activeStep === "basic" ? "bg-text-primary text-background border-text-primary" : "border-border text-text-muted"
               )}>1</div>
-              {t.workspace_setup.name_label}
+              {t.workspace_setup.tab_basic}
               {hasBasicErrors && <div className="w-1.5 h-1.5 rounded-full bg-danger animate-pulse" />}
             </button>
             <button
               onClick={() => setActiveStep("time")}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all",
-                activeStep === "time" 
-                  ? "bg-surface-elevated text-text-primary shadow-sm" 
+                activeStep === "time"
+                  ? "bg-surface-elevated text-text-primary shadow-sm"
                   : "text-text-muted hover:text-text-secondary"
               )}
             >
@@ -151,12 +157,12 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                 "w-5 h-5 rounded-full flex items-center justify-center text-[10px] border transition-colors",
                 activeStep === "time" ? "bg-text-primary text-background border-text-primary" : "border-border text-text-muted"
               )}>2</div>
-              {t.workspace_setup.unplugged_time}
+              {t.workspace_setup.tab_time}
               {hasTimeErrors && <div className="w-1.5 h-1.5 rounded-full bg-danger animate-pulse" />}
             </button>
           </div>
         </DialogHeader>
-        
+
         <form onSubmit={workspaceForm.handleSubmit(onWorkspaceSubmit)} className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto px-8 py-4 scrollbar-hide">
             <AnimatePresence mode="wait">
@@ -175,14 +181,14 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                       {t.workspace_setup.name_label}
                     </div>
                     <div className="space-y-2">
-                      <Input 
-                        {...workspaceForm.register("name")} 
-                        placeholder={t.workspace_setup.name_placeholder} 
-                        className="bg-background border-border text-text-primary h-14 rounded-2xl px-5 text-lg font-bold focus:ring-1 focus:ring-white/10" 
+                      <Input
+                        {...workspaceForm.register("name")}
+                        placeholder={t.workspace_setup.name_placeholder}
+                        className="bg-background border-border text-text-primary h-14 rounded-2xl px-5 text-lg font-bold focus:ring-1 focus:ring-white/10"
                       />
                       {workspaceForm.formState.errors.name && (
                         <p className="text-xs text-danger font-bold flex items-center gap-1.5 pl-1">
-                          <AlertCircle size={14}/> {workspaceForm.formState.errors.name.message}
+                          <AlertCircle size={14} /> {workspaceForm.formState.errors.name.message}
                         </p>
                       )}
                     </div>
@@ -192,8 +198,18 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                     <div className="flex items-center gap-2 text-xs font-bold text-text-secondary uppercase tracking-widest">
                       <Layout size={14} />
                       {t.workspace_setup.role_intro}
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info size={12} className="text-text-muted hover:text-text-secondary cursor-help transition-colors" />
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-[220px] text-xs leading-relaxed">
+                            {t.workspace_setup.role_intro_tooltip}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
-                    <textarea 
+                    <textarea
                       {...workspaceForm.register("roleIntro")}
                       placeholder={t.workspace_setup.role_placeholder}
                       className="w-full min-h-[160px] bg-background border-border rounded-2xl p-5 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-text-muted font-medium leading-relaxed shadow-inner resize-none"
@@ -215,14 +231,14 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                         <Clock size={14} />
                         {t.workspace_setup.core_time}
                       </div>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           workspaceForm.setValue("coreTimeStart", "");
                           workspaceForm.setValue("coreTimeEnd", "");
-                        }} 
+                        }}
                         className="h-7 text-[10px] font-black text-text-muted hover:text-text-primary transition-all rounded-lg uppercase tracking-wider"
                       >
                         {t.workspace_setup.core_time_reset}
@@ -244,7 +260,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                       </p>
                       {workspaceForm.formState.errors.coreTimeEnd && (
                         <p className="text-xs text-danger font-bold flex items-center gap-1.5 pl-1">
-                          <AlertCircle size={14}/> {workspaceForm.formState.errors.coreTimeEnd.message}
+                          <AlertCircle size={14} /> {workspaceForm.formState.errors.coreTimeEnd.message}
                         </p>
                       )}
                     </div>
@@ -255,12 +271,22 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                       <div className="flex items-center gap-2 text-xs font-bold text-text-secondary uppercase tracking-widest">
                         <Clock size={14} />
                         {t.workspace_setup.unplugged_time}
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info size={12} className="text-text-muted hover:text-text-secondary cursor-help transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-[240px] text-xs leading-relaxed">
+                              {t.workspace_setup.unplugged_tooltip}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => append({ label: "", startTime: "12:00", endTime: "13:00" })} 
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => append({ label: "", startTime: "12:00", endTime: "13:00" })}
                         className="border-border bg-background hover:bg-surface text-text-primary font-bold rounded-xl h-9 text-xs transition-all shadow-sm active:scale-95"
                       >
                         <Plus size={14} className="mr-2" /> {t.workspace_setup.add_unplugged}
@@ -274,27 +300,27 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                         </div>
                       )}
                       {fields.map((field, index) => (
-                        <motion.div 
-                          key={field.id} 
+                        <motion.div
+                          key={field.id}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           className="p-5 bg-background border border-border rounded-2xl space-y-4 relative shadow-sm group hover:border-text-primary/10 transition-colors"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black text-text-muted tracking-widest uppercase">Block #{index + 1}</span>
-                            <button 
-                              type="button" 
-                              onClick={() => remove(index)} 
+                            <span className="text-[10px] font-black text-text-muted tracking-widest uppercase">{t.workspace_setup.unplugged_block_label} #{index + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => remove(index)}
                               className="text-text-muted hover:text-danger transition-colors p-1"
                             >
                               <X size={16} />
                             </button>
                           </div>
                           <div className="space-y-4">
-                            <Input 
-                              {...workspaceForm.register(`unpluggedTimes.${index}.label` as const)} 
-                              placeholder={t.workspace_setup.unplugged_label_placeholder} 
-                              className="bg-surface border-border h-12 rounded-xl px-4 font-bold" 
+                            <Input
+                              {...workspaceForm.register(`unpluggedTimes.${index}.label` as const)}
+                              placeholder={t.workspace_setup.unplugged_label_placeholder}
+                              className="bg-surface border-border h-12 rounded-xl px-4 font-bold"
                             />
                             <div className="grid grid-cols-2 gap-4">
                               <Input type="time" {...workspaceForm.register(`unpluggedTimes.${index}.startTime` as const)} className="bg-surface border-border h-11 rounded-xl font-bold [color-scheme:dark]" />
@@ -302,7 +328,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                             </div>
                             {(workspaceForm.formState.errors.unpluggedTimes?.[index]?.label || workspaceForm.formState.errors.unpluggedTimes?.[index]?.endTime) && (
                               <p className="text-xs text-danger font-bold flex items-center gap-1.5 pl-1">
-                                <AlertCircle size={14}/> {workspaceForm.formState.errors.unpluggedTimes?.[index]?.label?.message || workspaceForm.formState.errors.unpluggedTimes?.[index]?.endTime?.message}
+                                <AlertCircle size={14} /> {workspaceForm.formState.errors.unpluggedTimes?.[index]?.label?.message || workspaceForm.formState.errors.unpluggedTimes?.[index]?.endTime?.message}
                               </p>
                             )}
                           </div>
@@ -317,7 +343,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
 
           <div className="p-8 border-t border-border bg-surface-elevated shrink-0 mt-auto">
             {activeStep === "basic" ? (
-              <Button 
+              <Button
                 type="button"
                 onClick={() => setActiveStep("time")}
                 className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-14 rounded-2xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95 flex items-center justify-center gap-2"
@@ -327,7 +353,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
               </Button>
             ) : (
               <div className="flex gap-4">
-                <Button 
+                <Button
                   type="button"
                   variant="outline"
                   onClick={() => setActiveStep("basic")}
@@ -335,8 +361,8 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                 >
                   {t.workspace_setup.prev_btn}
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="flex-[2] bg-text-primary text-background hover:bg-zinc-200 font-bold h-14 rounded-2xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95"
                 >
                   {isFirst ? t.workspace_setup.submit_btn : t.workspace_setup.title_new}
