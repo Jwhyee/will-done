@@ -146,6 +146,14 @@
 - **[Backend Command]**: `add_task` 호출. 마지막 태스크 종료 시점부터 자동 배정. 언플러그드 타임 중복 시 블록 쪼개기 수행.
 - **[UI Feedback]**: 타임라인 리렌더링 및 입력 폼 초기화.
 
+### D-2. 업무 내용 수정 및 타임 시프트 (Task Edit Flow)
+- **[Trigger]**: 타임라인 내 업무 블록의 `Pencil` 아이콘 클릭 후 폼 수정 및 저장.
+- **[Frontend State]**: `EditTaskModal`에서 변경된 제목, 설명, 목표 시간을 바탕으로 `handleEditTaskSubmit` 호출.
+- **[Backend Command]**: `update_task` 호출. 
+  - `DONE` 상태의 경우 리뷰 메모만 수정 가능. 
+  - `NOW` 및 `WILL` 상태의 경우 목표 시간이 초기값 대비 증감되었을 때 해당 블록의 종료 시간을 수정하고, 증감분만큼 `shift_future_blocks`를 트리거하여 전체 타임라인을 당기거나 밀어냄.
+- **[UI Feedback]**: 모달 닫힘. 전체 타임라인 즉각적인 리렌더링 및 후속 일정 재배치 시각화.
+
 ### E. 🔥 긴급 업무 입력 및 타임 시프트 (Urgent Task Flow)
 - **[Trigger]**: 태스크 입력 시 `🔥 Urgent` 체크박스 활성화 후 추가.
 - **[Frontend State]**: `isUrgent: true` 상태로 백엔드 전송.
@@ -162,10 +170,10 @@
   - **인박스로 이동**: 타임라인 대신 인박스(Inbox)에 태스크 저장.
 
 ### G. 업무 종료 및 분기 처리 (Task Transition Flow)
-- **[Trigger]**: 타임라인 내 `NOW` 상태 블록의 `Pencil` 아이콘 클릭 또는 종료 시간 도래 시 자동 팝업.
-- **[Frontend State]**: `TransitionModal` 오픈. **완료(Complete)**와 **연장(Extension)** 탭 중 선택.
+- **[Trigger]**: 타임라인 내 `NOW` 상태 블록의 `Check` 아이콘 클릭 또는 종료 시간 도래 시 자동 팝업.
+- **[Frontend State]**: `TransitionModal` 오픈.
 - **[Backend Command]**: `process_task_transition` 호출.
-  - **완료**: 실제 완료 시점으로 시간을 고정하고 리뷰 메모 저장. 이후 일정 당김/밀기.
+  - **완료**:제시간 종료, 혹은 현재 시점/과거 시점으로 시간 임의 선택. 목표 시간이 남은 상태에서 조기 종료 시 잉여 시간만큼 이후 일정 당김(Pull up). 목표 시간을 초과하여 지연 종료 시 초과 시간만큼 이후 일정 밀기(Push back).
   - **연장**: 지정된 분만큼 현재 블록 연장 및 이후 일정 밀기.
 - **[UI Feedback]**: 모달 닫힘. 타임라인 리렌더링. 2시간 집중 시 건강 관리 알림 토스트 노출.
 
