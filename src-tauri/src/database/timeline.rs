@@ -34,7 +34,11 @@ pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: Nai
     let end_of_day = start_of_day + Duration::days(1) - Duration::seconds(1);
 
     let mut blocks = sqlx::query_as::<_, TimeBlock>(
-        "SELECT * FROM time_blocks WHERE workspace_id = ?1 AND start_time >= ?2 AND start_time <= ?3 ORDER BY start_time ASC"
+        "SELECT tb.*, t.planning_memo 
+         FROM time_blocks tb
+         LEFT JOIN tasks t ON tb.task_id = t.id
+         WHERE tb.workspace_id = ?1 AND tb.start_time >= ?2 AND tb.start_time <= ?3 
+         ORDER BY tb.start_time ASC"
     )
     .bind(workspace_id)
     .bind(start_of_day.format("%Y-%m-%dT%H:%M:%S").to_string())
