@@ -12,6 +12,8 @@ interface CompletionSectionProps {
   agoMinutes: number;
   setAgoMinutes: (min: number) => void;
   handleComplete: () => Promise<void>;
+  endTime: string;
+  currentTime: Date;
 }
 
 export const CompletionSection = ({
@@ -23,15 +25,25 @@ export const CompletionSection = ({
   agoMinutes,
   setAgoMinutes,
   handleComplete,
+  endTime,
+  currentTime,
 }: CompletionSectionProps) => {
+  const isTargetTimeReached = new Date(endTime) <= currentTime;
+
   return (
     <div className="space-y-4">
+      {!isTargetTimeReached && completionType === "COMPLETE_ON_TIME" && (
+        <div className="text-[10px] font-bold text-accent bg-accent/5 py-1.5 px-3 rounded-lg flex items-center justify-center animate-in fade-in slide-in-from-top-1 duration-300">
+          아직 목표 시간이 되지 않았습니다.
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2 p-1 bg-background border border-border rounded-xl">
         <CompletionOption
           active={completionType === "COMPLETE_ON_TIME"}
           onClick={() => setCompletionType("COMPLETE_ON_TIME")}
           icon={<Target size={14} />}
           label={t.main.transition.complete_target}
+          disabled={!isTargetTimeReached}
         />
         <CompletionOption
           active={completionType === "COMPLETE_NOW"}
@@ -48,9 +60,8 @@ export const CompletionSection = ({
       </div>
 
       {/* Manual Input Area (Progressive Disclosure) */}
-      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-        completionType === "COMPLETE_AGO" ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
-      }`}>
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${completionType === "COMPLETE_AGO" ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
+        }`}>
         <div className="flex items-center justify-center gap-3 py-2">
           <div className="flex items-center gap-2">
             <Input

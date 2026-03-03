@@ -14,6 +14,7 @@ interface TransitionModalProps {
   transitionBlock: TimeBlock | null;
   onClose: () => void;
   onTransition: (action: string, extraMinutes?: number, reviewMemo?: string) => Promise<void>;
+  currentTime: Date;
 }
 
 type TabType = "COMPLETION";
@@ -24,6 +25,7 @@ export const TransitionModal = ({
   transitionBlock,
   onClose,
   onTransition,
+  currentTime,
 }: TransitionModalProps) => {
   const [activeTab, setActiveTab] = useState<TabType>("COMPLETION");
   const [reviewMemo, setReviewMemo] = useState("");
@@ -35,10 +37,11 @@ export const TransitionModal = ({
   useEffect(() => {
     if (transitionBlock) {
       setActiveTab("COMPLETION");
-      setCompletionType("COMPLETE_NOW");
+      const isTargetReached = new Date(transitionBlock.endTime) <= currentTime;
+      setCompletionType(isTargetReached ? "COMPLETE_ON_TIME" : "COMPLETE_NOW");
       setReviewMemo("");
     }
-  }, [transitionBlock]);
+  }, [transitionBlock, currentTime]);
 
   // Focus textarea when switching to COMPLETION tab
   useEffect(() => {
@@ -100,6 +103,8 @@ export const TransitionModal = ({
               agoMinutes={agoMinutes}
               setAgoMinutes={setAgoMinutes}
               handleComplete={handleComplete}
+              endTime={transitionBlock.endTime}
+              currentTime={currentTime}
             />
           </div>
         </div>
