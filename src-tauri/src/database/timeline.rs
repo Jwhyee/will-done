@@ -73,6 +73,7 @@ pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: Nai
             end_time: ut_end_dt.format("%Y-%m-%dT%H:%M:%S").to_string(),
             status: "UNPLUGGED".to_string(),
             review_memo: None,
+            planning_memo: None,
             is_urgent: false,
         });
     }

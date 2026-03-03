@@ -53,6 +53,7 @@ pub struct TimeBlock {
     pub end_time: String,
     pub status: String, // DONE, NOW, WILL, UNPLUGGED, PENDING
     pub review_memo: Option<String>,
+    pub planning_memo: Option<String>,
     pub is_urgent: bool,
 }
 
