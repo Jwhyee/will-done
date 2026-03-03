@@ -12,7 +12,7 @@ import {
 interface WorkspaceDialogsProps {
   t: any;
   userStartTime?: string;
-  deleteTaskId: number | null;
+  deleteTaskProps: { id: number; title: string; status: string } | null;
   isSplitDelete: boolean;
   moveAllConfirm: boolean;
   exceededConfirm: { data: any } | null;
@@ -29,7 +29,7 @@ interface WorkspaceDialogsProps {
 export const WorkspaceDialogs = ({
   t,
   userStartTime,
-  deleteTaskId,
+  deleteTaskProps,
   isSplitDelete,
   moveAllConfirm,
   exceededConfirm,
@@ -46,7 +46,7 @@ export const WorkspaceDialogs = ({
     <>
       {/* Deletion Confirmation */}
       <Dialog
-        open={!!deleteTaskId}
+        open={!!deleteTaskProps}
         onOpenChange={(open) => {
           if (!open) onDeleteCancel();
         }}
@@ -67,7 +67,7 @@ export const WorkspaceDialogs = ({
                 <Button
                   autoFocus
                   onClick={async () => {
-                    if (deleteTaskId) await onSplitDeleteConfirm(deleteTaskId, false);
+                    if (deleteTaskProps) await onSplitDeleteConfirm(deleteTaskProps.id, false);
                   }}
                   className="w-full bg-danger text-text-primary hover:bg-danger/80 font-bold h-12 rounded-xl transition-all active:scale-95"
                 >
@@ -76,7 +76,7 @@ export const WorkspaceDialogs = ({
                 <Button
                   variant="ghost"
                   onClick={async () => {
-                    if (deleteTaskId) await onSplitDeleteConfirm(deleteTaskId, true);
+                    if (deleteTaskProps) await onSplitDeleteConfirm(deleteTaskProps.id, true);
                   }}
                   className="w-full bg-surface text-text-secondary hover:bg-border hover:text-text-primary font-bold h-12 rounded-xl transition-all"
                 >
@@ -99,7 +99,12 @@ export const WorkspaceDialogs = ({
                   {t.main.delete_confirm.title}
                 </DialogTitle>
                 <DialogDescription className="text-text-secondary text-sm leading-relaxed">
-                  {t.main.delete_confirm.description}
+                  <span className="text-accent font-bold">[{deleteTaskProps?.title}]</span> 태스크를 정말 삭제하시겠습니까?
+                  {deleteTaskProps?.status === "NOW" && (
+                    <div className="mt-2 text-warning text-xs">
+                      진행 중이던 업무를 삭제하면 흐름이 끊길 수 있습니다. 대신 <strong>'긴급'</strong> 요소로 추가하는 것을 권장합니다.
+                    </div>
+                  )}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="mt-6 flex gap-3">
@@ -113,7 +118,7 @@ export const WorkspaceDialogs = ({
                 <Button
                   autoFocus
                   onClick={async () => {
-                    if (deleteTaskId) await onDeleteConfirm(deleteTaskId);
+                    if (deleteTaskProps) await onDeleteConfirm(deleteTaskProps.id);
                   }}
                   className="flex-1 bg-danger text-text-primary hover:bg-danger/80 font-bold rounded-xl h-12 transition-all active:scale-95"
                 >

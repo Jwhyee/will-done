@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { Rocket, Plus } from "lucide-react";
 import { TimeBlock, Task, User } from "@/types";
 import { TransitionModal } from "./components/TransitionModal";
+import { EditTaskModal } from "./components/EditTaskModal";
 import { useWorkspace } from "./hooks/useWorkspace";
 import { WorkspaceHeader } from "./components/WorkspaceHeader";
 import { WorkspaceTimeline } from "./components/WorkspaceTimeline";
@@ -22,6 +23,7 @@ interface WorkspaceViewProps {
   inboxTasks: Task[];
   activeWorkspaceId: number | null;
   onTaskSubmit: (data: any) => Promise<void>;
+  onEditTaskSubmit: (blockId: number, data: any) => Promise<void>;
   onTransition: (block: TimeBlock, action: string, extraMinutes?: number, reviewMemo?: string) => Promise<void>;
   onMoveToInbox: (blockId: number) => Promise<void>;
   onDeleteTask: (taskId: number) => Promise<void>;
@@ -47,6 +49,7 @@ export const WorkspaceView = ({
   inboxTasks,
   activeWorkspaceId,
   onTaskSubmit,
+  onEditTaskSubmit,
   onTransition,
   onMoveToInbox,
   onDeleteTask,
@@ -61,8 +64,8 @@ export const WorkspaceView = ({
   const {
     hoverTaskId,
     setHoverTaskId,
-    deleteTaskId,
-    setDeleteTaskId,
+    deleteTaskProps,
+    setDeleteTaskProps,
     isSplitDelete,
     setIsSplitDelete,
     moveAllConfirm,
@@ -74,6 +77,9 @@ export const WorkspaceView = ({
     taskForm,
     handleTaskSubmit,
     handleTaskError,
+    handleEditTaskSubmit,
+    editTaskBlock,
+    setEditTaskBlock,
     calculateProgress,
   } = useWorkspace({
     t,
@@ -81,6 +87,7 @@ export const WorkspaceView = ({
     currentTime,
     timeline,
     onTaskSubmit,
+    onEditTaskSubmit,
   });
 
   const dailyProgress = calculateProgress();
@@ -92,7 +99,7 @@ export const WorkspaceView = ({
         <div className="w-24 h-24 bg-surface rounded-3xl flex items-center justify-center shadow-2xl border border-border/50">
           <Rocket size={48} className="text-text-primary animate-bounce" />
         </div>
-        
+
         <div className="space-y-4 max-w-md">
           <h1 className="text-3xl font-black tracking-tighter text-text-primary leading-tight">
             {t.workspace_setup?.welcome || "환영합니다!"}
@@ -102,7 +109,7 @@ export const WorkspaceView = ({
           </p>
         </div>
 
-        <Button 
+        <Button
           onClick={onCreateWorkspace}
           className="bg-text-primary text-background hover:bg-zinc-200 font-bold h-14 px-8 rounded-2xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95 flex items-center gap-2"
         >
@@ -140,10 +147,14 @@ export const WorkspaceView = ({
         inboxTasksCount={inboxTasks.length}
         currentTime={currentTime}
         onTransition={setTransitionBlock}
+        onEditTask={setEditTaskBlock}
         onMoveToInbox={onMoveToInbox}
         onDelete={(id, isSplit) => {
-          setDeleteTaskId(id);
-          setIsSplitDelete(isSplit);
+          const block = timeline.find((b) => b.taskId === id);
+          if (block) {
+            setDeleteTaskProps({ id, title: block.title, status: block.status });
+            setIsSplitDelete(isSplit);
+          }
         }}
         onMoveAllConfirm={() => setMoveAllConfirm(true)}
         hoverTaskId={hoverTaskId}
@@ -164,21 +175,21 @@ export const WorkspaceView = ({
       <WorkspaceDialogs
         t={t}
         userStartTime={user?.dayStartTime}
-        deleteTaskId={deleteTaskId}
+        deleteTaskProps={deleteTaskProps}
         isSplitDelete={isSplitDelete}
         moveAllConfirm={moveAllConfirm}
         exceededConfirm={exceededConfirm}
         onDeleteCancel={() => {
-          setDeleteTaskId(null);
+          setDeleteTaskProps(null);
           setIsSplitDelete(false);
         }}
         onDeleteConfirm={async (id) => {
           await onDeleteTask(id);
-          setDeleteTaskId(null);
+          setDeleteTaskProps(null);
         }}
         onSplitDeleteConfirm={async (id, keepPast) => {
           await onHandleSplitTaskDeletion(id, keepPast);
-          setDeleteTaskId(null);
+          setDeleteTaskProps(null);
           setIsSplitDelete(false);
         }}
         onMoveAllCancel={() => setMoveAllConfirm(false)}
@@ -204,6 +215,13 @@ export const WorkspaceView = ({
             await onTransition(transitionBlock, action, extra, memo);
           }
         }}
+      />
+
+      <EditTaskModal
+        t={t}
+        editTaskBlock={editTaskBlock}
+        onClose={() => setEditTaskBlock(null)}
+        onEditTaskSubmit={handleEditTaskSubmit}
       />
     </div>
   );

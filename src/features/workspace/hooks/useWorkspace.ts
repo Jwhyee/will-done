@@ -11,6 +11,7 @@ interface UseWorkspaceProps {
   currentTime: Date;
   timeline: TimeBlock[];
   onTaskSubmit: (data: any) => Promise<void>;
+  onEditTaskSubmit: (blockId: number, data: any) => Promise<void>;
 }
 
 export const useWorkspace = ({
@@ -19,13 +20,15 @@ export const useWorkspace = ({
   currentTime,
   timeline,
   onTaskSubmit,
+  onEditTaskSubmit,
 }: UseWorkspaceProps) => {
   const [hoverTaskId, setHoverTaskId] = useState<number | null>(null);
-  const [deleteTaskId, setDeleteTaskId] = useState<number | null>(null);
+  const [deleteTaskProps, setDeleteTaskProps] = useState<{ id: number; title: string; status: string } | null>(null);
   const [isSplitDelete, setIsSplitDelete] = useState(false);
   const [moveAllConfirm, setMoveAllConfirm] = useState(false);
   const [exceededConfirm, setExceededConfirm] = useState<{ data: any } | null>(null);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
+  const [editTaskBlock, setEditTaskBlock] = useState<TimeBlock | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -111,6 +114,11 @@ export const useWorkspace = ({
     }
   };
 
+  const handleEditTaskSubmit = async (blockId: number, data: any) => {
+    await onEditTaskSubmit(blockId, data);
+    setEditTaskBlock(null);
+  };
+
   const calculateProgress = () => {
     const activeBlocks = timeline.filter((b) => b.status !== "UNPLUGGED");
     if (activeBlocks.length === 0) return 0;
@@ -135,8 +143,8 @@ export const useWorkspace = ({
   return {
     hoverTaskId,
     setHoverTaskId,
-    deleteTaskId,
-    setDeleteTaskId,
+    deleteTaskProps,
+    setDeleteTaskProps,
     isSplitDelete,
     setIsSplitDelete,
     moveAllConfirm,
@@ -148,6 +156,9 @@ export const useWorkspace = ({
     taskForm,
     handleTaskSubmit,
     handleTaskError,
+    handleEditTaskSubmit,
+    editTaskBlock,
+    setEditTaskBlock,
     calculateProgress,
   };
 };

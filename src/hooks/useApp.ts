@@ -28,14 +28,14 @@ export function useApp() {
   const [timeline, setTimeline] = useState<TimeBlock[]>([]);
   const [inboxTasks, setInboxTasks] = useState<Task[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
-  
+
   const logicalDate = useMemo(() => {
     if (!user) return currentTime;
     const [startH, startM] = user.dayStartTime.split(':').map(Number);
     const now = new Date(currentTime);
     const boundary = new Date(now);
     boundary.setHours(startH, startM, 0, 0);
-    
+
     const boundaryTime = boundary.getTime();
     if (currentTime.getTime() < boundaryTime) {
       now.setDate(now.getDate() - 1);
@@ -51,7 +51,7 @@ export function useApp() {
   const [isWorkspaceCreateModalOpen, setIsWorkspaceCreateModalOpen] = useState(false);
   const [todayCompletedDuration, setTodayCompletedDuration] = useState<number>(0);
   const lastNotifiedBlockId = useRef<number | null>(null);
-  
+
   const { showToast } = useToast();
 
   const lang = useMemo(() => (user?.lang || getLang()) as Lang, [user]);
@@ -62,16 +62,16 @@ export function useApp() {
     try {
       const g = await invoke<string>("get_greeting", { workspaceId: activeWorkspaceId, lang });
       setGreeting(g);
-      
+
       const targetDate = selectedDate || logicalDate;
       const dateStr = format(targetDate, "yyyy-MM-dd");
-      
-      const list = await invoke<TimeBlock[]>("get_timeline", { 
-        workspaceId: activeWorkspaceId, 
+
+      const list = await invoke<TimeBlock[]>("get_timeline", {
+        workspaceId: activeWorkspaceId,
         date: selectedDate ? dateStr : undefined
       });
       const inbox = await invoke<Task[]>("get_inbox", { workspaceId: activeWorkspaceId });
-      
+
       const completedDuration = await invoke<number>("get_today_completed_duration", { workspaceId: activeWorkspaceId });
       setTodayCompletedDuration(completedDuration);
 
@@ -122,7 +122,7 @@ export function useApp() {
         return;
       }
       setUser(u);
-      
+
       const wsList = await invoke<Workspace[]>("get_workspaces");
       setWorkspaces(wsList);
 
@@ -154,8 +154,8 @@ export function useApp() {
     const unlistenPromise = listen<number>("open-transition-modal", (event) => {
       const blockId = event.payload;
       // Fetch latest timeline and open transition modal
-      invoke<TimeBlock[]>("get_timeline", { 
-        workspaceId: activeWorkspaceId, 
+      invoke<TimeBlock[]>("get_timeline", {
+        workspaceId: activeWorkspaceId,
         date: undefined // Let backend handle logical date for "today"
       }).then(list => {
         const block = list.find(b => b.id === blockId);
@@ -235,17 +235,36 @@ export function useApp() {
   const onTaskSubmit = async (data: any) => {
     if (!activeWorkspaceId) return;
     try {
-      await invoke("add_task", { 
+      await invoke("add_task", {
         input: {
           workspaceId: activeWorkspaceId,
           ...data,
           planningMemo: data.planningMemo || null,
           isInbox: data.isInbox || false
-        } 
+        }
       });
       fetchMainData();
     } catch (error) {
       console.error("Task add failed:", error);
+    }
+  };
+
+  const onEditTaskSubmit = async (blockId: number, data: any) => {
+    if (!activeWorkspaceId) return;
+    try {
+      await invoke("update_task", {
+        input: {
+          blockId,
+          title: data.title,
+          description: data.description,
+          hours: data.hours,
+          minutes: data.minutes,
+          reviewMemo: data.reviewMemo,
+        }
+      });
+      fetchMainData();
+    } catch (error) {
+      console.error("Edit task failed:", error);
     }
   };
 
@@ -262,7 +281,7 @@ export function useApp() {
         }
       });
       setTransitionBlock(null);
-      
+
       // Update duration and check threshold
       const newDuration = await invoke<number>("get_today_completed_duration", { workspaceId: activeWorkspaceId });
       setTodayCompletedDuration(newDuration);
@@ -311,6 +330,7 @@ export function useApp() {
     handleDragStart,
     handleDragEnd,
     onTaskSubmit,
+    onEditTaskSubmit,
     onTransition,
   };
 }

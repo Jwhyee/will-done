@@ -12,6 +12,7 @@ interface WorkspaceTimelineProps {
   inboxTasksCount: number;
   currentTime: Date;
   onTransition: (block: TimeBlock | null) => void;
+  onEditTask: (block: TimeBlock) => void;
   onMoveToInbox: (blockId: number) => Promise<void>;
   onDelete: (id: number, isSplit: boolean) => void;
   onMoveAllConfirm: () => void;
@@ -26,6 +27,7 @@ export const WorkspaceTimeline = ({
   inboxTasksCount,
   currentTime,
   onTransition,
+  onEditTask,
   onMoveToInbox,
   onDelete,
   onMoveAllConfirm,
@@ -72,6 +74,7 @@ export const WorkspaceTimeline = ({
                   currentTime={currentTime}
                   t={t}
                   onTransition={onTransition}
+                  onEditTask={onEditTask}
                   onMoveToInbox={onMoveToInbox}
                   onDelete={(id: number) => {
                     const isSplit = timeline.filter((b) => b.taskId === id).length > 1;

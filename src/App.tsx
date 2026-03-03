@@ -79,6 +79,7 @@ function AppContent() {
     handleDragStart,
     handleDragEnd,
     onTaskSubmit,
+    onEditTaskSubmit,
     onTransition,
   } = useApp();
 
@@ -109,11 +110,11 @@ function AppContent() {
         return <OnboardingView t={t} onComplete={(u) => { setUser(u); setView("main"); }} />;
       case "retrospective":
         return (activeWorkspaceId && user) ? (
-          <RetrospectiveView 
-            workspaceId={activeWorkspaceId} 
+          <RetrospectiveView
+            workspaceId={activeWorkspaceId}
             user={user}
             t={t}
-            onClose={() => setView("main")} 
+            onClose={() => setView("main")}
             onShowSavedRetro={(retro) => {
               setActiveRetrospective(retro);
               setRetrospectiveOpen(true);
@@ -131,9 +132,9 @@ function AppContent() {
                 onSelectWorkspace={(id) => { setActiveWorkspaceId(id); setView("main"); }}
                 onAddWorkspace={() => setIsWorkspaceCreateModalOpen(true)}
                 onOpenSettings={() => setIsGlobalSettingsOpen(true)}
-                onOpenWorkspaceSettings={(id) => { 
-                  setSettingsWorkspaceId(id); 
-                  setIsWorkspaceSettingsOpen(true); 
+                onOpenWorkspaceSettings={(id) => {
+                  setSettingsWorkspaceId(id);
+                  setIsWorkspaceSettingsOpen(true);
                 }}
                 t={t}
               />
@@ -152,6 +153,7 @@ function AppContent() {
               inboxTasks={inboxTasks}
               activeWorkspaceId={activeWorkspaceId}
               onTaskSubmit={onTaskSubmit}
+              onEditTaskSubmit={onEditTaskSubmit}
               onTransition={onTransition}
               onMoveToInbox={async (blockId) => {
                 await invoke("move_to_inbox", { blockId });
@@ -188,7 +190,7 @@ function AppContent() {
   };
 
   return (
-    <DndContext 
+    <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
@@ -209,24 +211,25 @@ function AppContent() {
         {activeId ? (
           activeId.startsWith('inbox-') ? (
             <div className="w-64 opacity-90 scale-105">
-              <InboxItem 
-                task={inboxTasks.find(t => `inbox-${t.id}` === activeId)!} 
-                onMoveToTimeline={() => {}}
-                onDelete={() => {}}
+              <InboxItem
+                task={inboxTasks.find(t => `inbox-${t.id}` === activeId)!}
+                onMoveToTimeline={() => { }}
+                onDelete={() => { }}
               />
             </div>
           ) : (
             <div className="w-[calc(100vw-56px)] opacity-90 scale-105">
-              <SortableItem 
+              <SortableItem
                 block={timeline.find(b => b.id.toString() === activeId)!}
                 timeline={timeline}
                 currentTime={currentTime}
                 t={t}
-                onTransition={() => {}}
-                onMoveToInbox={() => {}}
-                onDelete={() => {}}
+                onTransition={() => { }}
+                onEditTask={() => { }}
+                onMoveToInbox={() => { }}
+                onDelete={() => { }}
                 hoverTaskId={null}
-                setHoverTaskId={() => {}}
+                setHoverTaskId={() => { }}
                 isPastView={isPastView}
               />
             </div>
@@ -299,7 +302,7 @@ function AppContent() {
               {t.retrospective.brag_desc}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-y-auto px-8 scrollbar-hide bg-background">
             <div className="py-8 text-sm leading-relaxed prose prose-invert max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -316,7 +319,7 @@ function AppContent() {
           </div>
 
           <DialogFooter className="p-6 border-t border-border bg-surface-elevated shrink-0">
-            <Button 
+            <Button
               onClick={() => activeRetrospective && navigator.clipboard.writeText(activeRetrospective.content)}
               disabled={!activeRetrospective}
               className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95 disabled:opacity-50"
