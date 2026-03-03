@@ -22,7 +22,7 @@ interface WorkspaceViewProps {
   timeline: TimeBlock[];
   inboxTasks: Task[];
   activeWorkspaceId: number | null;
-  onTaskSubmit: (data: any) => Promise<void>;
+  onTaskSubmit: (data: any, isInbox?: boolean) => Promise<void>;
   onEditTaskSubmit: (blockId: number, data: any) => Promise<void>;
   onTransition: (block: TimeBlock, action: string, extraMinutes?: number, reviewMemo?: string) => Promise<void>;
   onMoveToInbox: (blockId: number) => Promise<void>;

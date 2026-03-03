@@ -23,7 +23,7 @@ interface WorkspaceHeaderProps {
   dailyProgress: number;
   inboxTasksCount: number;
   taskForm: UseFormReturn<any>;
-  onTaskSubmit: (data: any) => Promise<void>;
+  onTaskSubmit: (data: any, isInbox?: boolean) => Promise<void>;
   onTaskError: (errors: any) => void;
   onOpenInbox: () => void;
   onOpenRetrospective: () => void;
@@ -65,10 +65,10 @@ export const WorkspaceHeader = ({
   const disabledDays = (date: Date) => {
     // Disable future dates beyond today
     if (date > logicalDate && !isSameDay(date, logicalDate)) return true;
-    
+
     // If not today, only allow dates in activeDates
     if (isSameDay(date, logicalDate)) return false;
-    
+
     const dateStr = format(date, "yyyy-MM-dd");
     return !activeDates.includes(dateStr);
   };
@@ -180,7 +180,7 @@ export const WorkspaceHeader = ({
                 </div>
               </TooltipTrigger>
               <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                {isRetroEnabled 
+                {isRetroEnabled
                   ? (t.header?.retrospective || "회고")
                   : (t.header?.retro_disabled_tooltip || "Google AI API 키를 설정해야 회고가 가능합니다")
                 }

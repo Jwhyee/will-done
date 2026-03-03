@@ -10,7 +10,7 @@ interface UseWorkspaceProps {
   user: User | null;
   currentTime: Date;
   timeline: TimeBlock[];
-  onTaskSubmit: (data: any) => Promise<void>;
+  onTaskSubmit: (data: any, isInbox?: boolean) => Promise<void>;
   onEditTaskSubmit: (blockId: number, data: any) => Promise<void>;
 }
 
@@ -64,7 +64,7 @@ export const useWorkspace = ({
     defaultValues: { title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false },
   });
 
-  const handleTaskSubmit = async (data: TaskFormValues) => {
+  const handleTaskSubmit = async (data: TaskFormValues, isInbox: boolean = false) => {
     if (!user) return;
 
     const duration = data.hours * 60 + data.minutes;
@@ -96,12 +96,12 @@ export const useWorkspace = ({
     const endOfLogicalDay = new Date(startOfLogicalDay);
     endOfLogicalDay.setDate(endOfLogicalDay.getDate() + 1);
 
-    if (endTime > endOfLogicalDay && !exceededConfirm) {
+    if (!isInbox && endTime > endOfLogicalDay && !exceededConfirm) {
       setExceededConfirm({ data });
       return;
     }
 
-    await onTaskSubmit(data);
+    await onTaskSubmit(data, isInbox);
     taskForm.reset({ title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false });
     setExceededConfirm(null);
   };

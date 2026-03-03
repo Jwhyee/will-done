@@ -1,4 +1,4 @@
-import { Send, Zap } from "lucide-react";
+import { Send, Zap, Inbox } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,14 @@ import { TimePicker } from "./TimePicker";
 interface TaskFormProps {
   t: any;
   taskForm: UseFormReturn<any>;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: any, isInbox?: boolean) => Promise<void>;
   onError: (errors: any) => void;
 }
 
 export const TaskForm = ({ t, taskForm, onSubmit, onError }: TaskFormProps) => {
   return (
     <div className="p-1 bg-surface border border-border rounded-2xl shadow-xl overflow-hidden group/form transition-all duration-300 hover:border-border/80">
-      <form onSubmit={taskForm.handleSubmit(onSubmit, onError)} className="flex flex-col">
+      <form onSubmit={taskForm.handleSubmit((data) => onSubmit(data), onError)} className="flex flex-col">
         <div className="px-3 pt-2">
           <div className="bg-background/40 border border-border/50 rounded-xl transition-all duration-300 group-focus-within/form:bg-background/60 group-focus-within/form:border-accent/30">
             <Input
@@ -52,22 +52,32 @@ export const TaskForm = ({ t, taskForm, onSubmit, onError }: TaskFormProps) => {
                 className={taskForm.watch("isUrgent") ? "text-danger fill-danger" : "text-text-secondary"}
               />
               <span
-                className={`text-xs font-medium uppercase tracking-wider ${
-                  taskForm.watch("isUrgent") ? "text-danger" : "text-text-secondary"
-                }`}
+                className={`text-xs font-medium uppercase tracking-wider ${taskForm.watch("isUrgent") ? "text-danger" : "text-text-secondary"
+                  }`}
               >
                 {t.main.urgent}
               </span>
             </label>
           </div>
 
-          <Button
-            type="submit"
-            className="h-10 px-5 bg-text-primary text-background hover:bg-zinc-200 font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-black/20"
-          >
-            <Send size={16} className="mr-1.5" />
-            {t.main.add_task}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={taskForm.handleSubmit((data) => onSubmit(data, true), onError)}
+              className="h-10 px-4 bg-surface-elevated text-text-primary border-border hover:bg-border font-bold rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
+            >
+              <Inbox size={16} className="text-text-secondary" />
+              <span className="hidden sm:inline">인박스 보관</span>
+            </Button>
+            <Button
+              type="submit"
+              className="h-10 px-5 bg-text-primary text-background hover:bg-zinc-200 font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-black/20 flex items-center gap-1.5"
+            >
+              <Send size={16} />
+              {t.main.add_task}
+            </Button>
+          </div>
         </div>
       </form>
     </div>
