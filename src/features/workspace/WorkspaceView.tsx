@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { Rocket, Plus } from "lucide-react";
-import { TimeBlock, Task, User } from "@/types";
+import { TimeBlock, Task, User, Workspace } from "@/types";
 import { TransitionModal } from "./components/TransitionModal";
 import { EditTaskModal } from "./components/EditTaskModal";
 import { useWorkspace } from "./hooks/useWorkspace";
@@ -60,7 +60,9 @@ export const WorkspaceView = ({
   onCreateWorkspace,
   transitionBlock,
   setTransitionBlock,
-}: WorkspaceViewProps) => {
+  workspaces,
+}: WorkspaceViewProps & { workspaces: Workspace[] }) => {
+  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
   const {
     hoverTaskId,
     setHoverTaskId,
@@ -160,6 +162,8 @@ export const WorkspaceView = ({
         hoverTaskId={hoverTaskId}
         setHoverTaskId={setHoverTaskId}
         isPastView={isPastView}
+        coreTimeStart={activeWorkspace?.coreTimeStart}
+        coreTimeEnd={activeWorkspace?.coreTimeEnd}
       />
 
       <WorkspaceInbox

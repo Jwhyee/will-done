@@ -63,11 +63,13 @@
       - **Overlay Design**: 헤더 상단에 전용 드래그 레이어(`h-8`) 적용 및 상단 여백(`pt-8`) 확보.
       - **Logical Date & Header**: 실시간 시계와 논리적 날짜 표시. 현재 시간이 설정 시간 이전이면 전날의 날짜를 노출하여 업무 연속성 보장.
       - **Daily Progress Bar**: 인사말 하단 배치(h-1.5), 논리적 날짜 기준 완료율 계산.
-      - **Task Input Form**: 입력 영역에 subtle background 및 border 추가로 어포던스 강화.
+      - **Task Input Form (Overlay)**: 입력 영역에 포커스 시 `absolute` 포지셔닝을 통해 타임라인 위로 확장되는 **오버레이(Overlay) UX** 적용. 확장 시 `planning_memo` 입력을 위한 넓은 Textarea를 제공하며, 외부 클릭 시 원래 크기로 복구됨. subtle background 및 border 추가로 어포던스 강화.
       - `Timeline`: 컨테이너 상단 여백 확보(`pt-10`) 및 좌측 여백 확장(`pl-28 ml-4`). 시간 레이블을 인디케이터(Dot)의 완전한 좌측(`-left-28`)으로 이동.
+        - **Core Time Visualization**: 워크스페이스에 설정된 코어 타임 구간에 포함되는 태스크는 배경색 강조(`bg-accent/5`) 및 좌측 타임라인 선/인디케이터에 **브랜드 컬러 및 글로우(Glow) 효과** 적용.
       - `SortableItem`: 태스크 제목, 상태/시간 범위, 액션 아이콘. 
         - **종료 임박 강조**: 마감 시간이 지난 태스크는 `animate-breathing` 효과 적용.
         - **스타일 통일**: 분절된 블록의 테두리를 모두 실선(Solid)으로 통일.
+        - **Unplugged Time Constraints**: '언플러그드 타임' 블록은 드래그 핸들 및 모든 액션 버튼(수정, 삭제 등)을 노출하지 않으며, 상호작용이 불가능한 정적 상태로 렌더링됨.
       - `Modals`: 
         - **WorkspaceCreateModal**: **[1. 기본 정보 / 2. 시간 관리]**의 2단계 스텝 구조를 가진 워크스페이스 생성 전용 모달. `h-fit` 컨테이너를 사용하여 콤팩트한 UI 제공. "기본 정보" 탭의 **직무 소개(AI 컨텍스트)** 레이블 및 "시간 관리" 탭의 **언플러그드 타임** 레이블 우측에 `Info` 아이콘 기반 **Tooltip**을 제공하여 각 필드의 역할을 안내. 언플러그드 타임 블록 추가 시 `업무 제외 시간 #{N}` 형태로 표시.
         - **TransitionModal**: '완료 처리'와 '연장 처리'를 분리하는 **탭(Tab) 기반 인터페이스**.

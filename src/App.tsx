@@ -144,6 +144,7 @@ function AppContent() {
               t={t}
               user={user}
               workspacesCount={workspaces.length}
+              workspaces={workspaces}
               greeting={greeting}
               currentTime={currentTime}
               logicalDate={logicalDate}
