@@ -1,6 +1,6 @@
 use tauri::State;
 use chrono::{Local, NaiveDate, Timelike};
-use crate::models::{Task, TimeBlock, AddTaskInput, TaskTransitionInput, DbState};
+use crate::models::{Task, TimeBlock, AddTaskInput, TaskTransitionInput, UpdateTaskInput, DbState};
 use crate::database;
 use crate::error::{Result, AppError};
 
@@ -37,6 +37,11 @@ pub async fn get_inbox(state: State<'_, DbState>, workspace_id: i64) -> Result<V
 #[tauri::command]
 pub async fn add_task(state: State<'_, DbState>, input: AddTaskInput) -> Result<()> {
     database::timeline::add_task(&state.pool, input).await
+}
+
+#[tauri::command]
+pub async fn update_task(state: State<'_, DbState>, input: UpdateTaskInput) -> Result<()> {
+    database::timeline::update_task(&state.pool, input).await
 }
 
 #[tauri::command]

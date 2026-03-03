@@ -449,6 +449,60 @@ pub async fn get_active_dates(pool: &SqlitePool, workspace_id: i64) -> Result<Ve
     Ok(dates)
 }
 
+pub async fn update_task(pool: &SqlitePool, input: crate::models::UpdateTaskInput) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    let block: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = ?1")
+        .bind(input.block_id)
+        .fetch_one(&mut *tx)
+        .await?;
+
+    if let Some(task_id) = block.task_id {
+        sqlx::query("UPDATE tasks SET title = ?1, planning_memo = ?2 WHERE id = ?3")
+            .bind(&input.title)
+            .bind(&input.description)
+            .bind(task_id)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query("UPDATE time_blocks SET title = ?1 WHERE task_id = ?2")
+            .bind(&input.title)
+            .bind(task_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    if block.status == "DONE" {
+        sqlx::query("UPDATE time_blocks SET review_memo = ?1 WHERE id = ?2")
+            .bind(input.review_memo)
+            .bind(input.block_id)
+            .execute(&mut *tx)
+            .await?;
+    } else {
+        let start_dt = NaiveDateTime::parse_from_str(&block.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+        let original_end_dt = NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+        let original_duration = (original_end_dt - start_dt).num_minutes();
+        
+        let new_duration = (input.hours * 60 + input.minutes) as i64;
+        let diff = new_duration - original_duration;
+
+        let new_end_dt = start_dt + Duration::minutes(new_duration);
+
+        sqlx::query("UPDATE time_blocks SET end_time = ?1 WHERE id = ?2")
+            .bind(new_end_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
+            .bind(input.block_id)
+            .execute(&mut *tx)
+            .await?;
+
+        if diff != 0 {
+            shift_future_blocks(&mut tx, block.workspace_id, original_end_dt, diff).await?;
+        }
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
 pub async fn update_block_status(pool: &SqlitePool, block_id: i64, status: &str) -> Result<()> {
     let mut tx = pool.begin().await?;
 
@@ -812,5 +866,48 @@ mod tests {
         
         assert_eq!(t2_block.start_time, "2026-03-01T09:30:00");
         assert_eq!(t2_block.end_time, "2026-03-01T10:30:00");
+    }
+
+    #[tokio::test]
+    async fn test_update_task_time_shift() {
+        let pool = setup_db().await;
+        
+        // 1. Create Workspace & Tasks
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'Task A')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'Task B')").execute(&pool).await.unwrap();
+
+        // Task A: 09:00 - 09:30 (NOW), Task B: 09:30 - 10:30 (WILL)
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'Task A', '2026-03-01T09:00:00', '2026-03-01T09:30:00', 'NOW')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'Task B', '2026-03-01T09:30:00', '2026-03-01T10:30:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // 2. Update Task A: Change duration from 30m to 60m
+        let input = crate::models::UpdateTaskInput {
+            block_id: 10,
+            title: "Task A Updated".to_string(),
+            description: Some("New desc".to_string()),
+            hours: 1,
+            minutes: 0,
+            review_memo: None,
+        };
+
+        update_task(&pool, input).await.unwrap();
+
+        // 3. Verify
+        let block_a: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 10").fetch_one(&pool).await.unwrap();
+        let block_b: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 11").fetch_one(&pool).await.unwrap();
+
+        assert_eq!(block_a.title, "Task A Updated");
+        assert_eq!(block_a.start_time, "2026-03-01T09:00:00");
+        assert_eq!(block_a.end_time, "2026-03-01T10:00:00");
+
+        // Task B should be shifted by 30 mins
+        assert_eq!(block_b.start_time, "2026-03-01T10:00:00");
+        assert_eq!(block_b.end_time, "2026-03-01T11:00:00");
+        
+        // Ensure Task also gets updated
+        let task_a: Task = sqlx::query_as("SELECT * FROM tasks WHERE id = 1").fetch_one(&pool).await.unwrap();
+        assert_eq!(task_a.title, "Task A Updated");
+        assert_eq!(task_a.planning_memo.unwrap(), "New desc");
     }
 }

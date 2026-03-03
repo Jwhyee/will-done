@@ -170,6 +170,7 @@ pub fn run() {
             commands::timeline::add_task,
             commands::timeline::get_timeline,
             commands::timeline::get_inbox,
+            commands::timeline::update_task,
             commands::timeline::move_to_inbox,
             commands::timeline::move_to_timeline,
             commands::timeline::move_all_to_timeline,

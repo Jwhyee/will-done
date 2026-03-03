@@ -91,6 +91,17 @@ pub struct TaskTransitionInput {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct UpdateTaskInput {
+    pub block_id: i64,
+    pub title: String,
+    pub description: Option<String>,
+    pub hours: i32,
+    pub minutes: i32,
+    pub review_memo: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateWorkspaceInput {
     pub name: String,
     pub core_time_start: Option<String>,
