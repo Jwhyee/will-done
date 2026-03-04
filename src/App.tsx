@@ -200,7 +200,7 @@ function AppContent() {
       {/* Global Drag Region */}
       <div
         data-tauri-drag-region
-        className="fixed top-0 left-0 right-0 h-8 z-40 bg-transparent select-none cursor-grab active:cursor-grabbing"
+        className="fixed top-0 left-0 right-0 h-8 z-[10000] bg-transparent select-none cursor-grab active:cursor-grabbing"
       />
       {renderView()}
 

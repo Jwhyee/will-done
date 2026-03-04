@@ -83,18 +83,38 @@ export function useApp() {
       if (isToday) {
         const active = list.find(b => b.status === "NOW");
         if (active && new Date(active.endTime) < now && !transitionBlock) {
-          setTransitionBlock(active);
+          // Check if this is a split task (has a future part with same taskId)
+          const hasFuturePart = list.some(b => b.taskId === active.taskId && b.id !== active.id && b.status === "WILL");
 
-          // Send Native Notification if enabled
-          if (user?.isNotificationEnabled && lastNotifiedBlockId.current !== active.id) {
-            const granted = await isPermissionGranted();
-            if (granted) {
-              sendNotification({
-                id: active.id,
-                title: t.retrospective.task_notification_title,
-                body: t.retrospective.task_notification_body.replace("{title}", active.title),
-              });
-              lastNotifiedBlockId.current = active.id;
+          if (hasFuturePart) {
+            // Silent transition: auto-complete the current block
+            await invoke("process_task_transition", {
+              input: {
+                blockId: active.id,
+                action: "DONE",
+                extraMinutes: null,
+                reviewMemo: null
+              }
+            });
+            // Re-fetch list after silent transition
+            list = await invoke<TimeBlock[]>("get_timeline", {
+              workspaceId: activeWorkspaceId,
+              date: undefined
+            });
+          } else {
+            setTransitionBlock(active);
+
+            // Send Native Notification if enabled
+            if (user?.isNotificationEnabled && lastNotifiedBlockId.current !== active.id) {
+              const granted = await isPermissionGranted();
+              if (granted) {
+                sendNotification({
+                  id: active.id,
+                  title: t.retrospective.task_notification_title,
+                  body: t.retrospective.task_notification_body.replace("{title}", active.title),
+                });
+                lastNotifiedBlockId.current = active.id;
+              }
             }
           }
         }
