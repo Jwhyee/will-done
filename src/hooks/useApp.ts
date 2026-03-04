@@ -53,12 +53,14 @@ export function useApp() {
   const lastNotifiedBlockId = useRef<number | null>(null);
 
   const { showToast } = useToast();
+  const isFetchingRef = useRef(false);
 
   const lang = useMemo(() => (user?.lang || getLang()) as Lang, [user]);
   const t = translations[lang];
 
   const fetchMainData = useCallback(async () => {
-    if (!activeWorkspaceId) return;
+    if (!activeWorkspaceId || isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
       const g = await invoke<string>("get_greeting", { workspaceId: activeWorkspaceId, lang });
       setGreeting(g);
@@ -66,7 +68,7 @@ export function useApp() {
       const targetDate = selectedDate || logicalDate;
       const dateStr = format(targetDate, "yyyy-MM-dd");
 
-      const list = await invoke<TimeBlock[]>("get_timeline", {
+      let list = await invoke<TimeBlock[]>("get_timeline", {
         workspaceId: activeWorkspaceId,
         date: selectedDate ? dateStr : undefined
       });
@@ -101,8 +103,11 @@ export function useApp() {
           const next = list.find(b => b.status === "WILL" && new Date(b.startTime) <= now);
           if (next) {
             await invoke("update_block_status", { blockId: next.id, status: "NOW" });
-            fetchMainData();
-            return;
+            // Re-fetch timeline after status update
+            list = await invoke<TimeBlock[]>("get_timeline", {
+              workspaceId: activeWorkspaceId,
+              date: undefined
+            });
           }
         }
       }
@@ -111,8 +116,10 @@ export function useApp() {
       setInboxTasks(inbox);
     } catch (error) {
       console.error("Fetch failed:", error);
+    } finally {
+      isFetchingRef.current = false;
     }
-  }, [activeWorkspaceId, lang, selectedDate, transitionBlock]);
+  }, [activeWorkspaceId, lang, selectedDate, transitionBlock, logicalDate, user?.isNotificationEnabled, t.retrospective.task_notification_body, t.retrospective.task_notification_title]);
 
   const init = useCallback(async () => {
     try {

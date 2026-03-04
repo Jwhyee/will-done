@@ -134,7 +134,7 @@ export const SortableItem = ({
                 <GripVertical size={14} className={`transition-opacity duration-300 ${isHovered || isDragging ? "text-text-primary opacity-100" : "text-text-muted opacity-40"}`} />
               </div>
             )}
-            {(isDone || isNow || block.status === "UNPLUGGED" || (isSplit && !isLastOfTask)) && <div className="w-[14px]" />} {/* Spacer for layout consistency */}
+            {(isDone || isNow || (isSplit && !isLastOfTask)) && block.status !== "UNPLUGGED" && <div className="w-[14px]" />}
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 {block.isUrgent && <AlertTriangle size={14} className="text-danger fill-danger/20" />}

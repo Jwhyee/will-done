@@ -41,7 +41,7 @@ export const TransitionModal = ({
       setCompletionType(isTargetReached ? "COMPLETE_ON_TIME" : "COMPLETE_NOW");
       setReviewMemo("");
     }
-  }, [transitionBlock, currentTime]);
+  }, [transitionBlock]);
 
   // Focus textarea when switching to COMPLETION tab
   useEffect(() => {
