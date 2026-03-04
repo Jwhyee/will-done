@@ -378,15 +378,25 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
         .fetch_one(&mut *tx)
         .await?;
 
-    // 분할된 태스크의 경우 마지막 블록만 트랜지션 가능
     if let Some(task_id) = block.task_id {
-        let is_last: (i64,) = sqlx::query_as("SELECT MAX(id) FROM time_blocks WHERE task_id = ?1")
+        let first_incomplete: (Option<i64>,) = sqlx::query_as("SELECT MIN(id) FROM time_blocks WHERE task_id = ?1 AND status != 'DONE'")
             .bind(task_id)
             .fetch_one(&mut *tx)
             .await?;
 
-        if is_last.0 != input.block_id {
-            return Err(crate::error::AppError::InvalidInput("Only the last block of a split task can be transitioned.".to_string()));
+        if let Some(fid) = first_incomplete.0 {
+            if fid != input.block_id {
+                return Err(crate::error::AppError::InvalidInput("Only the first active block of a split task can be transitioned.".to_string()));
+            }
+        } else {
+            // 모든 블록이 DONE인 경우, 마지막 블록만 수정 가능하도록 유지 (필요 시)
+            let last_id: (i64,) = sqlx::query_as("SELECT MAX(id) FROM time_blocks WHERE task_id = ?1")
+                .bind(task_id)
+                .fetch_one(&mut *tx)
+                .await?;
+            if last_id.0 != input.block_id {
+                return Err(crate::error::AppError::InvalidInput("Only the last block of a completed split task can be modified.".to_string()));
+            }
         }
     }
 
@@ -522,13 +532,23 @@ pub async fn update_block_status(pool: &SqlitePool, block_id: i64, status: &str)
         .await?;
 
     if let Some(task_id) = block.task_id {
-        let is_last: (i64,) = sqlx::query_as("SELECT MAX(id) FROM time_blocks WHERE task_id = ?1")
+        let first_incomplete: (Option<i64>,) = sqlx::query_as("SELECT MIN(id) FROM time_blocks WHERE task_id = ?1 AND status != 'DONE'")
             .bind(task_id)
             .fetch_one(&mut *tx)
             .await?;
 
-        if is_last.0 != block_id {
-            return Err(crate::error::AppError::InvalidInput("Only the last block of a split task can be modified.".to_string()));
+        if let Some(fid) = first_incomplete.0 {
+            if fid != block_id {
+                return Err(crate::error::AppError::InvalidInput("Only the first active block of a split task can be modified.".to_string()));
+            }
+        } else {
+            let last_id: (i64,) = sqlx::query_as("SELECT MAX(id) FROM time_blocks WHERE task_id = ?1")
+                .bind(task_id)
+                .fetch_one(&mut *tx)
+                .await?;
+            if last_id.0 != block_id {
+                return Err(crate::error::AppError::InvalidInput("Only the last block of a completed split task can be modified.".to_string()));
+            }
         }
     }
 
@@ -927,5 +947,39 @@ mod tests {
         let task_a: Task = sqlx::query_as("SELECT * FROM tasks WHERE id = 1").fetch_one(&pool).await.unwrap();
         assert_eq!(task_a.title, "Task A Updated");
         assert_eq!(task_a.planning_memo.unwrap(), "New desc");
+    }
+
+    #[tokio::test]
+    async fn test_split_task_transition_with_unplugged() {
+        let pool = setup_db().await;
+        
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'Task Split')").execute(&pool).await.unwrap();
+
+        // Task Split: 09:00 - 09:30 (WILL), 10:00 - 10:30 (WILL)
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'Task Split', '2026-03-01T09:00:00', '2026-03-01T09:30:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 1, 1, 'Task Split', '2026-03-01T10:00:00', '2026-03-01T10:30:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // 1. Try marking the second block (11) as NOW - should fail
+        let result = update_block_status(&pool, 11, "NOW").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Only the first active block"));
+
+        // 2. Try marking the first block (10) as NOW - should succeed
+        let result = update_block_status(&pool, 10, "NOW").await;
+        assert!(result.is_ok());
+
+        // 3. Complete the first block
+        let transition_input = crate::models::TaskTransitionInput {
+            block_id: 10,
+            action: "COMPLETE_ON_TIME".to_string(),
+            extra_minutes: None,
+            review_memo: None,
+        };
+        process_task_transition(&pool, transition_input).await.unwrap();
+
+        // 4. Now the second block (11) is the first incomplete block - should succeed marking as NOW
+        let result = update_block_status(&pool, 11, "NOW").await;
+        assert!(result.is_ok());
     }
 }

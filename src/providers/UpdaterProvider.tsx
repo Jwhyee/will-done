@@ -39,7 +39,12 @@ export const UpdaterProvider: React.FC<{ children: ReactNode }> = ({ children })
         setDialogOpen(true);
       }
     } catch (error) {
-      console.error("Failed to check for updates:", error);
+      // Log more context but avoid showing disruptive alerts for background update checks
+      if (error instanceof Error && error.message.includes("fetch")) {
+        console.warn("Updater: Remote manifest not found or inaccessible (likely draft release or offline).");
+      } else {
+        console.error("Updater: Failed to check for updates:", error);
+      }
     } finally {
       setChecking(false);
     }
