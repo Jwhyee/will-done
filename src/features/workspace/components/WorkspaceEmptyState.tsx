@@ -18,8 +18,8 @@ export const WorkspaceEmptyState = ({ t, onCreateWorkspace }: WorkspaceEmptyStat
           {t.workspace_setup?.welcome || "환영합니다!"}
         </h1>
         <p className="text-lg font-medium text-text-secondary leading-relaxed whitespace-pre-line">
-          {t.workspace_setup?.empty_desc || "아직 워크스페이스가 없습니다.
-좌측 사이드바의 + 버튼을 눌러 첫 번째 워크스페이스를 생성하고 업무를 시작해보세요."}
+          {t.workspace_setup?.empty_desc || `아직 워크스페이스가 없습니다.
+좌측 사이드바의 + 버튼을 눌러 첫 번째 워크스페이스를 생성하고 업무를 시작해보세요.`}
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-import { Trash2, Clock, CalendarDays } from "lucide-react";
+import { Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
