@@ -27,3 +27,4 @@ dist-ssr
 /docs/ai/*
 GEMINI.md
 .gemini/*
+will-done.db
