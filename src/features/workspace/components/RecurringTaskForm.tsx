@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { TimePicker } from "./TimePicker";
 
 interface RecurringTaskFormProps {
   t: any;
@@ -22,6 +23,8 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
   });
 
   const selectedDays = watch("daysOfWeek");
+  const hours = watch("hours");
+  const minutes = watch("minutes");
 
   const toggleDay = (day: number) => {
     if (selectedDays.includes(day)) {
@@ -44,10 +47,17 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
     reset();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      // Prevent submitting if title is empty or no days selected
+      handleSubmit(handleFormSubmit)();
+    }
+  };
+
   const days = [1, 2, 3, 4, 5, 6, 0]; // Mon to Sun
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6 p-6 bg-surface border border-border rounded-2xl shadow-sm">
+    <div className="space-y-6 p-6 bg-surface border border-border rounded-2xl shadow-sm">
       <div className="space-y-4">
         {/* Title */}
         <div className="space-y-2">
@@ -57,7 +67,8 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
           </Label>
           <Input
             {...register("title", { required: true })}
-            placeholder={t.main.add_task_placeholder}
+            placeholder={t.main.task_placeholder}
+            onKeyDown={handleKeyDown}
             className="bg-background border-border h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10"
           />
         </div>
@@ -69,25 +80,15 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
             {t.workspace_routine.duration_label}
           </Label>
           <div className="flex items-center gap-3">
-            <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded-xl px-3 h-12">
-              <input
-                type="number"
-                {...register("hours")}
-                className="w-full bg-transparent border-none text-right focus:ring-0 p-0 text-sm font-bold"
-                min="0"
-              />
-              <span className="text-[10px] font-bold text-text-muted uppercase">{t.main.hours}</span>
-            </div>
-            <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded-xl px-3 h-12">
-              <input
-                type="number"
-                {...register("minutes")}
-                className="w-full bg-transparent border-none text-right focus:ring-0 p-0 text-sm font-bold"
-                min="0"
-                max="59"
-              />
-              <span className="text-[10px] font-bold text-text-muted uppercase">{t.main.mins}</span>
-            </div>
+            <TimePicker
+              hours={hours}
+              minutes={minutes}
+              onChange={(h, m) => {
+                setValue("hours", h);
+                setValue("minutes", m);
+              }}
+              t={t}
+            />
           </div>
         </div>
 
@@ -130,13 +131,14 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
       </div>
 
       <Button
-        type="submit"
+        type="button"
+        onClick={() => handleSubmit(handleFormSubmit)()}
         disabled={isSubmitting || selectedDays.length === 0}
         className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95 disabled:opacity-50"
       >
         <Plus size={16} className="mr-2" />
         {t.workspace_routine?.add_btn || "Add Routine"}
       </Button>
-    </form>
+    </div>
   );
 };
