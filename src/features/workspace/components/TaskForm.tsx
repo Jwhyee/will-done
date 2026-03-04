@@ -48,10 +48,10 @@ export const TaskForm = ({ t, taskForm, onSubmit, onError }: TaskFormProps) => {
     <div
       ref={formRef}
       className={cn(
-        "bg-surface border border-border rounded-2xl shadow-xl transition-all duration-300 group/form",
+        "bg-surface border border-border rounded-2xl transition-all duration-300 group/form",
         isExpanded
-          ? "absolute left-8 right-8 top-full mt-2 z-[100] border-accent/30 shadow-2xl shadow-black/40 scale-[1.02] origin-top"
-          : "relative overflow-hidden hover:border-border/80 p-1"
+          ? "absolute left-8 right-8 top-full -mt-2 z-[100] bg-surface/95 backdrop-blur-xl border-accent/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] scale-[1.01] ring-1 ring-white/5"
+          : "relative overflow-hidden hover:border-border/80 p-1 shadow-xl"
       )}
     >
       <form

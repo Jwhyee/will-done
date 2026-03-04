@@ -103,13 +103,13 @@ export const SortableItem = ({
       </div>
 
       {/* Timeline Line - Improved visibility and centering */}
-      <div className={`absolute -left-12 top-[31px] w-[2px] bottom-[-55px] z-0 group-last/item:hidden -translate-x-1/2 ${isCore ? "bg-accent/60 shadow-[0_0_8px_rgba(59,130,246,0.3)]" : "bg-border"}`} />
+      <div className={`absolute -left-12 top-[31px] w-[2px] bottom-[-55px] z-0 group-last/item:hidden -translate-x-1/2 ${isCore ? "bg-accent shadow-[0_0_10px_rgba(59,130,246,0.6)]" : "bg-border"}`} />
 
       {/* Status Indicator Dot - Improved centering and contrast */}
-      <div className={`absolute -left-12 top-[31px] w-3 h-3 rounded-full border-2 bg-background z-10 transition-all duration-500 -translate-x-1/2 -translate-y-1/2 ${block.status === "DONE" ? "border-success bg-success/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]" :
-        block.status === "NOW" ? "border-accent scale-125 shadow-[0_0_15px_rgba(59,130,246,0.5)] bg-accent/30" :
-          isCore ? "border-accent shadow-[0_0_10px_rgba(59,130,246,0.4)] bg-accent/20" :
-            block.status === "PENDING" ? "border-warning bg-warning/20 shadow-[0_0_10px_rgba(234,179,8,0.2)]" :
+      <div className={`absolute -left-12 top-[31px] w-3 h-3 rounded-full border-2 bg-background z-10 transition-all duration-500 -translate-x-1/2 -translate-y-1/2 ${block.status === "DONE" ? "border-success bg-success/20 shadow-[0_0_10px_rgba(34,197,94,0.3)]" :
+        block.status === "NOW" ? "border-accent scale-125 shadow-[0_0_15px_rgba(59,130,246,0.6)] bg-accent/30" :
+          isCore ? "border-accent scale-110 shadow-[0_0_12px_rgba(59,130,246,0.5)] bg-accent/40" :
+            block.status === "PENDING" ? "border-warning bg-warning/20 shadow-[0_0_10px_rgba(234,179,8,0.3)]" :
               block.status === "UNPLUGGED" ? "border-border bg-surface-elevated" : "border-border"
         }`} />
 
@@ -121,8 +121,8 @@ export const SortableItem = ({
         onMouseEnter={() => block.taskId && setHoverTaskId(block.taskId)}
         onMouseLeave={() => setHoverTaskId(null)}
         className={`p-5 rounded-2xl border-[1.5px] transition-all duration-300 transform ${block.status === "DONE" ? "bg-success/5 border-success/20 opacity-60" :
-          block.status === "NOW" ? (new Date(block.endTime) < currentTime ? "bg-danger/10 border-danger animate-breathing" : "bg-accent/5 border-accent animate-breathing-accent shadow-[0_0_15px_rgba(59,130,246,0.1)]") :
-            isCore ? "bg-accent/5 border-accent/20" :
+          block.status === "NOW" ? (new Date(block.endTime) < currentTime ? "bg-danger/10 border-danger animate-breathing shadow-[0_0_20px_rgba(239,68,68,0.1)]" : "bg-accent/10 border-accent animate-breathing-accent shadow-[0_0_20px_rgba(59,130,246,0.15)]") :
+            isCore ? "bg-accent/5 border-accent/40 shadow-[0_0_15px_rgba(59,130,246,0.05)]" :
               block.status === "PENDING" ? "bg-warning/5 border-warning/40 opacity-80" :
                 block.status === "UNPLUGGED" ? "bg-surface/40 border-border opacity-40 cursor-default" : "bg-surface-elevated/50 border-border hover:bg-surface-elevated"
           } ${isHovered ? "border-text-primary/40 bg-surface-elevated/80 -translate-x-1 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.01] opacity-100" : ""} ${isSplit ? "shadow-sm" : ""} ${isFirstOfTask ? "mb-1" : ""} ${isLastOfTask ? "mt-1" : ""} ${isMiddleOfTask ? "my-1" : ""}`}
