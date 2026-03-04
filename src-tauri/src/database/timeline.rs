@@ -156,8 +156,8 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
         let urgent_duration = (input.hours * 60 + input.minutes) as i64;
 
         if let Some(block) = current_now {
-            // 현재 태스크 중단 -> PENDING 처리 (찢어진 UI용)
-            sqlx::query("UPDATE time_blocks SET end_time = ?1, status = 'PENDING' WHERE id = ?2")
+            // 1. 현재 태스크 중단 -> DONE 처리 (파트1)
+            sqlx::query("UPDATE time_blocks SET end_time = ?1, status = 'DONE' WHERE id = ?2")
                 .bind(now_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
                 .bind(block.id)
                 .execute(&mut *tx)
@@ -166,24 +166,28 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
             let original_end = NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
             let remaining_duration = (original_end - now_dt).num_minutes();
 
-            // 긴급 업무 삽입 (Block B)
-            schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration, true).await?;
+            // 2. 이후 블록 미리 밀기 (Gap 확보)
+            shift_future_blocks(&mut tx, input.workspace_id, original_end, urgent_duration).await?;
+
+            // 3. 긴급 업무 삽입 (Block B) - NOW 상태로 시작
+            schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration, true, "NOW").await?;
 
             let urgent_end = now_dt + Duration::minutes(urgent_duration);
 
-            // 이후 블록 밀기 (Block C 삽입 전에 실행하여 Block C가 밀리지 않게 함)
-            shift_future_blocks(&mut tx, input.workspace_id, original_end, urgent_duration).await?;
-
-            // 남은 부분 삽입 (Block C)
+            // 4. 남은 부분 삽입 (Block C) - WILL 상태
             if remaining_duration > 0 {
-                schedule_task_blocks(&mut tx, input.workspace_id, block.task_id.unwrap(), &block.title, urgent_end, remaining_duration, block.is_urgent).await?;
+                schedule_task_blocks(&mut tx, input.workspace_id, block.task_id.unwrap(), &block.title, urgent_end, remaining_duration, block.is_urgent, "WILL").await?;
             }
         } else {
-            schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration, true).await?;
+            // 현재 진행 중인 태스크가 없는 경우
+            // 1. 이후 블록 미리 밀기
             shift_future_blocks(&mut tx, input.workspace_id, now_dt, urgent_duration).await?;
+            
+            // 2. 긴급 업무 삽입 - NOW 상태로 시작
+            schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, now_dt, urgent_duration, true, "NOW").await?;
         }
     } else {
-        schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, current_start, duration, false).await?;
+        schedule_task_blocks(&mut tx, input.workspace_id, task_id, &input.title, current_start, duration, false, "WILL").await?;
     }
 
     tx.commit().await?;
@@ -254,7 +258,7 @@ pub async fn move_to_timeline(pool: &SqlitePool, task_id: i64, workspace_id: i64
     };
 
     let duration = if task.estimated_minutes > 0 { task.estimated_minutes as i64 } else { 30 };
-    schedule_task_blocks(&mut tx, workspace_id, task_id, &task.title, current_start, duration, false).await?;
+    schedule_task_blocks(&mut tx, workspace_id, task_id, &task.title, current_start, duration, false, "WILL").await?;
 
     tx.commit().await?;
     Ok(())
@@ -285,14 +289,15 @@ pub async fn move_all_to_timeline(pool: &SqlitePool, workspace_id: i64) -> Resul
         };
 
         let duration = if task.estimated_minutes > 0 { task.estimated_minutes as i64 } else { 30 };
-        
+
         // let end_dt = current_start + Duration::minutes(duration);
         // if end_dt.date() > current_start.date() {
         //     break;
         // }
 
-        schedule_task_blocks(&mut tx, workspace_id, task.id, &task.title, current_start, duration, false).await?;
-    }
+        schedule_task_blocks(&mut tx, workspace_id, task.id, &task.title, current_start, duration, false, "WILL").await?;
+        }
+
 
     tx.commit().await?;
     Ok(())
@@ -594,9 +599,11 @@ async fn schedule_task_blocks(
     title: &str,
     start_dt: NaiveDateTime,
     mut remaining_minutes: i64,
-    is_urgent: bool
+    is_urgent: bool,
+    status: &str
 ) -> Result<()> {
     let mut current_start = start_dt;
+    let mut first = true;
     
     let unplugged: Vec<UnpluggedTime> = sqlx::query_as("SELECT * FROM unplugged_times WHERE workspace_id = ?1")
         .bind(workspace_id)
@@ -627,12 +634,15 @@ async fn schedule_task_blocks(
         let duration = (end - current_start).num_minutes();
 
         if duration > 0 {
-            sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status, is_urgent) VALUES (?1, ?2, ?3, ?4, ?5, 'WILL', ?6)")
+            let block_status = if first { status } else { "WILL" };
+            sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status, is_urgent) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
                 .bind(task_id).bind(workspace_id).bind(title)
                 .bind(current_start.format("%Y-%m-%dT%H:%M:%S").to_string())
                 .bind(end.format("%Y-%m-%dT%H:%M:%S").to_string())
+                .bind(block_status)
                 .bind(is_urgent)
                 .execute(&mut **tx).await?;
+            first = false;
         }
 
         remaining_minutes -= duration;
@@ -733,8 +743,8 @@ mod tests {
         let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
         
         /* 기대하는 결과:
-           - T1 (Block A): 18:00 - 18:10 (PENDING)
-           - T2 (Urgent): 18:10 - 18:30 (WILL)
+           - T1 (Block A): 18:00 - 18:10 (DONE)
+           - T2 (Urgent): 18:10 - 18:30 (NOW)
            - T1 (Block C): 18:30 - 18:50 (WILL) -> 남은 20분
            - T3 (Future): 18:50 - 19:20 (WILL) -> 20분 뒤로 밀림
         */
@@ -747,22 +757,25 @@ mod tests {
         
         // Block A
         assert_eq!(blocks[0].title, "T1");
-        assert_eq!(blocks[0].status, "PENDING");
+        assert_eq!(blocks[0].status, "DONE");
         assert_eq!(blocks[0].start_time, "2026-03-01T18:00:00");
         assert_eq!(blocks[0].end_time, "2026-03-01T18:10:00");
 
         // Block B (Urgent)
         assert_eq!(blocks[1].title, "T2 (Urgent)");
+        assert_eq!(blocks[1].status, "NOW");
         assert_eq!(blocks[1].start_time, "2026-03-01T18:10:00");
         assert_eq!(blocks[1].end_time, "2026-03-01T18:30:00");
 
         // Block C (T1 Resume)
         assert_eq!(blocks[2].title, "T1");
+        assert_eq!(blocks[2].status, "WILL");
         assert_eq!(blocks[2].start_time, "2026-03-01T18:30:00");
         assert_eq!(blocks[2].end_time, "2026-03-01T18:50:00");
 
         // Block T3 (Shifted)
         assert_eq!(blocks[3].title, "T3");
+        assert_eq!(blocks[3].status, "WILL");
         assert_eq!(blocks[3].start_time, "2026-03-01T18:50:00");
         assert_eq!(blocks[3].end_time, "2026-03-01T19:20:00");
     }

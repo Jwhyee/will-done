@@ -74,7 +74,7 @@ export const WorkspaceHeader = ({
   };
 
   return (
-    <header className="px-8 pt-8 pb-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-30 border-b border-border select-none relative">
+    <header className="px-8 pt-8 pb-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-50 border-b border-border select-none relative">
       <div className="flex items-center justify-between relative z-50">
         <div className="space-y-1 w-full max-w-2xl">
           <div className="flex items-center space-x-3 mb-1">
