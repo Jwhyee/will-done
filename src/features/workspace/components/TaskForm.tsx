@@ -119,7 +119,7 @@ export const TaskForm = ({ t, taskForm, onSubmit, onError }: TaskFormProps) => {
               className="h-10 px-4 bg-surface-elevated text-text-primary border-border hover:bg-border font-bold rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
             >
               <Inbox size={16} className="text-text-secondary" />
-              <span className="hidden sm:inline">인박스 보관</span>
+              <span className="hidden sm:inline">{t.main.add_task_inbox}</span>
             </Button>
             <Button
               type="submit"

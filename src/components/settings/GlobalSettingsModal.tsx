@@ -60,8 +60,8 @@ export const GlobalSettingsModal = ({
 
   const onSubmit = async (data: any) => {
     try {
-      const updatedUser = await invoke<User>("save_user", { 
-        nickname: data.nickname, 
+      const updatedUser = await invoke<User>("save_user", {
+        nickname: data.nickname,
         geminiApiKey: data.geminiApiKey || null,
         lang: data.lang,
         isNotificationEnabled: data.isNotificationEnabled,
@@ -113,12 +113,12 @@ export const GlobalSettingsModal = ({
 
             <div className="space-y-3">
               <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.sidebar.lang_label}</Label>
-              <select 
+              <select
                 {...register("lang")}
                 className="w-full h-12 bg-surface border border-border rounded-xl px-4 font-medium text-text-primary outline-none focus:ring-1 focus:ring-white/10 appearance-none"
               >
-                <option value="ko">한국어 (Korean)</option>
-                <option value="en">English</option>
+                <option value="ko">한국어 (KO)</option>
+                <option value="en">English (EN)</option>
               </select>
             </div>
 
@@ -137,7 +137,7 @@ export const GlobalSettingsModal = ({
                   </Label>
                   <p className="text-[10px] text-text-secondary leading-none">{t.onboarding.notification_guide}</p>
                 </div>
-                <input 
+                <input
                   type="checkbox"
                   {...register("isNotificationEnabled")}
                   onChange={(e) => handleNotificationToggle(e.target.checked)}

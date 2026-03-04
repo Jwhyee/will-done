@@ -99,10 +99,10 @@ export const WorkspaceDialogs = ({
                   {t.main.delete_confirm.title}
                 </DialogTitle>
                 <DialogDescription className="text-text-secondary text-sm leading-relaxed">
-                  <span className="text-accent font-bold">[{deleteTaskProps?.title}]</span> 태스크를 정말 삭제하시겠습니까?
+                  {t.main.delete_confirm.desc_with_title.replace("{title}", deleteTaskProps?.title || "")}
                   {deleteTaskProps?.status === "NOW" && (
                     <div className="mt-2 text-warning text-xs">
-                      진행 중이던 업무를 삭제하면 흐름이 끊길 수 있습니다. 대신 <strong>'긴급'</strong> 요소로 추가하는 것을 권장합니다.
+                      {t.main.delete_confirm.now_warning}
                     </div>
                   )}
                 </DialogDescription>

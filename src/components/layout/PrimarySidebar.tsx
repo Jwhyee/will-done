@@ -12,10 +12,10 @@ interface PrimarySidebarProps {
   t: any;
 }
 
-export const PrimarySidebar = ({ 
-  workspaces, 
-  activeWorkspaceId, 
-  onSelectWorkspace, 
+export const PrimarySidebar = ({
+  workspaces,
+  activeWorkspaceId,
+  onSelectWorkspace,
   onAddWorkspace,
   onOpenSettings,
   onOpenWorkspaceSettings,
@@ -31,11 +31,10 @@ export const PrimarySidebar = ({
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => onSelectWorkspace(ws.id)}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all duration-300 transform ${
-                      activeWorkspaceId === ws.id 
-                      ? "bg-text-primary text-background scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]" 
-                      : "bg-surface-elevated text-text-muted hover:bg-border hover:text-text-primary"
-                    }`}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all duration-300 transform ${activeWorkspaceId === ws.id
+                        ? "bg-text-primary text-background scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                        : "bg-surface-elevated text-text-muted hover:bg-border hover:text-text-primary"
+                      }`}
                   >
                     {ws.name.substring(0, 2).toUpperCase()}
                   </button>
@@ -57,20 +56,19 @@ export const PrimarySidebar = ({
               </button>
             </div>
           ))}
-          
+
           <Tooltip>
             <TooltipTrigger asChild>
-              <button 
+              <button
                 onClick={onAddWorkspace}
-                className={`w-10 h-10 rounded-xl bg-surface-elevated border border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:border-text-secondary transition-all duration-300 ${
-                  workspaces.length === 0 ? "animate-breathing ring-2 ring-text-primary/20" : ""
-                }`}
+                className={`w-10 h-10 rounded-xl bg-surface-elevated border border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:border-text-secondary transition-all duration-300 ${workspaces.length === 0 ? "animate-breathing ring-2 ring-text-primary/20" : ""
+                  }`}
               >
                 <Plus size={20} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-              {t.sidebar?.add_workspace || "워크스페이스 추가"}
+              {t.sidebar.add_workspace}
             </TooltipContent>
           </Tooltip>
         </div>
@@ -79,7 +77,7 @@ export const PrimarySidebar = ({
         <div className="mt-auto">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button 
+              <button
                 onClick={onOpenSettings}
                 className="w-10 h-10 rounded-xl bg-surface-elevated border border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:border-text-secondary transition-all duration-300"
               >
@@ -87,7 +85,7 @@ export const PrimarySidebar = ({
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-              {t.sidebar?.settings || "설정"}
+              {t.sidebar.settings}
             </TooltipContent>
           </Tooltip>
         </div>

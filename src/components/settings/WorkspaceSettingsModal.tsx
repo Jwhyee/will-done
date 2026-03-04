@@ -72,10 +72,10 @@ export const WorkspaceSettingsModal = ({
             coreTimeStart: ws.coreTimeStart || "",
             coreTimeEnd: ws.coreTimeEnd || "",
             roleIntro: ws.roleIntro || "",
-            unpluggedTimes: ut.map(u => ({ 
-              label: u.label, 
-              startTime: u.startTime, 
-              endTime: u.endTime 
+            unpluggedTimes: ut.map(u => ({
+              label: u.label,
+              startTime: u.startTime,
+              endTime: u.endTime
             }))
           });
         } catch (error: any) {
@@ -144,11 +144,11 @@ export const WorkspaceSettingsModal = ({
 
           <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
             <Tabs defaultValue="basic" className="flex-1 flex flex-col overflow-hidden px-8">
-              <TabsList className="w-full h-11 bg-surface border border-border/50 p-1 mb-6 shrink-0">
-                <TabsTrigger value="basic" className="flex-1 gap-2"><Settings2 size={14} />{t.sidebar.workspace_tab_basic}</TabsTrigger>
-                <TabsTrigger value="time" className="flex-1 gap-2"><Clock size={14} />{t.sidebar.workspace_tab_time}</TabsTrigger>
-                <TabsTrigger value="routine" className="flex-1 gap-2"><Repeat size={14} />{t.sidebar.workspace_tab_routine}</TabsTrigger>
-                <TabsTrigger value="advanced" className="flex-1 gap-2"><ShieldAlert size={14} />{t.sidebar.workspace_tab_advanced}</TabsTrigger>
+              <TabsList className="w-full h-11 bg-surface border border-border/50 p-1 mb-6 shrink-0 flex overflow-x-auto scrollbar-hide">
+                <TabsTrigger value="basic" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Settings2 size={14} />{t.sidebar.workspace_tab_basic}</TabsTrigger>
+                <TabsTrigger value="time" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Clock size={14} />{t.sidebar.workspace_tab_time}</TabsTrigger>
+                <TabsTrigger value="routine" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Repeat size={14} />{t.sidebar.workspace_tab_routine}</TabsTrigger>
+                <TabsTrigger value="advanced" className="flex-1 gap-2 whitespace-nowrap shrink-0"><ShieldAlert size={14} />{t.sidebar.workspace_tab_advanced}</TabsTrigger>
               </TabsList>
 
               <div className="flex-1 overflow-hidden">

@@ -35,13 +35,13 @@ export const EditTaskModal = ({
     const isDone = editTaskBlock?.status === "DONE";
 
     const editSchema = z.object({
-        title: z.string().min(1, t.main?.toast?.set_title || "태스크 제목을 입력해주세요."),
+        title: z.string().min(1, t.main.toast.set_title),
         planningMemo: z.string().optional(),
         hours: z.number().min(0).max(23),
         minutes: z.number().min(0).max(59),
         reviewMemo: z.string().optional(),
     }).refine((data) => isDone || (data.hours > 0 || data.minutes > 0), {
-        message: t.main?.toast?.set_duration || "수행 시간을 설정해주세요.",
+        message: t.main.toast.set_duration,
         path: ["minutes"],
     });
 
@@ -95,27 +95,27 @@ export const EditTaskModal = ({
             <DialogContent className="sm:max-w-[440px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-6 antialiased">
                 <DialogHeader className="space-y-1">
                     <DialogTitle className="text-xl font-black tracking-tighter text-text-primary">
-                        태스크 수정
+                        {t.main.edit_task.title}
                     </DialogTitle>
                     <DialogDescription className="text-text-secondary text-[11px] font-medium">
-                        <span className="text-accent font-bold">[{editTaskBlock.title}]</span>의 내용을 수정합니다.
+                        {t.main.edit_task.description.replace("{title}", editTaskBlock.title)}
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-2">
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-text-secondary">제목</label>
+                        <label className="text-xs font-bold text-text-secondary">{t.main.edit_task.name_label}</label>
                         <input
                             {...form.register("title")}
                             className="w-full bg-background border border-border rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-                            placeholder="태스크 제목"
+                            placeholder={t.main.edit_task.name_placeholder}
                         />
                     </div>
 
                     {!isDone && (
                         <>
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-text-secondary">목표 시간</label>
+                                <label className="text-xs font-bold text-text-secondary">{t.main.edit_task.duration_label}</label>
                                 <TimePicker
                                     hours={form.watch("hours")}
                                     minutes={form.watch("minutes")}
@@ -128,11 +128,11 @@ export const EditTaskModal = ({
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-text-secondary">계획</label>
+                                <label className="text-xs font-bold text-text-secondary">{t.main.edit_task.plan_label}</label>
                                 <textarea
                                     {...form.register("planningMemo")}
                                     className="w-full h-24 bg-background border border-border rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-                                    placeholder="업무 계획을 수정해주세요."
+                                    placeholder={t.main.edit_task.plan_placeholder}
                                 />
                             </div>
                         </>
@@ -140,11 +140,11 @@ export const EditTaskModal = ({
 
                     {isDone && (
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-text-secondary">업무 후기</label>
+                            <label className="text-xs font-bold text-text-secondary">{t.main.edit_task.review_label}</label>
                             <textarea
                                 {...form.register("reviewMemo")}
                                 className="w-full h-24 bg-background border border-border rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-                                placeholder="업무 후기를 남겨주세요."
+                                placeholder={t.main.edit_task.review_placeholder}
                             />
                         </div>
                     )}
@@ -156,13 +156,13 @@ export const EditTaskModal = ({
                             onClick={onClose}
                             className="bg-surface text-text-secondary hover:bg-border font-bold rounded-xl"
                         >
-                            취소
+                            {t.main.edit_task.cancel_btn}
                         </Button>
                         <Button
                             type="submit"
                             className="bg-accent text-text-primary hover:bg-accent/80 font-bold rounded-xl"
                         >
-                            저장
+                            {t.main.edit_task.save_btn}
                         </Button>
                     </div>
                 </form>

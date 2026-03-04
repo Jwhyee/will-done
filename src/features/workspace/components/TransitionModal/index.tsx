@@ -73,10 +73,10 @@ export const TransitionModal = ({
       <DialogContent className="sm:max-w-[440px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-6 antialiased [&>button]:hidden overflow-hidden">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-xl font-black tracking-tighter text-text-primary">
-            태스크 완료
+            {t.main.transition.modal_title || t.main.transition.title}
           </DialogTitle>
           <DialogDescription className="text-text-secondary text-[11px] font-medium">
-            <span className="text-accent font-bold">[{transitionBlock.title}]</span> 태스크를 완료하시겠습니까?
+            {t.main.transition.modal_desc ? t.main.transition.modal_desc.replace("{title}", transitionBlock.title) : t.main.transition.description}
           </DialogDescription>
         </DialogHeader>
 

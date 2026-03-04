@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { 
-  format, 
+import {
+  format,
   parse,
   isValid,
 } from "date-fns";
@@ -19,12 +19,12 @@ interface DateSelectorProps {
   t: any;
 }
 
-export const DateSelector = ({ 
-  type, 
-  value, 
-  onChange, 
-  activeDates, 
-  t 
+export const DateSelector = ({
+  type,
+  value,
+  onChange,
+  activeDates,
+  t
 }: DateSelectorProps) => {
   // 1. Available Dates processing
   const availableMonths = useMemo(() => {
@@ -49,10 +49,10 @@ export const DateSelector = ({
   // 2. Stepper Logic for MONTHLY
   if (type === "MONTHLY") {
     const currentIndex = availableMonths.indexOf(value);
-    const label = value ? `${value.split("-")[0]}${t.common?.year || '년'} ${parseInt(value.split("-")[1])}${t.common?.month || '월'}` : "---";
-    
+    const label = value ? `${value.split("-")[0]}${t.common.year} ${parseInt(value.split("-")[1])}${t.common.month}` : "---";
+
     return (
-      <Stepper 
+      <Stepper
         label={label}
         onPrev={() => onChange(availableMonths[currentIndex - 1])}
         onNext={() => onChange(availableMonths[currentIndex + 1])}
@@ -68,11 +68,11 @@ export const DateSelector = ({
     let label = "---";
     if (value.includes("|")) {
       const [y, m, w] = value.split("|");
-      label = `${y}${t.common?.year || '년'} ${parseInt(m)}${t.common?.month || '월'} ${w}${t.retrospective?.week_unit || '주'}`;
+      label = `${y}${t.common.year} ${parseInt(m)}${t.common.month} ${w}${t.retrospective.week_unit}`;
     }
 
     return (
-      <Stepper 
+      <Stepper
         label={label}
         onPrev={() => onChange(availableWeeks[currentIndex - 1])}
         onNext={() => onChange(availableWeeks[currentIndex + 1])}
@@ -92,8 +92,8 @@ export const DateSelector = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="w-full h-12 bg-surface border-border rounded-xl flex items-center justify-between px-4 hover:bg-surface-elevated transition-all group"
         >
           <div className="flex items-center gap-2">

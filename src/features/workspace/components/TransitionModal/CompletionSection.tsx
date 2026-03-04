@@ -34,7 +34,7 @@ export const CompletionSection = ({
     <div className="space-y-4">
       {!isTargetTimeReached && completionType === "COMPLETE_ON_TIME" && (
         <div className="text-[10px] font-bold text-accent bg-accent/5 py-1.5 px-3 rounded-lg flex items-center justify-center animate-in fade-in slide-in-from-top-1 duration-300">
-          아직 목표 시간이 되지 않았습니다.
+          {t.main.transition.not_yet_warning}
         </div>
       )}
       <div className="grid grid-cols-3 gap-2 p-1 bg-background border border-border rounded-xl">
@@ -86,7 +86,7 @@ export const CompletionSection = ({
             <span className="text-xs font-bold text-text-muted">{t.main.mins}</span>
           </div>
           <span className="text-xs font-bold text-text-secondary ml-1">
-            {t.main.transition.complete_ago_unit.replace("{min}", "").replace("분 전", "전")}
+            {t.main.transition.ago_suffix}
           </span>
         </div>
       </div>

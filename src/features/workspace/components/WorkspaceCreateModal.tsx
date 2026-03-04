@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { RecurringTaskForm } from "./RecurringTaskForm";
 
 interface WorkspaceCreateModalProps {
   t: any;
@@ -37,7 +38,8 @@ const isStartTimeBeforeEnd = (start?: string, end?: string) => {
 };
 
 export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = false }: WorkspaceCreateModalProps) => {
-  const [activeStep, setActiveStep] = useState<"basic" | "time">("basic");
+  const [activeStep, setActiveStep] = useState<"basic" | "time" | "routine">("basic");
+  const [recurringTasks, setRecurringTasks] = useState<any[]>([]);
 
   const workspaceSchema = z.object({
     name: z.string().min(1, t.workspace_setup.name_required),
@@ -46,8 +48,8 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
     roleIntro: z.string().optional(),
     unpluggedTimes: z.array(z.object({
       label: z.string().min(1, t.workspace_setup.label_required),
-      startTime: z.string().min(1, "Required"),
-      endTime: z.string().min(1, "Required"),
+      startTime: z.string().min(1, t.common.required),
+      endTime: z.string().min(1, t.common.required),
     })).superRefine((items, ctx) => {
       items.forEach((item, index) => {
         if (!isStartTimeBeforeEnd(item.startTime, item.endTime)) {
@@ -92,6 +94,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
         roleIntro: "",
         unpluggedTimes: []
       });
+      setRecurringTasks([]);
       setActiveStep("basic");
     }
   }, [isOpen, workspaceForm]);
@@ -103,6 +106,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
         coreTimeStart: data.coreTimeStart || null,
         coreTimeEnd: data.coreTimeEnd || null,
         roleIntro: data.roleIntro || null,
+        recurringTasks: recurringTasks.length > 0 ? recurringTasks : null,
       };
       const id = await invoke<number>("create_workspace", { input: sanitizedData });
       onSuccess(id);
@@ -160,6 +164,21 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
               {t.workspace_setup.tab_time}
               {hasTimeErrors && <div className="w-1.5 h-1.5 rounded-full bg-danger animate-pulse" />}
             </button>
+            <button
+              onClick={() => setActiveStep("routine")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all",
+                activeStep === "routine"
+                  ? "bg-surface-elevated text-text-primary shadow-sm"
+                  : "text-text-muted hover:text-text-secondary"
+              )}
+            >
+              <div className={cn(
+                "w-5 h-5 rounded-full flex items-center justify-center text-[10px] border transition-colors",
+                activeStep === "routine" ? "bg-text-primary text-background border-text-primary" : "border-border text-text-muted"
+              )}>3</div>
+              {t.sidebar.workspace_tab_routine}
+            </button>
           </div>
         </DialogHeader>
 
@@ -216,7 +235,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                     />
                   </div>
                 </motion.div>
-              ) : (
+              ) : activeStep === "time" ? (
                 <motion.div
                   key="time"
                   initial={{ opacity: 0, x: 10 }}
@@ -247,11 +266,11 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                     <div className="p-4 bg-surface rounded-2xl border border-border/50 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-bold text-text-muted uppercase tracking-widest pl-1">Start</Label>
+                          <Label className="text-[10px] font-bold text-text-muted uppercase tracking-widest pl-1">{t.common.start}</Label>
                           <Input type="time" {...workspaceForm.register("coreTimeStart")} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-bold text-text-muted uppercase tracking-widest pl-1">End</Label>
+                          <Label className="text-[10px] font-bold text-text-muted uppercase tracking-widest pl-1">{t.common.end}</Label>
                           <Input type="time" {...workspaceForm.register("coreTimeEnd")} className="bg-background border-border text-text-primary h-12 rounded-xl px-4 font-bold [color-scheme:dark]" />
                         </div>
                       </div>
@@ -337,6 +356,64 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                     </div>
                   </div>
                 </motion.div>
+              ) : (
+                <motion.div
+                  key="routine"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold text-text-primary px-1">{t.workspace_routine.title}</h3>
+                    <p className="text-xs text-text-secondary leading-relaxed px-1">
+                      {t.workspace_routine.desc}
+                    </p>
+                  </div>
+
+                  <RecurringTaskForm
+                    t={t}
+                    onSubmit={async (newTask) => {
+                      setRecurringTasks(prev => [...prev, newTask]);
+                    }}
+                  />
+
+                  {recurringTasks.length > 0 && (
+                    <div className="space-y-3 pt-2 pb-6">
+                      <Label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest pl-1">
+                        {t.workspace_routine.list_label}
+                      </Label>
+                      <div className="space-y-2">
+                        {recurringTasks.map((task, index) => (
+                          <div key={index} className="flex items-center justify-between p-4 bg-background border border-border rounded-xl">
+                            <div className="space-y-1">
+                              <p className="text-sm font-bold text-text-primary">{task.title}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[10px] text-text-secondary font-medium">
+                                  {Math.floor(task.duration / 60)}{t.main.hours} {task.duration % 60}{t.main.mins}
+                                </p>
+                                <span className="text-[10px] text-border">•</span>
+                                <p className="text-[10px] text-text-secondary font-medium lowercase">
+                                  {task.daysOfWeek.map((d: number) => t.workspace_routine.days[d]).join(", ")}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setRecurringTasks(prev => prev.filter((_, i) => i !== index))}
+                              className="h-8 w-8 p-0 text-text-muted hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
+                            >
+                              <X size={14} />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
@@ -351,12 +428,31 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
                 {t.workspace_setup.next_btn}
                 <ChevronRight size={20} />
               </Button>
-            ) : (
+            ) : activeStep === "time" ? (
               <div className="flex gap-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setActiveStep("basic")}
+                  className="flex-1 bg-background border-border text-text-primary hover:bg-surface h-14 rounded-2xl font-bold transition-all"
+                >
+                  {t.workspace_setup.prev_btn}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setActiveStep("routine")}
+                  className="flex-[2] bg-text-primary text-background hover:bg-zinc-200 font-bold h-14 rounded-2xl text-lg transition-all shadow-xl shadow-black/20 active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {t.workspace_setup.next_btn}
+                  <ChevronRight size={20} />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setActiveStep("time")}
                   className="flex-1 bg-background border-border text-text-primary hover:bg-surface h-14 rounded-2xl font-bold transition-all"
                 >
                   {t.workspace_setup.prev_btn}

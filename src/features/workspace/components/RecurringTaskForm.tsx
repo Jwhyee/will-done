@@ -33,7 +33,7 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
 
   const handleFormSubmit = async (data: any) => {
     if (data.daysOfWeek.length === 0) return;
-    
+
     const duration = (data.hours * 60) + parseInt(data.minutes.toString());
     await onSubmit({
       title: data.title,
@@ -55,9 +55,9 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
             <FileText size={12} />
             {t.workspace_routine.title_label}
           </Label>
-          <Input 
+          <Input
             {...register("title", { required: true })}
-            placeholder="예: 아침 명상, 주간 회의"
+            placeholder={t.main.add_task_placeholder}
             className="bg-background border-border h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10"
           />
         </div>
@@ -70,19 +70,19 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
           </Label>
           <div className="flex items-center gap-3">
             <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded-xl px-3 h-12">
-              <input 
-                type="number" 
-                {...register("hours")} 
-                className="w-full bg-transparent border-none text-right focus:ring-0 p-0 text-sm font-bold" 
+              <input
+                type="number"
+                {...register("hours")}
+                className="w-full bg-transparent border-none text-right focus:ring-0 p-0 text-sm font-bold"
                 min="0"
               />
               <span className="text-[10px] font-bold text-text-muted uppercase">{t.main.hours}</span>
             </div>
             <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded-xl px-3 h-12">
-              <input 
-                type="number" 
-                {...register("minutes")} 
-                className="w-full bg-transparent border-none text-right focus:ring-0 p-0 text-sm font-bold" 
+              <input
+                type="number"
+                {...register("minutes")}
+                className="w-full bg-transparent border-none text-right focus:ring-0 p-0 text-sm font-bold"
                 min="0"
                 max="59"
               />
@@ -121,7 +121,7 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
           <Label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">
             {t.workspace_routine.planning_label}
           </Label>
-          <textarea 
+          <textarea
             {...register("planningMemo")}
             placeholder={t.main.planning_placeholder}
             className="w-full min-h-[100px] bg-background border border-border rounded-xl p-4 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-white/10 placeholder:text-text-muted font-medium leading-relaxed resize-none"
@@ -129,13 +129,13 @@ export const RecurringTaskForm = ({ t, onSubmit }: RecurringTaskFormProps) => {
         </div>
       </div>
 
-      <Button 
-        type="submit" 
+      <Button
+        type="submit"
         disabled={isSubmitting || selectedDays.length === 0}
         className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95 disabled:opacity-50"
       >
         <Plus size={16} className="mr-2" />
-        {t.workspace_routine.add_btn}
+        {t.workspace_routine?.add_btn || "Add Routine"}
       </Button>
     </form>
   );

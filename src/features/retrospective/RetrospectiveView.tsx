@@ -6,8 +6,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { 
-  format, 
+import {
+  format,
   parse,
   isValid,
 } from "date-fns";
@@ -25,24 +25,24 @@ interface RetrospectiveViewProps {
   onShowSavedRetro: (retro: Retrospective) => void;
 }
 
-export const RetrospectiveView = ({ 
-  workspaceId, 
+export const RetrospectiveView = ({
+  workspaceId,
   user,
   t,
-  onClose, 
-  onShowSavedRetro 
+  onClose,
+  onShowSavedRetro
 }: RetrospectiveViewProps) => {
   const [tab, setTab] = useState<"create" | "browse">("create");
   const [retroType, setRetroType] = useState<"DAILY" | "WEEKLY" | "MONTHLY">("DAILY");
   const [browseType, setBrowseType] = useState<"DAILY" | "WEEKLY" | "MONTHLY">("DAILY");
   const { showToast } = useToast();
   const [isCopied, setIsCopied] = useState(false);
-  
+
   const [inputValue, setInputValue] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [dateLabel, setDateLabel] = useState("");
-  
+
   const [browseInputValue, setBrowseInputValue] = useState("");
   const [browseDateLabel, setBrowseDateLabel] = useState("");
   const [foundRetro, setFoundRetro] = useState<Retrospective | null>(null);
@@ -59,7 +59,7 @@ export const RetrospectiveView = ({
           const sorted = dates.sort();
           setActiveDates(sorted);
           const latest = sorted.length > 0 ? sorted[sorted.length - 1] : format(new Date(), "yyyy-MM-dd");
-          
+
           if (!inputValue) {
             setInputValue(latest);
             setBrowseInputValue(latest);
@@ -73,7 +73,7 @@ export const RetrospectiveView = ({
   const handleTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
     const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(new Date(), "yyyy-MM-dd");
     let newValue = latestActive;
-    
+
     if (newType === "MONTHLY") {
       newValue = latestActive.substring(0, 7);
     } else if (newType === "WEEKLY") {
@@ -82,7 +82,7 @@ export const RetrospectiveView = ({
         newValue = getWeekKey(isValid(d) ? d : new Date());
       } catch (e) { newValue = `${latestActive.split("-")[0]}|${latestActive.split("-")[1]}|1`; }
     }
-    
+
     setRetroType(newType);
     setInputValue(newValue);
   };
@@ -90,7 +90,7 @@ export const RetrospectiveView = ({
   const handleBrowseTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
     const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(new Date(), "yyyy-MM-dd");
     let newValue = latestActive;
-    
+
     if (newType === "MONTHLY") {
       newValue = latestActive.substring(0, 7);
     } else if (newType === "WEEKLY") {
@@ -99,7 +99,7 @@ export const RetrospectiveView = ({
         newValue = getWeekKey(isValid(d) ? d : new Date());
       } catch (e) { newValue = `${latestActive.split("-")[0]}|${latestActive.split("-")[1]}|1`; }
     }
-    
+
     setBrowseType(newType);
     setBrowseInputValue(newValue);
   };
@@ -129,30 +129,30 @@ export const RetrospectiveView = ({
 
   const handleGenerate = async () => {
     if (retroType === "DAILY" && !activeDates.includes(startDate)) {
-      showToast(t.main?.toast?.no_data_for_date || '해당 날짜에 데이터가 없습니다.', "error");
+      showToast(t.main.toast.no_data_for_date, "error");
       return;
     }
     setIsGenerating(true);
-    setGenMessage(t.retrospective?.gen_message || '회고를 생성 중입니다...');
+    setGenMessage(t.retrospective.gen_message);
     try {
       const retro = await invoke<Retrospective>("generate_retrospective", { workspaceId, startDate, endDate, retroType, dateLabel });
-      
+
       if (user.isNotificationEnabled) {
         let permission = await isPermissionGranted();
         if (!permission) permission = await requestPermission() === 'granted';
         if (permission) {
           sendNotification({
-            title: t.retrospective?.notification_title || '회고 생성 완료!',
-            body: (t.retrospective?.notification_body || '{label} {type} 회고가 생성되었습니다.')
+            title: t.retrospective.notification_title,
+            body: t.retrospective.notification_body
               .replace("{label}", dateLabel)
-              .replace("{type}", t.retrospective?.[retroType.toLowerCase()] || ''),
+              .replace("{type}", t.retrospective[retroType.toLowerCase()]),
           });
         }
       }
       onShowSavedRetro(retro);
     } catch (error: any) {
-      if (error.toString().includes("already exists")) showToast(t.retrospective?.duplicate_error || '이미 존재하는 회고입니다.', "error");
-      else if (error.toString().includes("No completed tasks")) showToast(t.retrospective?.no_tasks_error || '완료된 태스크가 없습니다.', "error");
+      if (error.toString().includes("already exists")) showToast(t.retrospective.duplicate_error, "error");
+      else if (error.toString().includes("No completed tasks")) showToast(t.retrospective.no_tasks_error, "error");
       else showToast(`Error: ${error}`, "error");
     } finally {
       setIsGenerating(false); setGenMessage("");
@@ -168,28 +168,28 @@ export const RetrospectiveView = ({
   return (
     <div className="flex-1 flex h-screen overflow-hidden bg-background antialiased selection:bg-primary/30 relative">
       <aside className="w-64 border-r border-border bg-surface flex flex-col shrink-0 pt-8 pb-6 px-6 space-y-8 relative z-50">
-        <Button 
-          variant="ghost" 
-          className="justify-start -ml-2 text-text-secondary hover:text-text-primary font-bold h-10 px-3 group transition-all" 
+        <Button
+          variant="ghost"
+          className="justify-start -ml-2 text-text-secondary hover:text-text-primary font-bold h-10 px-3 group transition-all"
           onClick={onClose}
         >
           <ChevronLeft size={18} className="mr-2 group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm">{t.sidebar?.back || '뒤로 가기'}</span>
+          <span className="text-sm">{t.sidebar.back}</span>
         </Button>
         <div className="space-y-4">
           <div className="space-y-1">
             <h2 className="text-lg font-bold tracking-tight text-text-primary leading-tight">
-              {t.retrospective?.title || '회고'}
+              {t.retrospective.title}
             </h2>
           </div>
           <nav className="space-y-1.5">
             {[
-              { id: "create", label: t.retrospective?.create_tab || '회고 생성' },
-              { id: "browse", label: t.retrospective?.browse_tab || '회고 조회' }
+              { id: "create", label: t.retrospective.create_tab },
+              { id: "browse", label: t.retrospective.browse_tab }
             ].map((item) => (
-              <Button 
+              <Button
                 key={item.id}
-                variant={tab === item.id ? "secondary" : "ghost"} 
+                variant={tab === item.id ? "secondary" : "ghost"}
                 className={cn(
                   "w-full justify-start h-11 rounded-xl font-bold text-sm px-4 transition-all duration-300",
                   tab === item.id ? "bg-primary/10 text-primary shadow-sm" : "text-text-secondary hover:translate-x-1"
@@ -209,10 +209,10 @@ export const RetrospectiveView = ({
             <div className="space-y-6">
               <div className="space-y-1.5">
                 <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">
-                  {t.retrospective?.create_title || '새 회고 생성'}
+                  {t.retrospective.create_title}
                 </h1>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                  {t.retrospective?.create_desc || '업무를 돌아보고 더 나은 내일을 계획하세요.'}
+                  {t.retrospective.create_desc}
                 </p>
               </div>
 
@@ -220,33 +220,33 @@ export const RetrospectiveView = ({
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((type) => (
-                      <Button 
-                        key={type} 
-                        variant={retroType === type ? "default" : "outline"} 
-                        onClick={() => handleTypeChange(type)} 
+                      <Button
+                        key={type}
+                        variant={retroType === type ? "default" : "outline"}
+                        onClick={() => handleTypeChange(type)}
                         className={cn(
                           "flex-1 font-bold h-10 rounded-xl border-border text-xs transition-all",
                           retroType === type ? "shadow-md scale-[1.01]" : "hover:bg-surface-elevated"
                         )}
                       >
-                        {type === "DAILY" ? t.retrospective?.daily : type === "WEEKLY" ? t.retrospective?.weekly : t.retrospective?.monthly}
+                        {type === "DAILY" ? t.retrospective.daily : type === "WEEKLY" ? t.retrospective.weekly : t.retrospective.monthly}
                       </Button>
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <DateSelector 
-                    type={retroType} 
-                    value={inputValue} 
-                    onChange={setInputValue} 
-                    activeDates={activeDates} 
-                    t={t} 
+                  <DateSelector
+                    type={retroType}
+                    value={inputValue}
+                    onChange={setInputValue}
+                    activeDates={activeDates}
+                    t={t}
                   />
                 </div>
 
                 {genMessage && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center gap-3"
@@ -257,19 +257,19 @@ export const RetrospectiveView = ({
                 )}
               </div>
 
-              <Button 
-                onClick={handleGenerate} 
-                disabled={isGenerating} 
+              <Button
+                onClick={handleGenerate}
+                disabled={isGenerating}
                 className="w-full bg-text-primary text-background hover:bg-zinc-200 h-14 rounded-2xl font-black text-lg shadow-xl active:scale-95 disabled:opacity-50 transition-all duration-300 group"
               >
                 {isGenerating ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    {t.retrospective?.generating || '생성 중...'}
+                    {t.retrospective.generating}
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    {t.retrospective?.generate_btn || '회고 생성하기'}
+                    {t.retrospective.generate_btn}
                   </div>
                 )}
               </Button>
@@ -278,20 +278,20 @@ export const RetrospectiveView = ({
             <div className="space-y-6">
               <div className="space-y-1.5">
                 <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">
-                  {t.retrospective?.browse_title || '회고 조회'}
+                  {t.retrospective.browse_title}
                 </h1>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                  {t.retrospective?.browse_desc || '과거의 기록들을 톺아보며 성장을 확인하세요.'}
+                  {t.retrospective.browse_desc}
                 </p>
               </div>
 
               <div className="p-6 bg-surface border border-border rounded-2xl space-y-6 shadow-xl relative">
                 <div className="flex gap-2">
                   {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((type) => (
-                    <Button 
-                      key={type} 
-                      variant={browseType === type ? "default" : "outline"} 
-                      onClick={() => handleBrowseTypeChange(type)} 
+                    <Button
+                      key={type}
+                      variant={browseType === type ? "default" : "outline"}
+                      onClick={() => handleBrowseTypeChange(type)}
                       className={cn(
                         "flex-1 font-bold h-10 rounded-xl border-border text-xs transition-all",
                         browseType === type ? "shadow-md scale-[1.01]" : "hover:bg-surface-elevated"
@@ -301,18 +301,18 @@ export const RetrospectiveView = ({
                     </Button>
                   ))}
                 </div>
-                <DateSelector 
-                  type={browseType} 
-                  value={browseInputValue} 
-                  onChange={setBrowseInputValue} 
-                  activeDates={activeDates} 
-                  t={t} 
+                <DateSelector
+                  type={browseType}
+                  value={browseInputValue}
+                  onChange={setBrowseInputValue}
+                  activeDates={activeDates}
+                  t={t}
                 />
               </div>
 
               <AnimatePresence mode="wait">
                 {foundRetro ? (
-                  <motion.div 
+                  <motion.div
                     key={foundRetro.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -330,8 +330,8 @@ export const RetrospectiveView = ({
                           </p>
                         )}
                       </div>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         className="w-10 h-10 rounded-xl hover:bg-primary/10 transition-all active:scale-90"
                         onClick={() => handleCopy(foundRetro.content)}
@@ -345,7 +345,7 @@ export const RetrospectiveView = ({
                     </div>
                   </motion.div>
                 ) : (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="p-12 border-2 border-dashed border-border rounded-3xl flex flex-col items-center justify-center text-center space-y-4 bg-surface/30 backdrop-blur-sm"
@@ -355,10 +355,10 @@ export const RetrospectiveView = ({
                     </div>
                     <div className="space-y-1">
                       <p className="text-lg text-text-primary font-bold tracking-tight">
-                        {t.retrospective?.no_data_for_label || '회고 데이터가 없습니다.'}
+                        {t.retrospective.no_data_for_label}
                       </p>
                       <p className="text-sm text-text-secondary leading-relaxed">
-                        {t.retrospective?.select_another_range || "다른 기간을 선택하거나 회고를 생성해 보세요."}
+                        {t.retrospective.select_another_range}
                       </p>
                     </div>
                   </motion.div>

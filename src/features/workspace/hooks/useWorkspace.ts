@@ -108,9 +108,9 @@ export const useWorkspace = ({
 
   const handleTaskError = (errors: any) => {
     if (errors.minutes && taskForm.getValues("hours") === 0 && taskForm.getValues("minutes") === 0) {
-      showToast(t.main?.toast?.set_duration || "수행 시간을 설정해주세요.", "error");
+      showToast(t.main.toast.set_duration, "error");
     } else if (errors.title) {
-      showToast(t.main?.toast?.set_title || "태스크 제목을 입력해주세요.", "error");
+      showToast(t.main.toast.set_title, "error");
     }
   };
 

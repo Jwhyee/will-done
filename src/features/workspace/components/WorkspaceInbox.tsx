@@ -34,7 +34,7 @@ export const WorkspaceInbox = ({
             <div className="flex items-center justify-between">
               <SheetTitle className="text-lg font-bold text-text-primary flex items-center space-x-2">
                 <Inbox size={20} className="text-accent" />
-                <span>{t.sidebar?.inbox || "인박스"}</span>
+                <span>{t.sidebar.inbox}</span>
               </SheetTitle>
               {inboxTasks.length > 0 && (
                 <Button
@@ -43,7 +43,7 @@ export const WorkspaceInbox = ({
                   onClick={onMoveAllConfirm}
                   className="text-accent hover:text-accent hover:bg-accent/20 font-bold text-xs transition-all duration-200 active:scale-95"
                 >
-                  {t.main?.move_all?.btn || "전체 이동"}
+                  {t.main.move_all.btn}
                 </Button>
               )}
             </div>
@@ -58,7 +58,7 @@ export const WorkspaceInbox = ({
                 {inboxTasks.length === 0 ? (
                   <div className="p-8 border border-dashed border-border bg-background/20 rounded-2xl text-center mt-4">
                     <p className="text-sm text-text-secondary font-bold leading-relaxed">
-                      {t.sidebar?.no_tasks || "인박스가 비어있습니다."}
+                      {t.sidebar.no_tasks}
                     </p>
                   </div>
                 ) : (

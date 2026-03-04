@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format, isSameDay } from "date-fns";
-import { ko } from "date-fns/locale";
+import * as locales from "date-fns/locale";
 import { Clock, Inbox, Sparkles, Calendar as CalendarIcon, RotateCcw } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { invoke } from "@tauri-apps/api/core";
@@ -51,6 +51,7 @@ export const WorkspaceHeader = ({
   const [activeDates, setActiveDates] = useState<string[]>([]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const isRetroEnabled = !!user?.geminiApiKey;
+  const activeLocale = user?.lang === "ko" ? locales.ko : locales.enUS;
 
   const viewDate = selectedDate || logicalDate;
 
@@ -82,7 +83,7 @@ export const WorkspaceHeader = ({
               <PopoverTrigger asChild>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-surface-elevated cursor-pointer transition-all active:scale-95 group border border-transparent hover:border-border/50">
                   <div className={`text-[11px] font-bold uppercase tracking-wider transition-colors ${isPastView ? 'text-accent' : 'text-text-primary'}`}>
-                    {format(viewDate, "yyyy년 M월 d일 (EEE)", { locale: ko })}
+                    {format(viewDate, user?.lang === "ko" ? "yyyy년 M월 d일 (EEE)" : "MMM d, yyyy (EEE)", { locale: activeLocale })}
                   </div>
                   <CalendarIcon size={12} className={`transition-colors ${isPastView ? 'text-accent' : 'text-text-muted group-hover:text-text-primary'}`} />
                 </div>
@@ -99,7 +100,7 @@ export const WorkspaceHeader = ({
                   }}
                   disabled={disabledDays}
                   initialFocus
-                  locale={ko}
+                  locale={activeLocale}
                   className="p-3"
                 />
                 <div className="p-2 border-t border-border bg-surface/50">
@@ -113,7 +114,7 @@ export const WorkspaceHeader = ({
                     }}
                   >
                     <RotateCcw size={14} />
-                    {t.main?.go_to_today || "오늘로 이동"}
+                    {t.main.go_to_today}
                   </Button>
                 </div>
               </PopoverContent>
@@ -161,7 +162,7 @@ export const WorkspaceHeader = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                {t.sidebar?.inbox || "인박스"}
+                {t.sidebar.inbox}
               </TooltipContent>
             </Tooltip>
 
@@ -181,8 +182,8 @@ export const WorkspaceHeader = ({
               </TooltipTrigger>
               <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
                 {isRetroEnabled
-                  ? (t.header?.retrospective || "회고")
-                  : (t.header?.retro_disabled_tooltip || "Google AI API 키를 설정해야 회고가 가능합니다")
+                  ? t.header.retrospective
+                  : t.header.retro_disabled_tooltip
                 }
               </TooltipContent>
             </Tooltip>

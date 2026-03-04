@@ -178,7 +178,7 @@ export const SortableItem = ({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                      {t.main.tooltip?.move_to_inbox || "인박스로 이동"}
+                      {t.main.tooltip.move_to_inbox}
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -201,7 +201,7 @@ export const SortableItem = ({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                    {t.main.tooltip?.edit || "수정"}
+                    {t.main.tooltip.edit}
                   </TooltipContent>
                 </Tooltip>
 
@@ -224,7 +224,7 @@ export const SortableItem = ({
                       </span>
                     </TooltipTrigger>
                     <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                      {t.main.tooltip?.complete || "완료"}
+                      {t.main.tooltip.complete}
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -246,7 +246,7 @@ export const SortableItem = ({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                      {t.main.tooltip?.delete || "삭제"}
+                      {t.main.tooltip.delete}
                     </TooltipContent>
                   </Tooltip>
                 )}
