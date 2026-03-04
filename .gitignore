@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI
+/docs/ai/*
+GEMINI.md
+.gemini/*
