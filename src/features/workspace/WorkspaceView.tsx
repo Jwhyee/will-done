@@ -58,10 +58,19 @@ export const WorkspaceView = ({
   const routineSuggestions = (() => {
     if (isPastView || !activeWorkspaceId) return [];
     const currentDay = logicalDate.getDay();
+    
+    // Normalize titles for comparison
+    const existingTitles = new Set([
+      ...timeline.map(b => b.title.trim().toLowerCase()),
+      ...inboxTasks.map(t => t.title.trim().toLowerCase())
+    ]);
+
     return recurringTasks.filter((rt) => {
       try {
         const days = JSON.parse(rt.daysOfWeek) as number[];
-        return days.includes(currentDay) && !timeline.some(b => b.title === rt.title) && !inboxTasks.some(t => t.title === rt.title);
+        const isToday = days.includes(currentDay);
+        const alreadyAdded = existingTitles.has(rt.title.trim().toLowerCase());
+        return isToday && !alreadyAdded;
       } catch { return false; }
     });
   })();
