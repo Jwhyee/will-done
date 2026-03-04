@@ -69,6 +69,28 @@ pub struct Retrospective {
     pub used_model: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct RecurringTask {
+    pub id: i64,
+    pub workspace_id: i64,
+    pub title: String,
+    pub planning_memo: Option<String>,
+    pub duration: i64,
+    pub days_of_week: String, // JSON array string e.g., "[1,2,3]"
+    pub created_at: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateRecurringTaskInput {
+    pub workspace_id: i64,
+    pub title: String,
+    pub planning_memo: Option<String>,
+    pub duration: i64,
+    pub days_of_week: Vec<i32>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AddTaskInput {

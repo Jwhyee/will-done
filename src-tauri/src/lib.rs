@@ -67,6 +67,7 @@ pub fn run() {
                         println!("🚀 [Dev Mode] Cleaning database...");
                         sqlx::query("DELETE FROM retrospectives").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM time_blocks").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM recurring_tasks").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM tasks").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM unplugged_times").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM workspaces").execute(&pool).await.ok();
@@ -153,6 +154,8 @@ pub fn run() {
                 sqlx::query("CREATE TABLE IF NOT EXISTS retrospectives (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, retro_type TEXT NOT NULL, content TEXT NOT NULL, date_label TEXT NOT NULL, created_at TEXT NOT NULL, used_model TEXT, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE retrospectives ADD COLUMN used_model TEXT").execute(&pool).await.ok();
 
+                sqlx::query("CREATE TABLE IF NOT EXISTS recurring_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, duration INTEGER NOT NULL DEFAULT 0, days_of_week TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+
                 app_handle.manage(DbState { pool });
             });
             Ok(())
@@ -167,6 +170,9 @@ pub fn run() {
             commands::workspace::update_workspace,
             commands::workspace::delete_workspace,
             commands::workspace::get_unplugged_times,
+            commands::workspace::get_recurring_tasks,
+            commands::workspace::add_recurring_task,
+            commands::workspace::delete_recurring_task,
             commands::timeline::get_greeting,
             commands::timeline::add_task,
             commands::timeline::get_timeline,

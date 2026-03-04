@@ -1,5 +1,5 @@
 use tauri::State;
-use crate::models::{Workspace, UnpluggedTime, CreateWorkspaceInput, DbState};
+use crate::models::{Workspace, UnpluggedTime, CreateWorkspaceInput, DbState, RecurringTask, CreateRecurringTaskInput};
 use crate::database;
 use crate::error::Result;
 
@@ -38,4 +38,19 @@ pub async fn update_workspace(
 #[tauri::command]
 pub async fn delete_workspace(state: State<'_, DbState>, id: i64) -> Result<()> {
     database::workspace::delete_workspace(&state.pool, id).await
+}
+
+#[tauri::command]
+pub async fn get_recurring_tasks(state: State<'_, DbState>, workspace_id: i64) -> Result<Vec<RecurringTask>> {
+    database::workspace::get_recurring_tasks(&state.pool, workspace_id).await
+}
+
+#[tauri::command]
+pub async fn add_recurring_task(state: State<'_, DbState>, input: CreateRecurringTaskInput) -> Result<i64> {
+    database::workspace::add_recurring_task(&state.pool, input).await
+}
+
+#[tauri::command]
+pub async fn delete_recurring_task(state: State<'_, DbState>, id: i64) -> Result<()> {
+    database::workspace::delete_recurring_task(&state.pool, id).await
 }
