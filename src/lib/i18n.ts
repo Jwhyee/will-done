@@ -79,6 +79,7 @@ export const translations = {
       workspace: "워크스페이스",
       workspace_tab_basic: "기본 정보",
       workspace_tab_time: "시간 관리",
+      workspace_tab_routine: "고정 업무",
       workspace_tab_advanced: "고급 설정",
       save_changes: "변경 사항 저장",
       lang_label: "언어 설정",
@@ -86,6 +87,21 @@ export const translations = {
       back: "뒤로 가기",
       date_search: "날짜 검색",
       no_tasks: "대기 중인 태스크가 없습니다.",
+      workspace_routine: {
+        title: "고정 업무 (루틴) 관리",
+        desc: "특정 요일에 반복되는 업무를 템플릿으로 등록해두면, 해당 요일에 타임라인 상단에서 간편하게 추가할 수 있습니다.",
+        add_btn: "루틴 추가",
+        list_label: "등록된 루틴 목록",
+        list_empty: "등록된 고정 업무가 없습니다.",
+        title_label: "업무 제목",
+        duration_label: "예상 시간",
+        days_label: "반복 요일",
+        planning_label: "계획 메모 (선택)",
+        days: {
+          0: "일", 1: "월", 2: "화", 3: "수", 4: "목", 5: "금", 6: "토"
+        },
+        delete_confirm: "이 고정 업무를 삭제하시겠습니까?",
+      },
       workspace_delete_desc: "워크스페이스 삭제 시 모든 태스크, 회고 및 설정 데이터가 영구적으로 삭제됩니다.",
       workspace_delete_btn: "워크스페이스 삭제",
       workspace_delete_confirm_title: "워크스페이스 삭제 확인",
@@ -105,6 +121,10 @@ export const translations = {
       add_task: "등록",
       planning_placeholder: "업무의 구체적인 단계나 목표를 마크다운으로 작성해보세요.",
       retrospective_btn: "일일 회고 생성",
+      routine_suggestion: {
+        banner: "✨ 오늘의 루틴이 기다리고 있어요",
+        add_tooltip: "타임라인에 추가",
+      },
       empty_timeline: "오늘의 일정이 아직 없습니다. 새로운 태스크를 추가해보세요.",
       transition: {
         title: "태스크 종료 분기",
@@ -302,6 +322,7 @@ export const translations = {
       workspace: "Workspace",
       workspace_tab_basic: "Basic Info",
       workspace_tab_time: "Time",
+      workspace_tab_routine: "Routine",
       workspace_tab_advanced: "Advanced",
       save_changes: "Save Changes",
       lang_label: "Language",
@@ -309,6 +330,21 @@ export const translations = {
       back: "Back",
       date_search: "Search Date",
       no_tasks: "No pending tasks.",
+      workspace_routine: {
+        title: "Recurring Task Management",
+        desc: "Register tasks that repeat on specific days to receive suggestions on the timeline.",
+        add_btn: "Add Routine",
+        list_label: "Registered Routines",
+        list_empty: "No recurring tasks registered.",
+        title_label: "Title",
+        duration_label: "Estimated Duration",
+        days_label: "Repeat Days",
+        planning_label: "Planning Memo (Optional)",
+        days: {
+          0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat"
+        },
+        delete_confirm: "Are you sure you want to delete this routine?",
+      },
       workspace_delete_desc: "Deleting a workspace will permanently remove all associated tasks, retrospectives, and settings.",
       workspace_delete_btn: "Delete Workspace",
       workspace_delete_confirm_title: "Confirm Workspace Deletion",
@@ -328,6 +364,10 @@ export const translations = {
       add_task: "Add",
       planning_placeholder: "Write specific steps or goals for this task using markdown.",
       retrospective_btn: "Generate Review",
+      routine_suggestion: {
+        banner: "✨ Today's routine is waiting for you",
+        add_tooltip: "Add to Timeline",
+      },
       empty_timeline: "No schedule for today. Add a new task to start.",
       transition: {
         title: "Task Transition",
