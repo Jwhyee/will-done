@@ -83,6 +83,15 @@ pub struct RecurringTask {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct CreateRecurringTaskInitialInput {
+    pub title: String,
+    pub planning_memo: Option<String>,
+    pub duration: i64,
+    pub days_of_week: Vec<i32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateRecurringTaskInput {
     pub workspace_id: i64,
     pub title: String,
@@ -131,6 +140,7 @@ pub struct CreateWorkspaceInput {
     pub core_time_end: Option<String>,
     pub role_intro: Option<String>,
     pub unplugged_times: Vec<UnpluggedTimeInput>,
+    pub recurring_tasks: Option<Vec<CreateRecurringTaskInitialInput>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

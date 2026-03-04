@@ -46,6 +46,24 @@ pub async fn create_workspace(
         .await?;
     }
 
+    if let Some(recurring_tasks) = input.recurring_tasks {
+        let created_at = chrono::Local::now().to_rfc3339();
+        for rt in recurring_tasks {
+            let days_of_week_json = serde_json::to_string(&rt.days_of_week)?;
+            sqlx::query(
+                "INSERT INTO recurring_tasks (workspace_id, title, planning_memo, duration, days_of_week, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )
+            .bind(workspace_id)
+            .bind(rt.title)
+            .bind(rt.planning_memo)
+            .bind(rt.duration)
+            .bind(days_of_week_json)
+            .bind(&created_at)
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
     tx.commit().await?;
     Ok(workspace_id)
 }
@@ -61,7 +79,7 @@ pub async fn get_unplugged_times(pool: &SqlitePool, workspace_id: i64) -> Result
 pub async fn update_workspace(
     pool: &SqlitePool,
     id: i64,
-    input: CreateWorkspaceInput,
+    mut input: CreateWorkspaceInput,
 ) -> Result<()> {
     let mut tx = pool.begin().await?;
     sqlx::query(
@@ -90,6 +108,29 @@ pub async fn update_workspace(
         .bind(ut.end_time)
         .execute(&mut *tx)
         .await?;
+    }
+
+    if let Some(recurring_tasks) = input.recurring_tasks {
+        let created_at = chrono::Local::now().to_rfc3339();
+        sqlx::query("DELETE FROM recurring_tasks WHERE workspace_id = ?1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+            
+        for rt in recurring_tasks {
+            let days_of_week_json = serde_json::to_string(&rt.days_of_week)?;
+            sqlx::query(
+                "INSERT INTO recurring_tasks (workspace_id, title, planning_memo, duration, days_of_week, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )
+            .bind(id)
+            .bind(rt.title)
+            .bind(rt.planning_memo)
+            .bind(rt.duration)
+            .bind(days_of_week_json)
+            .bind(&created_at)
+            .execute(&mut *tx)
+            .await?;
+        }
     }
 
     tx.commit().await?;
@@ -156,6 +197,7 @@ mod tests {
             core_time_end: Some("18:00".to_string()),
             role_intro: Some("Engineer".to_string()),
             unplugged_times: vec![],
+            recurring_tasks: None,
         };
 
         let mut tx = pool.begin().await.unwrap();

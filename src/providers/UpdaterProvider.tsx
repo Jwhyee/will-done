@@ -40,8 +40,12 @@ export const UpdaterProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
     } catch (error) {
       // Log more context but avoid showing disruptive alerts for background update checks
-      if (error instanceof Error && error.message.includes("fetch")) {
-        console.warn("Updater: Remote manifest not found or inaccessible (likely draft release or offline).");
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const isFetchError = errorMsg.includes("fetch") || errorMsg.includes("JSON");
+
+      if (isFetchError) {
+        // Only log as warning in development or if it's a known non-critical fetch issue
+        console.warn("Updater: Remote manifest not found or inaccessible (likely development environment or offline).");
       } else {
         console.error("Updater: Failed to check for updates:", error);
       }
