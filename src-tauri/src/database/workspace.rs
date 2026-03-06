@@ -79,7 +79,7 @@ pub async fn get_unplugged_times(pool: &SqlitePool, workspace_id: i64) -> Result
 pub async fn update_workspace(
     pool: &SqlitePool,
     id: i64,
-    mut input: CreateWorkspaceInput,
+    input: CreateWorkspaceInput,
 ) -> Result<()> {
     let mut tx = pool.begin().await?;
     sqlx::query(
