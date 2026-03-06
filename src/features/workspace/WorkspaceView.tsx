@@ -124,7 +124,7 @@ export const WorkspaceView = ({
         onSplitDeleteConfirm={async (id, keepPast) => { await onHandleSplitTaskDeletion(id, keepPast); setDeleteTaskProps(null); setIsSplitDelete(false); }}
         onMoveAllCancel={() => setMoveAllConfirm(false)} onMoveAllConfirm={async () => { await onMoveAllToTimeline(); setMoveAllConfirm(false); }}
         onExceededCancel={() => setExceededConfirm(null)} onExceededContinue={handleTaskSubmit} onExceededToInbox={async (data) => {
-          await onTaskSubmit({ ...data, isInbox: true }); taskForm.reset({ title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false }); setExceededConfirm(null);
+          await onTaskSubmit(data, true); taskForm.reset({ title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false }); setExceededConfirm(null);
         }}
       />
 

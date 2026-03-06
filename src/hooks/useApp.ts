@@ -269,7 +269,7 @@ export function useApp() {
     }
   };
 
-  const onTaskSubmit = async (data: any) => {
+  const onTaskSubmit = async (data: any, isInbox: boolean = false) => {
     if (!activeWorkspaceId) return;
     try {
       await invoke("add_task", {
@@ -277,7 +277,7 @@ export function useApp() {
           workspaceId: activeWorkspaceId,
           ...data,
           planningMemo: data.planningMemo || null,
-          isInbox: data.isInbox || false
+          isInbox
         }
       });
       await fetchMainData();
