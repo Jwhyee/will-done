@@ -193,6 +193,8 @@ export const translations = {
         btn: "모두 이동",
         cancel: "취소",
       },
+      show_completed: "완료된 업무 {n}개 보기",
+      hide_completed: "완료된 업무 {n}개 숨기기",
       go_to_today: "오늘로 이동",
       tooltip: {
         edit: "수정",
@@ -487,6 +489,8 @@ export const translations = {
         btn: "Move All",
         cancel: "Cancel",
       },
+      show_completed: "Show {n} completed tasks",
+      hide_completed: "Hide {n} completed tasks",
       go_to_today: "Go to Today",
       tooltip: {
         edit: "Edit",

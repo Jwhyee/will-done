@@ -1,5 +1,7 @@
-import { Clock, Send } from "lucide-react";
+import { useState } from "react";
+import { Clock, Send, ChevronDown, ChevronUp } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { TimeBlock } from "@/types";
@@ -41,6 +43,11 @@ export const WorkspaceTimeline = ({
   coreTimeEnd,
   overId,
 }: WorkspaceTimelineProps) => {
+  const [isDoneVisible, setIsDoneVisible] = useState(false);
+
+  const doneBlocks = timeline.filter((b) => b.status === "DONE");
+  const remainingBlocks = timeline.filter((b) => b.status !== "DONE");
+
   return (
     <ScrollArea className="flex-1 px-8">
       <div className="pt-14 pb-32 space-y-4">
@@ -68,11 +75,64 @@ export const WorkspaceTimeline = ({
           </div>
         ) : (
           <DroppableArea id="timeline" className="space-y-6 relative pl-28 ml-4 pt-10 pb-4 min-h-[200px]">
+            {doneBlocks.length > 0 && (
+              <div className="flex flex-col space-y-4 mb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDoneVisible(!isDoneVisible)}
+                  className="w-fit self-center text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text-primary bg-surface/30 hover:bg-surface/50 rounded-full px-4 h-8 transition-all gap-2"
+                >
+                  {isDoneVisible ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  {isDoneVisible 
+                    ? t.main.hide_completed?.replace("{n}", doneBlocks.length.toString()) || `Hide ${doneBlocks.length} completed tasks`
+                    : t.main.show_completed?.replace("{n}", doneBlocks.length.toString()) || `Show ${doneBlocks.length} completed tasks`
+                  }
+                </Button>
+
+                <AnimatePresence initial={false}>
+                  {isDoneVisible && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0, overflow: "hidden" }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="space-y-6"
+                    >
+                      {doneBlocks.map((block) => (
+                        <SortableItem
+                          key={block.id}
+                          block={block}
+                          timeline={timeline}
+                          currentTime={currentTime}
+                          t={t}
+                          onTransition={onTransition}
+                          onEditTask={onEditTask}
+                          onMoveToInbox={onMoveToInbox}
+                          onDelete={(id: number) => {
+                            const isSplit = timeline.filter((b) => b.taskId === id).length > 1;
+                            onDelete(id, isSplit);
+                          }}
+                          hoverTaskId={hoverTaskId}
+                          setHoverTaskId={setHoverTaskId}
+                          isPastView={isPastView}
+                          coreTimeStart={coreTimeStart}
+                          coreTimeEnd={coreTimeEnd}
+                          overId={overId}
+                        />
+                      ))}
+                      <div className="h-4 border-b border-border/30 mx-[-20px] mb-6" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
             <SortableContext
-              items={timeline.map((b) => b.id.toString())}
+              items={remainingBlocks.map((b) => b.id.toString())}
               strategy={verticalListSortingStrategy}
             >
-              {timeline.map((block) => (
+              {remainingBlocks.map((block) => (
                 <SortableItem
                   key={block.id === -1 ? `unplugged-${block.startTime}` : block.id}
                   block={block}
