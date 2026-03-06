@@ -50,7 +50,7 @@ export const WorkspaceTimeline = ({
 
   return (
     <ScrollArea className="flex-1 px-8">
-      <div className="pt-14 pb-32 space-y-4">
+      <div className="pb-32 space-y-4">
         {timeline.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-text-secondary space-y-4 border-2 border-dashed border-border rounded-3xl group relative overflow-hidden">
             <Clock
