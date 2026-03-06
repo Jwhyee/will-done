@@ -432,6 +432,24 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
                 .bind(input.block_id)
                 .execute(&mut *tx)
                 .await?;
+
+            // Auto-resume logic: if the next sequential task is PENDING, set it to NOW
+            let next_block: Option<TimeBlock> = sqlx::query_as(
+                "SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE' AND start_time >= ?2 ORDER BY start_time ASC LIMIT 1"
+            )
+            .bind(block.workspace_id)
+            .bind(end_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
+            .fetch_optional(&mut *tx)
+            .await?;
+
+            if let Some(nb) = next_block {
+                if nb.status == "PENDING" {
+                    sqlx::query("UPDATE time_blocks SET status = 'NOW' WHERE id = ?1")
+                        .bind(nb.id)
+                        .execute(&mut *tx)
+                        .await?;
+                }
+            }
         },
         "DELAY" => {
             let extra = input.extra_minutes.unwrap_or(0) as i64;
@@ -659,12 +677,12 @@ async fn reorder_internal(tx: &mut Transaction<'_, Sqlite>, workspace_id: i64, b
 
     if all_blocks.is_empty() { return Ok(()); }
 
-    // 현재 진행 중인 업무(NOW)의 위치 검증: NOW 이전으로 WILL 태스크가 올 수 없음
+    // 현재 진행 중인 업무(NOW)의 위치 검증: NOW 이전으로 WILL 태스크나 미래의 PENDING 태스크가 올 수 없음
     if let Some(now_block) = all_blocks.iter().find(|b| b.status == "NOW") {
         if let Some(pos) = block_ids.iter().position(|&id| id == now_block.id) {
             for &id in &block_ids[..pos] {
                 if let Some(prev_block) = all_blocks.iter().find(|b| b.id == id) {
-                    if prev_block.status == "WILL" || prev_block.status == "PENDING" {
+                    if prev_block.status == "WILL" || (prev_block.status == "PENDING" && prev_block.start_time >= now_block.start_time) {
                         return Err(AppError::InvalidInput("Cannot move tasks before the active task".to_string()));
                     }
                 }
@@ -1460,5 +1478,42 @@ mod tests {
         assert_eq!(pending_future.status, "PENDING");
         assert_eq!(pending_future.start_time, "2026-03-01T10:45:00");
         assert_eq!(pending_future.end_time, "2026-03-01T11:30:00");
+    }
+
+    #[tokio::test]
+    async fn test_auto_resume_pending_tasks() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // T1: 10:00 - 10:15 (PENDING)
+        // T2: 10:15 - 11:15 (NOW)
+        // T1: 11:15 - 12:00 (PENDING)
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+        
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'T1', '2026-03-01T10:00:00', '2026-03-01T10:15:00', 'PENDING')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'T2', '2026-03-01T10:15:00', '2026-03-01T11:15:00', 'NOW')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 1, 1, 'T1', '2026-03-01T11:15:00', '2026-03-01T12:00:00', 'PENDING')").execute(&pool).await.unwrap();
+
+        let input = TaskTransitionInput {
+            block_id: 11,
+            action: "COMPLETE_ON_TIME".to_string(),
+            extra_minutes: None,
+            review_memo: None,
+        };
+
+        process_task_transition(&pool, input).await.unwrap();
+
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+        
+        let t1_past = blocks.iter().find(|b| b.id == 10).unwrap();
+        let t2 = blocks.iter().find(|b| b.id == 11).unwrap();
+        let t1_future = blocks.iter().find(|b| b.id == 12).unwrap();
+
+        assert_eq!(t2.status, "DONE");
+        // T1 past stays PENDING because it's in the past
+        assert_eq!(t1_past.status, "PENDING");
+        // T1 future auto-resumes to NOW!
+        assert_eq!(t1_future.status, "NOW");
     }
 }
