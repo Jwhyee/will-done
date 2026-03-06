@@ -156,8 +156,8 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
         let urgent_duration = (input.hours * 60 + input.minutes) as i64;
 
         if let Some(block) = current_now {
-            // 1. 현재 태스크 중단 -> DONE 처리 (파트1)
-            sqlx::query("UPDATE time_blocks SET end_time = ?1, status = 'DONE' WHERE id = ?2")
+            // 1. 현재 태스크 중단 -> PENDING 처리 (파트1)
+            sqlx::query("UPDATE time_blocks SET end_time = ?1, status = 'PENDING' WHERE id = ?2")
                 .bind(now_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
                 .bind(block.id)
                 .execute(&mut *tx)
@@ -174,9 +174,9 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
 
             let urgent_end = now_dt + Duration::minutes(urgent_duration);
 
-            // 4. 남은 부분 삽입 (Block C) - WILL 상태
+            // 4. 남은 부분 삽입 (Block C) - PENDING 상태
             if remaining_duration > 0 {
-                schedule_task_blocks(&mut tx, input.workspace_id, block.task_id.unwrap(), &block.title, urgent_end, remaining_duration, block.is_urgent, "WILL").await?;
+                schedule_task_blocks(&mut tx, input.workspace_id, block.task_id.unwrap(), &block.title, urgent_end, remaining_duration, block.is_urgent, "PENDING").await?;
             }
         } else {
             // 현재 진행 중인 태스크가 없는 경우
@@ -659,6 +659,19 @@ async fn reorder_internal(tx: &mut Transaction<'_, Sqlite>, workspace_id: i64, b
 
     if all_blocks.is_empty() { return Ok(()); }
 
+    // 현재 진행 중인 업무(NOW)의 위치 검증: NOW 이전으로 WILL 태스크가 올 수 없음
+    if let Some(now_block) = all_blocks.iter().find(|b| b.status == "NOW") {
+        if let Some(pos) = block_ids.iter().position(|&id| id == now_block.id) {
+            for &id in &block_ids[..pos] {
+                if let Some(prev_block) = all_blocks.iter().find(|b| b.id == id) {
+                    if prev_block.status == "WILL" || prev_block.status == "PENDING" {
+                        return Err(AppError::InvalidInput("Cannot move tasks before the active task".to_string()));
+                    }
+                }
+            }
+        }
+    }
+
     // 정렬 기준점: 현재 첫 번째 블록의 시작 시간
     let mut current_blocks: Vec<TimeBlock> = all_blocks.clone();
     current_blocks.sort_by(|a, b| a.start_time.cmp(&b.start_time));
@@ -776,7 +789,7 @@ async fn shift_future_blocks(
     after_dt: NaiveDateTime,
     shift_minutes: i64
 ) -> Result<()> {
-    let blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND start_time >= ?2 AND status = 'WILL'")
+    let blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND start_time >= ?2 AND status IN ('WILL', 'PENDING')")
         .bind(workspace_id)
         .bind(after_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
         .fetch_all(&mut **tx)
@@ -862,9 +875,9 @@ mod tests {
         let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
         
         /* 기대하는 결과:
-           - T1 (Block A): 18:00 - 18:10 (DONE)
+           - T1 (Block A): 18:00 - 18:10 (PENDING)
            - T2 (Urgent): 18:10 - 18:30 (NOW)
-           - T1 (Block C): 18:30 - 18:50 (WILL) -> 남은 20분
+           - T1 (Block C): 18:30 - 18:50 (PENDING) -> 남은 20분
            - T3 (Future): 18:50 - 19:20 (WILL) -> 20분 뒤로 밀림
         */
         
@@ -876,7 +889,7 @@ mod tests {
         
         // Block A
         assert_eq!(blocks[0].title, "T1");
-        assert_eq!(blocks[0].status, "DONE");
+        assert_eq!(blocks[0].status, "PENDING");
         assert_eq!(blocks[0].start_time, "2026-03-01T18:00:00");
         assert_eq!(blocks[0].end_time, "2026-03-01T18:10:00");
 
@@ -888,7 +901,7 @@ mod tests {
 
         // Block C (T1 Resume)
         assert_eq!(blocks[2].title, "T1");
-        assert_eq!(blocks[2].status, "WILL");
+        assert_eq!(blocks[2].status, "PENDING");
         assert_eq!(blocks[2].start_time, "2026-03-01T18:30:00");
         assert_eq!(blocks[2].end_time, "2026-03-01T18:50:00");
 
@@ -1227,6 +1240,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_reorder_will_above_now_blocked() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // T1(NOW): 10:00-11:00, T2(WILL): 11:00-12:00
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'T1', '2026-03-01T10:00:00', '2026-03-01T11:00:00', 'NOW')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'T2', '2026-03-01T11:00:00', '2026-03-01T12:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // Swap them: [T2, T1] -> Should fail because T2 is WILL and T1 is NOW
+        let result = reorder_blocks(&pool, 1, vec![11, 10]).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Cannot move tasks before the active task"));
+
+        // Move T2 up via move_task_step -> Should also fail
+        let result = move_task_step(&pool, 1, 11, "up").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Cannot move tasks before the active task"));
+    }
+
+    #[tokio::test]
     async fn test_move_task_boundary_and_state() {
         let pool = setup_db().await;
         sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
@@ -1379,5 +1415,50 @@ mod tests {
         // Lunch is 12:00 - 13:00.
         // In a perfect system, T2 should have been split into 11:30-12:00 and 13:00-13:30.
         // This test serves as a "Gold Standard" for future refactoring.
+    }
+
+    #[tokio::test]
+    async fn test_urgent_task_splits_to_pending() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // 1. Start a task (NOW): 10:00 - 11:00
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'Original Task')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'Original Task', '2026-03-01T10:00:00', '2026-03-01T11:00:00', 'NOW')").execute(&pool).await.unwrap();
+
+        // 2. Add an Urgent task at 10:15 (duration 30m)
+        let now_dt = NaiveDateTime::parse_from_str("2026-03-01T10:15:00", "%Y-%m-%dT%H:%M:%S").unwrap();
+        let input = AddTaskInput {
+            workspace_id: 1,
+            title: "Urgent Task".to_string(),
+            hours: 0,
+            minutes: 30,
+            planning_memo: None,
+            is_urgent: true,
+            is_inbox: Some(false),
+        };
+
+        add_task_at(&pool, input, now_dt).await.unwrap();
+
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+
+        // Should have 3 blocks:
+        // Original Task (id: 10) [PENDING]: 10:00 - 10:15
+        // Urgent Task (new id) [NOW]: 10:15 - 10:45
+        // Original Task (new id, same task_id) [PENDING]: 10:45 - 11:30
+        
+        let pending_past = blocks.iter().find(|b| b.id == 10).unwrap();
+        assert_eq!(pending_past.status, "PENDING");
+        assert_eq!(pending_past.end_time, "2026-03-01T10:15:00");
+
+        let urgent = blocks.iter().find(|b| b.title == "Urgent Task").unwrap();
+        assert_eq!(urgent.status, "NOW");
+        assert_eq!(urgent.start_time, "2026-03-01T10:15:00");
+        assert_eq!(urgent.end_time, "2026-03-01T10:45:00");
+
+        let pending_future = blocks.iter().find(|b| b.title == "Original Task" && b.id != 10).unwrap();
+        assert_eq!(pending_future.status, "PENDING");
+        assert_eq!(pending_future.start_time, "2026-03-01T10:45:00");
+        assert_eq!(pending_future.end_time, "2026-03-01T11:30:00");
     }
 }
