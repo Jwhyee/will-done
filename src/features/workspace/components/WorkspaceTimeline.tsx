@@ -21,6 +21,7 @@ interface WorkspaceTimelineProps {
   isPastView: boolean;
   coreTimeStart?: string | null;
   coreTimeEnd?: string | null;
+  overId: string | null;
 }
 
 export const WorkspaceTimeline = ({
@@ -38,6 +39,7 @@ export const WorkspaceTimeline = ({
   isPastView,
   coreTimeStart,
   coreTimeEnd,
+  overId,
 }: WorkspaceTimelineProps) => {
   return (
     <ScrollArea className="flex-1 px-8">
@@ -89,6 +91,7 @@ export const WorkspaceTimeline = ({
                   isPastView={isPastView}
                   coreTimeStart={coreTimeStart}
                   coreTimeEnd={coreTimeEnd}
+                  overId={overId}
                 />
               ))}
             </SortableContext>

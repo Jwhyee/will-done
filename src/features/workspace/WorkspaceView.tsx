@@ -36,13 +36,14 @@ interface WorkspaceViewProps {
   transitionBlock: TimeBlock | null;
   setTransitionBlock: (block: TimeBlock | null) => void;
   workspaces: Workspace[];
+  overId: string | null;
 }
 
 export const WorkspaceView = ({
   t, user, workspacesCount, greeting, currentTime, logicalDate, selectedDate, onDateChange,
   timeline, inboxTasks, activeWorkspaceId, onTaskSubmit, onEditTaskSubmit, onTransition,
   onMoveToInbox, onDeleteTask, onHandleSplitTaskDeletion, onMoveAllToTimeline, onMoveToTimeline,
-  onOpenRetrospective, onCreateWorkspace, transitionBlock, setTransitionBlock, workspaces,
+  onOpenRetrospective, onCreateWorkspace, transitionBlock, setTransitionBlock, workspaces, overId,
 }: WorkspaceViewProps) => {
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
   const { tasks: recurringTasks } = useRecurringTasks(activeWorkspaceId);
@@ -105,6 +106,7 @@ export const WorkspaceView = ({
           if (block) { setDeleteTaskProps({ id, title: block.title, status: block.status }); setIsSplitDelete(isSplit); }
         }} onMoveAllConfirm={() => setMoveAllConfirm(true)} hoverTaskId={hoverTaskId} setHoverTaskId={setHoverTaskId}
         isPastView={isPastView} coreTimeStart={activeWorkspace?.coreTimeStart} coreTimeEnd={activeWorkspace?.coreTimeEnd}
+        overId={overId}
       />
 
       <WorkspaceInbox t={t} isOpen={isInboxOpen} onOpenChange={setIsInboxOpen} inboxTasks={inboxTasks} onMoveToTimeline={onMoveToTimeline} onDeleteTask={onDeleteTask} onMoveAllConfirm={() => setMoveAllConfirm(true)} />

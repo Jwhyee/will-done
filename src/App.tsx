@@ -72,11 +72,13 @@ function AppContent() {
     activeRetrospective,
     setActiveRetrospective,
     activeId,
+    overId,
     isWorkspaceCreateModalOpen,
     setIsWorkspaceCreateModalOpen,
     t,
     fetchMainData,
     handleDragStart,
+    handleDragOver,
     handleDragEnd,
     onTaskSubmit,
     onEditTaskSubmit,
@@ -184,6 +186,7 @@ function AppContent() {
               onCreateWorkspace={() => setIsWorkspaceCreateModalOpen(true)}
               transitionBlock={transitionBlock}
               setTransitionBlock={setTransitionBlock}
+              overId={overId}
             />
           </MainLayout>
         );
@@ -195,6 +198,7 @@ function AppContent() {
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       {/* Global Drag Region */}
@@ -232,6 +236,7 @@ function AppContent() {
                 hoverTaskId={null}
                 setHoverTaskId={() => { }}
                 isPastView={isPastView}
+                overId={overId}
               />
             </div>
           )

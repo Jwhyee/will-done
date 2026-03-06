@@ -19,6 +19,7 @@ interface SortableItemProps {
   isPastView: boolean;
   coreTimeStart?: string | null;
   coreTimeEnd?: string | null;
+  overId: string | null;
 }
 
 const formatDisplayTime = (isoString: string) => {
@@ -39,7 +40,8 @@ export const SortableItem = ({
   setHoverTaskId,
   isPastView,
   coreTimeStart,
-  coreTimeEnd
+  coreTimeEnd,
+  overId
 }: SortableItemProps) => {
   const isInCoreTime = (startTime: string, endTime: string) => {
     if (!coreTimeStart || !coreTimeEnd) return false;
@@ -78,7 +80,12 @@ export const SortableItem = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: block.id, disabled: block.status === "UNPLUGGED" || block.status === "DONE" || block.status === "NOW" || (isSplit && !isLastOfTask) });
+  } = useSortable({ 
+    id: block.id.toString(), 
+    disabled: block.status === "UNPLUGGED" || block.status === "DONE" || (isSplit && !isLastOfTask) 
+  });
+
+  const isOver = overId === block.id.toString();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -96,6 +103,10 @@ export const SortableItem = ({
 
   return (
     <div ref={setNodeRef} style={style} className="relative group/item" id={`block-${block.id}`}>
+      {/* Drop Indicator - Visual Placeholder */}
+      {isOver && !isDragging && (
+        <div className="absolute -top-3 left-0 right-0 h-1 bg-accent rounded-full z-50 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+      )}
       <div className="absolute -left-28 top-[31px] w-14 -translate-y-1/2 text-center">
         <p className="text-[10px] font-black font-mono text-text-muted group-hover/item:text-text-secondary transition-colors">
           {formatDisplayTime(block.startTime)}

@@ -8,6 +8,7 @@ import {
 import {
   DragEndEvent,
   DragStartEvent,
+  DragOverEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -16,6 +17,7 @@ import { format } from "date-fns";
 import { useToast } from "@/providers/ToastProvider";
 import { translations, getLang, type Lang } from "@/lib/i18n";
 import { TimeBlock, Task, User, Workspace, Retrospective } from "@/types";
+import { validateDropPosition } from "@/features/workspace/utils/dndValidation";
 
 export type ViewState = "loading" | "onboarding" | "workspace_setup" | "main" | "retrospective";
 
@@ -48,6 +50,7 @@ export function useApp() {
   const [retrospectiveOpen, setRetrospectiveOpen] = useState(false);
   const [activeRetrospective, setActiveRetrospective] = useState<Retrospective | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
   const [isWorkspaceCreateModalOpen, setIsWorkspaceCreateModalOpen] = useState(false);
   const [todayCompletedDuration, setTodayCompletedDuration] = useState<number>(0);
   const lastNotifiedBlockId = useRef<number | null>(null);
@@ -202,9 +205,16 @@ export function useApp() {
     setActiveId(event.active.id.toString());
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    setOverId(over ? over.id.toString() : null);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveId(null);
     const { active, over } = event;
+    setActiveId(null);
+    setOverId(null);
+    
     if (!over) return;
 
     const activeId = active.id.toString();
@@ -230,30 +240,30 @@ export function useApp() {
 
     // Only Timeline Reordering
     if (!activeId.includes("inbox") && !overId.includes("inbox")) {
+      const validation = validateDropPosition(activeId, overId, timeline, currentTime, t);
+      
+      if (!validation.isValid) {
+        if (validation.error) showToast(validation.error);
+        return;
+      }
+
       const oldIndex = timeline.findIndex((item) => item.id.toString() === activeId);
       const newIndex = timeline.findIndex((item) => item.id.toString() === overId);
 
       if (oldIndex !== newIndex) {
-        const nowIndex = timeline.findIndex(b => b.status === "NOW");
-        const activeBlock = timeline[oldIndex];
-
-        if (activeBlock.status !== "NOW") {
-          if (nowIndex !== -1 && newIndex <= nowIndex) {
-            showToast(t.main.toast.past_time_error);
-            return;
-          }
-          if (nowIndex === -1 && timeline.length > 0 && newIndex === 0 && new Date(timeline[0].startTime) < currentTime) {
-            showToast(t.main.toast.past_time_error);
-            return;
-          }
-        }
-
         const newTimeline = arrayMove(timeline, oldIndex, newIndex);
-        setTimeline(newTimeline);
+        setTimeline(newTimeline); // Optimistic UI update (visual only until fetch)
+        
         const ids = newTimeline.filter(b => b.status !== "UNPLUGGED").map(b => b.id);
         if (activeWorkspaceId) {
-          await invoke("reorder_blocks", { workspaceId: activeWorkspaceId, blockIds: ids });
-          fetchMainData();
+          try {
+            await invoke("reorder_blocks", { workspaceId: activeWorkspaceId, blockIds: ids });
+            fetchMainData();
+          } catch (error) {
+            console.error("Reorder failed:", error);
+            // Revert on error
+            fetchMainData();
+          }
         }
       }
     }
@@ -348,6 +358,7 @@ export function useApp() {
     activeRetrospective,
     setActiveRetrospective,
     activeId,
+    overId,
     isWorkspaceCreateModalOpen,
     setIsWorkspaceCreateModalOpen,
     todayCompletedDuration,
@@ -355,6 +366,7 @@ export function useApp() {
     lang,
     fetchMainData,
     handleDragStart,
+    handleDragOver,
     handleDragEnd,
     onTaskSubmit,
     onEditTaskSubmit,
