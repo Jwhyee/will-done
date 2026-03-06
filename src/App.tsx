@@ -83,6 +83,9 @@ function AppContent() {
     onTaskSubmit,
     onEditTaskSubmit,
     onTransition,
+    onMoveTaskStep,
+    onMoveTaskToPriority,
+    onMoveTaskToBottom,
   } = useApp();
 
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
@@ -184,6 +187,9 @@ function AppContent() {
               }}
               onOpenRetrospective={() => setView("retrospective")}
               onCreateWorkspace={() => setIsWorkspaceCreateModalOpen(true)}
+              onMoveTaskStep={onMoveTaskStep}
+              onMoveTaskToPriority={onMoveTaskToPriority}
+              onMoveTaskToBottom={onMoveTaskToBottom}
               transitionBlock={transitionBlock}
               setTransitionBlock={setTransitionBlock}
               overId={overId}
@@ -233,6 +239,9 @@ function AppContent() {
                 onEditTask={() => { }}
                 onMoveToInbox={() => { }}
                 onDelete={() => { }}
+                onMoveTaskStep={onMoveTaskStep}
+                onMoveTaskToPriority={onMoveTaskToPriority}
+                onMoveTaskToBottom={onMoveTaskToBottom}
                 hoverTaskId={null}
                 setHoverTaskId={() => { }}
                 isPastView={isPastView}

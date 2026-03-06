@@ -24,6 +24,9 @@ interface WorkspaceTimelineProps {
   coreTimeStart?: string | null;
   coreTimeEnd?: string | null;
   overId: string | null;
+  onMoveTaskStep: (blockId: number, direction: "up" | "down") => Promise<void>;
+  onMoveTaskToPriority: (blockId: number) => Promise<void>;
+  onMoveTaskToBottom: (blockId: number) => Promise<void>;
 }
 
 export const WorkspaceTimeline = ({
@@ -42,6 +45,9 @@ export const WorkspaceTimeline = ({
   coreTimeStart,
   coreTimeEnd,
   overId,
+  onMoveTaskStep,
+  onMoveTaskToPriority,
+  onMoveTaskToBottom,
 }: WorkspaceTimelineProps) => {
   const [isDoneVisible, setIsDoneVisible] = useState(false);
 
@@ -119,6 +125,9 @@ export const WorkspaceTimeline = ({
                           coreTimeStart={coreTimeStart}
                           coreTimeEnd={coreTimeEnd}
                           overId={overId}
+                          onMoveTaskStep={onMoveTaskStep}
+                          onMoveTaskToPriority={onMoveTaskToPriority}
+                          onMoveTaskToBottom={onMoveTaskToBottom}
                         />
                       ))}
                       <div className="h-4 border-b border-border/30 mx-[-20px] mb-6" />
@@ -152,6 +161,9 @@ export const WorkspaceTimeline = ({
                   coreTimeStart={coreTimeStart}
                   coreTimeEnd={coreTimeEnd}
                   overId={overId}
+                  onMoveTaskStep={onMoveTaskStep}
+                  onMoveTaskToPriority={onMoveTaskToPriority}
+                  onMoveTaskToBottom={onMoveTaskToBottom}
                 />
               ))}
             </SortableContext>

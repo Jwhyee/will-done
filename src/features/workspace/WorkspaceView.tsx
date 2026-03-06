@@ -31,6 +31,9 @@ interface WorkspaceViewProps {
   onHandleSplitTaskDeletion: (taskId: number, keepPast: boolean) => Promise<void>;
   onMoveAllToTimeline: () => Promise<void>;
   onMoveToTimeline: (taskId: number) => Promise<void>;
+  onMoveTaskStep: (blockId: number, direction: "up" | "down") => Promise<void>;
+  onMoveTaskToPriority: (blockId: number) => Promise<void>;
+  onMoveTaskToBottom: (blockId: number) => Promise<void>;
   onOpenRetrospective: () => void;
   onCreateWorkspace: () => void;
   transitionBlock: TimeBlock | null;
@@ -43,6 +46,7 @@ export const WorkspaceView = ({
   t, user, workspacesCount, greeting, currentTime, logicalDate, selectedDate, onDateChange,
   timeline, inboxTasks, activeWorkspaceId, onTaskSubmit, onEditTaskSubmit, onTransition,
   onMoveToInbox, onDeleteTask, onHandleSplitTaskDeletion, onMoveAllToTimeline, onMoveToTimeline,
+  onMoveTaskStep, onMoveTaskToPriority, onMoveTaskToBottom,
   onOpenRetrospective, onCreateWorkspace, transitionBlock, setTransitionBlock, workspaces, overId,
 }: WorkspaceViewProps) => {
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
@@ -107,6 +111,9 @@ export const WorkspaceView = ({
         }} onMoveAllConfirm={() => setMoveAllConfirm(true)} hoverTaskId={hoverTaskId} setHoverTaskId={setHoverTaskId}
         isPastView={isPastView} coreTimeStart={activeWorkspace?.coreTimeStart} coreTimeEnd={activeWorkspace?.coreTimeEnd}
         overId={overId}
+        onMoveTaskStep={onMoveTaskStep}
+        onMoveTaskToPriority={onMoveTaskToPriority}
+        onMoveTaskToBottom={onMoveTaskToBottom}
       />
 
       <WorkspaceInbox t={t} isOpen={isInboxOpen} onOpenChange={setIsInboxOpen} inboxTasks={inboxTasks} onMoveToTimeline={onMoveToTimeline} onDeleteTask={onDeleteTask} onMoveAllConfirm={() => setMoveAllConfirm(true)} />

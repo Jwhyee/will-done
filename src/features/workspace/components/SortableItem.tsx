@@ -1,6 +1,7 @@
-import { GripVertical, Pencil, X, AlertTriangle, Inbox } from "lucide-react";
+import { ChevronUp, ChevronsUp, ChevronDown, ChevronsDown, Pencil, X, AlertTriangle, Inbox } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TimeBlock } from "@/types";
@@ -20,6 +21,9 @@ interface SortableItemProps {
   coreTimeStart?: string | null;
   coreTimeEnd?: string | null;
   overId: string | null;
+  onMoveTaskStep: (blockId: number, direction: "up" | "down") => Promise<void>;
+  onMoveTaskToPriority: (blockId: number) => Promise<void>;
+  onMoveTaskToBottom: (blockId: number) => Promise<void>;
 }
 
 const formatDisplayTime = (isoString: string) => {
@@ -41,7 +45,10 @@ export const SortableItem = ({
   isPastView,
   coreTimeStart,
   coreTimeEnd,
-  overId
+  overId,
+  onMoveTaskStep,
+  onMoveTaskToPriority,
+  onMoveTaskToBottom,
 }: SortableItemProps) => {
   const isInCoreTime = (startTime: string, endTime: string) => {
     if (!coreTimeStart || !coreTimeEnd) return false;
@@ -74,8 +81,6 @@ export const SortableItem = ({
   const isMiddleOfTask = isSplit && blockIndexInTask > 0 && blockIndexInTask < taskBlocks.length - 1;
 
   const {
-    attributes,
-    listeners,
     setNodeRef,
     transform,
     transition,
@@ -100,9 +105,16 @@ export const SortableItem = ({
   const isHovered = block.taskId && hoverTaskId === block.taskId;
   const isDone = block.status === "DONE";
   const isNow = block.status === "NOW";
+  const showControls = !(isDone || isNow || block.status === "UNPLUGGED" || (isSplit && !isLastOfTask));
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group/item" id={`block-${block.id}`}>
+    <motion.div 
+      layout
+      ref={setNodeRef} 
+      style={style} 
+      className="relative group/item" 
+      id={`block-${block.id}`}
+    >
       {/* Drop Indicator - Visual Placeholder */}
       {isOver && !isDragging && (
         <div className="absolute -top-3 left-0 right-0 h-1 bg-accent rounded-full z-50 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
@@ -140,12 +152,76 @@ export const SortableItem = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            {!(isDone || isNow || block.status === "UNPLUGGED" || (isSplit && !isLastOfTask)) && (
-              <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-                <GripVertical size={14} className={`transition-opacity duration-300 ${isHovered || isDragging ? "text-text-primary opacity-100" : "text-text-muted opacity-40"}`} />
+            {showControls && (
+              <div className="flex flex-col -space-y-1.5 mr-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5 p-0 hover:bg-accent/20 text-text-muted hover:text-accent transition-colors" 
+                        onClick={(e) => { e.stopPropagation(); onMoveTaskToPriority(block.id); }}
+                      >
+                        <ChevronsUp size={14} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
+                      NOW 다음으로 이동
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5 p-0 hover:bg-accent/20 text-text-muted hover:text-text-primary transition-colors" 
+                        onClick={(e) => { e.stopPropagation(); onMoveTaskStep(block.id, "up"); }}
+                      >
+                        <ChevronUp size={14} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
+                      위로 이동
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5 p-0 hover:bg-accent/20 text-text-muted hover:text-text-primary transition-colors" 
+                        onClick={(e) => { e.stopPropagation(); onMoveTaskStep(block.id, "down"); }}
+                      >
+                        <ChevronDown size={14} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
+                      아래로 이동
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5 p-0 hover:bg-accent/20 text-text-muted hover:text-accent transition-colors" 
+                        onClick={(e) => { e.stopPropagation(); onMoveTaskToBottom(block.id); }}
+                      >
+                        <ChevronsDown size={14} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
+                      가장 아래로 이동
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             )}
-            {(isDone || isNow || (isSplit && !isLastOfTask)) && block.status !== "UNPLUGGED" && <div className="w-[14px]" />}
+            {!showControls && block.status !== "UNPLUGGED" && <div className="w-[24px]" />}
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 {block.isUrgent && <AlertTriangle size={14} className="text-danger fill-danger/20" />}
@@ -266,7 +342,7 @@ export const SortableItem = ({
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
 
   );
 

@@ -85,6 +85,21 @@ pub async fn reorder_blocks(state: State<'_, DbState>, workspace_id: i64, block_
 }
 
 #[tauri::command]
+pub async fn move_task_step(state: State<'_, DbState>, workspace_id: i64, block_id: i64, direction: String) -> Result<()> {
+    database::timeline::move_task_step(&state.pool, workspace_id, block_id, &direction).await
+}
+
+#[tauri::command]
+pub async fn move_task_to_priority(state: State<'_, DbState>, workspace_id: i64, block_id: i64) -> Result<()> {
+    database::timeline::move_task_to_priority(&state.pool, workspace_id, block_id).await
+}
+
+#[tauri::command]
+pub async fn move_task_to_bottom(state: State<'_, DbState>, workspace_id: i64, block_id: i64) -> Result<()> {
+    database::timeline::move_task_to_bottom(&state.pool, workspace_id, block_id).await
+}
+
+#[tauri::command]
 pub async fn get_active_dates(state: State<'_, DbState>, workspace_id: i64) -> Result<Vec<String>> {
     database::timeline::get_active_dates(&state.pool, workspace_id).await
 }

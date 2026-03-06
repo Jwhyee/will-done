@@ -1,7 +1,7 @@
 use sqlx::{SqlitePool, Sqlite, Transaction, Row};
 use chrono::{NaiveDateTime, Duration, NaiveTime, NaiveDate, Local};
 use crate::models::{Task, TimeBlock, UnpluggedTime, AddTaskInput, TaskTransitionInput};
-use crate::error::Result;
+use crate::error::{Result, AppError};
 
 pub async fn get_today_completed_duration(pool: &SqlitePool, workspace_id: i64, day_start_time: &str) -> Result<i64> {
     let now = Local::now();
@@ -564,6 +564,13 @@ pub async fn update_block_status(pool: &SqlitePool, block_id: i64, status: &str)
 
 pub async fn reorder_blocks(pool: &SqlitePool, workspace_id: i64, block_ids: Vec<i64>) -> Result<()> {
     let mut tx = pool.begin().await?;
+    reorder_internal(&mut tx, workspace_id, block_ids).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn move_task_step(pool: &SqlitePool, workspace_id: i64, block_id: i64, direction: &str) -> Result<()> {
+    let mut tx = pool.begin().await?;
 
     let all_blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE' ORDER BY start_time ASC")
         .bind(workspace_id)
@@ -572,26 +579,120 @@ pub async fn reorder_blocks(pool: &SqlitePool, workspace_id: i64, block_ids: Vec
 
     if all_blocks.is_empty() { return Ok(()); }
 
-    let start_dt = NaiveDateTime::parse_from_str(&all_blocks[0].start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
-    let mut current_time = start_dt;
+    let mut ids: Vec<i64> = all_blocks.iter().map(|b| b.id).collect();
+    let index = ids.iter().position(|&id| id == block_id).ok_or_else(|| AppError::NotFound("Block not found".to_string()))?;
 
-    let unplugged: Vec<UnpluggedTime> = sqlx::query_as("SELECT * FROM unplugged_times WHERE workspace_id = ?1")
+    if direction == "up" {
+        if index > 0 {
+            ids.swap(index, index - 1);
+        }
+    } else if direction == "down" {
+        if index < ids.len() - 1 {
+            ids.swap(index, index + 1);
+        }
+    }
+
+    reorder_internal(&mut tx, workspace_id, ids).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn move_task_to_priority(pool: &SqlitePool, workspace_id: i64, block_id: i64) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    let all_blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE' ORDER BY start_time ASC")
         .bind(workspace_id)
         .fetch_all(&mut *tx)
         .await?;
 
+    if all_blocks.is_empty() { return Ok(()); }
+
+    let mut ids: Vec<i64> = all_blocks.iter().map(|b| b.id).collect();
+    let index = ids.iter().position(|&id| id == block_id).ok_or_else(|| AppError::NotFound("Block not found".to_string()))?;
+
+    let target_id = ids.remove(index);
+    
+    // NOW 상태의 태스크 바로 뒤를 찾음
+    let now_pos = all_blocks.iter().position(|b| b.status == "NOW");
+    
+    // ids에서 now_block_id의 위치를 다시 찾음 (target_id가 제거되었으므로 인덱스가 변했을 수 있음)
+    let new_pos = if let Some(n_idx) = now_pos {
+        let now_id = all_blocks[n_idx].id;
+        ids.iter().position(|&id| id == now_id).map(|p| p + 1).unwrap_or(0)
+    } else {
+        0
+    };
+
+    ids.insert(new_pos, target_id);
+
+    reorder_internal(&mut tx, workspace_id, ids).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn move_task_to_bottom(pool: &SqlitePool, workspace_id: i64, block_id: i64) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    let all_blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE' ORDER BY start_time ASC")
+        .bind(workspace_id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+    if all_blocks.is_empty() { return Ok(()); }
+
+    let mut ids: Vec<i64> = all_blocks.iter().map(|b| b.id).collect();
+    let index = ids.iter().position(|&id| id == block_id).ok_or_else(|| AppError::NotFound("Block not found".to_string()))?;
+
+    let target_id = ids.remove(index);
+    ids.push(target_id);
+
+    reorder_internal(&mut tx, workspace_id, ids).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn reorder_internal(tx: &mut Transaction<'_, Sqlite>, workspace_id: i64, block_ids: Vec<i64>) -> Result<()> {
+    let all_blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE'")
+        .bind(workspace_id)
+        .fetch_all(&mut **tx)
+        .await?;
+
+    if all_blocks.is_empty() { return Ok(()); }
+
+    // 정렬 기준점: 현재 첫 번째 블록의 시작 시간
+    let mut current_blocks: Vec<TimeBlock> = all_blocks.clone();
+    current_blocks.sort_by(|a, b| a.start_time.cmp(&b.start_time));
+    
+    let start_dt = NaiveDateTime::parse_from_str(&current_blocks[0].start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+    let mut current_time = start_dt;
+
+    let unplugged: Vec<UnpluggedTime> = sqlx::query_as("SELECT * FROM unplugged_times WHERE workspace_id = ?1")
+        .bind(workspace_id)
+        .fetch_all(&mut **tx)
+        .await?;
+
     for id in block_ids {
         if let Some(block) = all_blocks.iter().find(|b| b.id == id).cloned() {
-            if block.status == "UNPLUGGED" { continue; }
-
-            let duration_min = (NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap() - 
-                               NaiveDateTime::parse_from_str(&block.start_time, "%Y-%m-%dT%H:%M:%S").unwrap()).num_minutes();
+            let start_val = NaiveDateTime::parse_from_str(&block.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+            let end_val = NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+            let duration_min = (end_val - start_val).num_minutes();
             
-            for ut in &unplugged {
-                let ut_start = current_time.date().and_time(NaiveTime::parse_from_str(&ut.start_time, "%H:%M").unwrap());
-                let ut_end = current_time.date().and_time(NaiveTime::parse_from_str(&ut.end_time, "%H:%M").unwrap());
-                if current_time >= ut_start && current_time < ut_end {
-                    current_time = ut_end;
+            // Unplugged 시간 체크 및 건너뛰기
+            let mut shifted = true;
+            while shifted {
+                shifted = false;
+                for ut in &unplugged {
+                    let ut_start = current_time.date().and_time(NaiveTime::parse_from_str(&ut.start_time, "%H:%M").unwrap());
+                    let mut ut_end = current_time.date().and_time(NaiveTime::parse_from_str(&ut.end_time, "%H:%M").unwrap());
+                    
+                    if ut_end < ut_start {
+                        ut_end += Duration::days(1);
+                    }
+
+                    if current_time >= ut_start && current_time < ut_end {
+                        current_time = ut_end;
+                        shifted = true;
+                    }
                 }
             }
 
@@ -601,14 +702,12 @@ pub async fn reorder_blocks(pool: &SqlitePool, workspace_id: i64, block_ids: Vec
                 .bind(current_time.format("%Y-%m-%dT%H:%M:%S").to_string())
                 .bind(new_end.format("%Y-%m-%dT%H:%M:%S").to_string())
                 .bind(block.id)
-                .execute(&mut *tx)
+                .execute(&mut **tx)
                 .await?;
 
             current_time = new_end;
         }
     }
-
-    tx.commit().await?;
     Ok(())
 }
 
@@ -1065,6 +1164,96 @@ mod tests {
 
         assert_eq!(blocks[1].title, "Future");
         assert_eq!(blocks[1].start_time, "2026-03-01T16:00:00");
+    }
+
+    #[tokio::test]
+    async fn test_reorder_logic_priority_jump() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // T1(NOW): 09:00-10:00, T2(WILL): 10:00-11:00, T3(WILL): 11:00-12:00
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (3, 1, 'T3')").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'T1', '2026-03-01T09:00:00', '2026-03-01T10:00:00', 'NOW')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'T2', '2026-03-01T10:00:00', '2026-03-01T11:00:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 3, 1, 'T3', '2026-03-01T11:00:00', '2026-03-01T12:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // T3를 Priority Jump (NOW 뒤로)
+        move_task_to_priority(&pool, 1, 12).await.unwrap();
+
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+        
+        // Expected: T1(NOW), T3(WILL), T2(WILL)
+        assert_eq!(blocks[0].id, 10);
+        assert_eq!(blocks[1].id, 12);
+        assert_eq!(blocks[2].id, 11);
+
+        // Time shift check: T3 should start at 10:00, T2 at 11:00
+        assert_eq!(blocks[1].start_time, "2026-03-01T10:00:00");
+        assert_eq!(blocks[2].start_time, "2026-03-01T11:00:00");
+    }
+
+    #[tokio::test]
+    async fn test_move_task_step_up_down() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // T1(WILL): 09:00, T2(WILL): 10:00, T3(WILL): 11:00
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (3, 1, 'T3')").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'T1', '2026-03-01T09:00:00', '2026-03-01T10:00:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'T2', '2026-03-01T10:00:00', '2026-03-01T11:00:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 3, 1, 'T3', '2026-03-01T11:00:00', '2026-03-01T12:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // Move T1 down
+        move_task_step(&pool, 1, 10, "down").await.unwrap();
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+        // Expected: T2, T1, T3
+        assert_eq!(blocks[0].id, 11);
+        assert_eq!(blocks[1].id, 10);
+        assert_eq!(blocks[2].id, 12);
+
+        // Move T3 up
+        move_task_step(&pool, 1, 12, "up").await.unwrap();
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+        // Expected: T2, T3, T1
+        assert_eq!(blocks[0].id, 11);
+        assert_eq!(blocks[1].id, 12);
+        assert_eq!(blocks[2].id, 10);
+    }
+
+    #[tokio::test]
+    async fn test_move_task_boundary_and_state() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // T1(DONE): 08:00, T2(NOW): 09:00, T3(WILL): 10:00
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (3, 1, 'T3')").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'T1', '2026-03-01T08:00:00', '2026-03-01T09:00:00', 'DONE')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'T2', '2026-03-01T09:00:00', '2026-03-01T10:00:00', 'NOW')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 3, 1, 'T3', '2026-03-01T10:00:00', '2026-03-01T11:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // Boundary: T2(NOW) is the first in NOW/WILL list. Trying to move 'up' should do nothing.
+        move_task_step(&pool, 1, 11, "up").await.unwrap();
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+        assert_eq!(blocks[1].id, 11); // Still second in total list (after DONE)
+        assert_eq!(blocks[2].id, 12);
+
+        // Boundary: T3(WILL) is the last. Trying to move 'down' should do nothing.
+        move_task_step(&pool, 1, 12, "down").await.unwrap();
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+        assert_eq!(blocks[2].id, 12);
+
+        // State: Try to move T1(DONE). Should return error as it's not in the NOW/WILL query.
+        let result = move_task_step(&pool, 1, 10, "up").await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

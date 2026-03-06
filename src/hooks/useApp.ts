@@ -335,6 +335,36 @@ export function useApp() {
     }
   };
 
+  const onMoveTaskStep = async (blockId: number, direction: "up" | "down") => {
+    if (!activeWorkspaceId) return;
+    try {
+      await invoke("move_task_step", { workspaceId: activeWorkspaceId, blockId, direction });
+      await fetchMainData();
+    } catch (error) {
+      console.error("Move task step failed:", error);
+    }
+  };
+
+  const onMoveTaskToPriority = async (blockId: number) => {
+    if (!activeWorkspaceId) return;
+    try {
+      await invoke("move_task_to_priority", { workspaceId: activeWorkspaceId, blockId });
+      await fetchMainData();
+    } catch (error) {
+      console.error("Move task to priority failed:", error);
+    }
+  };
+
+  const onMoveTaskToBottom = async (blockId: number) => {
+    if (!activeWorkspaceId) return;
+    try {
+      await invoke("move_task_to_bottom", { workspaceId: activeWorkspaceId, blockId });
+      await fetchMainData();
+    } catch (error) {
+      console.error("Move task to bottom failed:", error);
+    }
+  };
+
   return {
     view,
     setView,
@@ -371,5 +401,8 @@ export function useApp() {
     onTaskSubmit,
     onEditTaskSubmit,
     onTransition,
+    onMoveTaskStep,
+    onMoveTaskToPriority,
+    onMoveTaskToBottom,
   };
 }
