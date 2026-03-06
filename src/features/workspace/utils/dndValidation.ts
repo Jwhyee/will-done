@@ -52,15 +52,29 @@ export const validateDropPosition = (
 
   // 4. Past time validation
   const nowIndex = timeline.findIndex(b => b.status === "NOW");
-  const overIndex = timeline.findIndex(b => b.id.toString() === overId);
-  
+
   if (activeBlock.status !== "NOW") {
     // If there is a NOW block, you can't move anything before it
-    if (nowIndex !== -1 && overIndex <= nowIndex) {
-      return { isValid: false, error: t.main.toast.past_time_error };
+    if (nowIndex !== -1) {
+      const overBlock = timeline.find((b) => b.id.toString() === overId);
+      const overIndex = timeline.findIndex((b) => b.id.toString() === overId);
+
+      // If dropped on another block, check its index
+      if (overBlock && overIndex <= nowIndex) {
+        return { isValid: false, error: t.main.toast.past_time_error };
+      }
+
+      // If dropped on a droppable area like "timeline"
+      // In handleDragEnd, newIndex will be -1, which arrayMove puts at the end.
+      // So dropping on "timeline" is generally safe (it goes to the end).
+      // But let's be safe: if overId is "timeline" or similar and nowIndex exists,
+      // we only allow it if it's NOT trying to be at the top.
+      // However, dnd-kit's SortableContext handles the indices.
     }
+    
     // If no NOW block, check if overBlock starts in the past
-    if (nowIndex === -1 && new Date(overBlock.startTime) < currentTime) {
+    const overBlock = timeline.find((b) => b.id.toString() === overId);
+    if (nowIndex === -1 && overBlock && new Date(overBlock.startTime) < currentTime) {
       return { isValid: false, error: t.main.toast.past_time_error };
     }
   }

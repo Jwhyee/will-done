@@ -105,6 +105,9 @@ export const SortableItem = ({
   const isHovered = block.taskId && hoverTaskId === block.taskId;
   const isDone = block.status === "DONE";
   const isNow = block.status === "NOW";
+  const remainingBlocks = timeline.filter((b) => b.status !== "DONE" && b.status !== "UNPLUGGED");
+  const currentIdx = remainingBlocks.findIndex(b => b.id === block.id);
+  const isImmediatelyAfterNow = currentIdx > 0 && remainingBlocks[currentIdx - 1].status === "NOW";
   const showControls = !(isDone || isNow || block.status === "UNPLUGGED" || (isSplit && !isLastOfTask));
 
   return (
@@ -176,14 +179,15 @@ export const SortableItem = ({
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-5 w-5 p-0 hover:bg-accent/20 text-text-muted hover:text-text-primary transition-colors" 
+                        disabled={isImmediatelyAfterNow}
+                        className={`h-5 w-5 p-0 hover:bg-accent/20 text-text-muted hover:text-text-primary transition-colors disabled:opacity-30`}
                         onClick={(e) => { e.stopPropagation(); onMoveTaskStep(block.id, "up"); }}
                       >
                         <ChevronUp size={14} />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="left" className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                      위로 이동
+                      {isImmediatelyAfterNow ? "현재 진행 중인 업무 위로 이동할 수 없습니다." : "위로 이동"}
                     </TooltipContent>
                   </Tooltip>
 
