@@ -192,7 +192,7 @@ export const WorkspaceHeader = ({
       </div>
 
       {!isPastView && (
-        <TaskForm t={t} taskForm={taskForm} onSubmit={onTaskSubmit} onError={onTaskError} />
+        <TaskForm t={t} taskForm={taskForm} onSubmit={onTaskSubmit} onError={onTaskError} workspaceId={activeWorkspaceId} />
       )}
     </header>
   );
