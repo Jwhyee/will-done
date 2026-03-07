@@ -21,7 +21,12 @@ export const TaskForm = ({ t, taskForm, onSubmit, onError }: TaskFormProps) => {
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Close form on outside click
-  useOnClickOutside(formRef, () => {
+  useOnClickOutside(formRef, (event) => {
+    const target = event.target as HTMLElement;
+    // Ignore clicks inside the TimePicker popover (which is rendered in a portal)
+    if (target.closest && target.closest('.time-picker-popover')) {
+      return;
+    }
     if (isExpanded) {
       setIsExpanded(false);
     }

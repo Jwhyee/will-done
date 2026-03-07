@@ -41,7 +41,7 @@ export const TimePicker = ({
           <ChevronDown size={14} className="text-text-muted ml-1" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-0 bg-surface-elevated border-border shadow-2xl rounded-2xl overflow-hidden" align="center">
+      <PopoverContent className="w-48 p-0 bg-surface-elevated border-border shadow-2xl rounded-2xl overflow-hidden time-picker-popover" align="center">
         <div className="flex h-64">
           <ScrollArea className="flex-1 border-r border-border">
             <div className="p-2 space-y-1">
