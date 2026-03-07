@@ -1,65 +1,75 @@
-# Execution Plan: Implement Autocomplete for TaskForm Title
+# Execution Plan: Project and Label Management System Integration
 
 ## 1. Goal
-Add an autocomplete/suggestion dropdown to the `TaskForm` title input, fetching distinct past task titles from the SQLite database via a new Tauri command, with frontend debouncing to prevent excessive backend calls.
+Introduce a comprehensive 'Project' and 'Label' management system to enhance task categorization. This includes frontend UI components (Creatable Select, Color Pickers), a centralized management interface in settings, backend SQLite schema updates with atomic transactions, and dynamic badge styling in the timeline.
 
 ## 2. Scope
 ### In-Scope
-- Add a new Tauri command in Rust to query distinct task titles matching a search string using `LIKE` in SQLite.
-- Implement debounce logic on the frontend title input in `TaskForm`.
-- Create a dropdown/popover UI beneath the `TaskForm` input to display autocomplete suggestions.
-- Update the input value when a suggestion is clicked and close the dropdown.
+- **Form UI**: Integrate Creatable Select in `TaskForm` and `EditTaskModal` for projects and labels. Include a "None" (empty) option at the top and sort the rest by recently used.
+- **Backend & DB**: Add `color` field to Label schema. Implement atomic transactions in Rust/SQLite to insert new projects/labels and map them to tasks during creation/update.
+- **Central Management**: Add "Project Management" and "Label Management" tabs to `WorkspaceSettingsModal`. Implement full CRUD operations and a GitHub-style color picker for labels.
+- **Timeline UI**: Update task item titles to the format `[{Project}] {Label} {Task Title}`. Render labels as GitHub-style rounded badges with dynamic styling (original color for text/border, 10-20% opacity for background).
 
 ### Out-of-Scope
-- Refactoring the entire `TaskForm` component.
-- Modifying other fields in `TaskForm` (like time picker or date).
-- Implementing global search across the app.
+- Implementing filtering or searching tasks by project/label on the timeline (deferred to future update).
+- Analytics or charts based on projects/labels.
 
 ## 3. Architecture Impact
 ```text
 src/
-└── features/
-    └── workspace/
-        └── components/
-            └── TaskForm.tsx (Modify)
-
+├── components/
+│   └── settings/
+│       ├── WorkspaceSettingsModal.tsx
+│       ├── ProjectManagementTab.tsx (New)
+│       └── LabelManagementTab.tsx (New)
+├── features/
+│   └── workspace/
+│       ├── components/
+│       │   ├── TaskForm.tsx
+│       │   ├── EditTaskModal.tsx
+│       │   └── TimelineItem.tsx (or equivalent rendering component)
 src-tauri/
 └── src/
+    ├── models.rs
     ├── commands/
-    │   └── workspace.rs (Modify)
+    │   └── workspace.rs
     └── database/
-        └── workspace.rs (Modify)
+        └── workspace.rs
 ```
 
 ## 4. Execution Plan
 *(Use `- [ ]` for all actionable steps. Break down into atomic tasks.)*
+
 ### Phase 1: Preparation & Infrastructure
-- [x] Review `src-tauri/src/database/workspace.rs` to understand the existing SQLite task tables.
-- [x] Review `src/features/workspace/components/TaskForm.tsx` to understand the current input and state management.
+- [x] Define Rust structs for `Project` and `Label` in `src-tauri/src/models.rs`, including the `color` field (Hex code) for `Label`.
+- [x] Add SQLite schema creation scripts/migrations in `src-tauri/src/lib.rs` for `projects`, `labels`, and their mapping tables or foreign keys on the `tasks` table.
+- [x] Create corresponding TypeScript interfaces in `src/types/index.ts`.
 
 ### Phase 2: Core Domain / Backend Logic
-- [x] Implement a new database function in `src-tauri/src/database/workspace.rs` (e.g., `search_task_titles`) that queries `DISTINCT title` using `LIKE %query%` with a reasonable limit.
-- [x] Add `#[test]` unit tests for the new database function to verify edge cases.
-- [x] Implement a new Tauri command in `src-tauri/src/commands/workspace.rs` (e.g., `suggest_task_titles`) that calls the database function.
-- [x] Register the new Tauri command in the main application setup (`src-tauri/src/lib.rs` or `main.rs`).
+- [x] Implement DB CRUD operations for Projects and Labels in `src-tauri/src/database/workspace.rs` (e.g., `create_project`, `get_projects`, `update_project`, `delete_project`, and similarly for labels).
+- [x] Implement query logic to fetch projects/labels ordered by "recently used".
+- [x] Update task creation/editing database logic to use atomic transactions: if a new project/label text is provided, insert it first, then map the generated ID to the task.
+- [x] Create and register Tauri commands in `src-tauri/src/commands/workspace.rs` to expose these operations to the frontend.
+- [x] Write `#[test]` unit tests for the new database queries and transactions.
 
 ### Phase 3: Interfaces / Frontend UI
-- [x] Implement a debounce utility or use an existing one (e.g., a custom `useDebounce` hook) in the frontend.
-- [x] Add local state to `TaskForm.tsx` for tracking the search query, suggestions array, and dropdown visibility.
-- [x] Update the `TaskForm` input `onChange` handler to trigger the debounced backend Tauri command `suggest_task_titles`.
-- [x] Build a Popover or Dropdown UI within `TaskForm.tsx` to display the suggestions list.
-- [x] Implement click handlers on suggestions to update the input title value, clear the suggestions, and close the dropdown.
+- [x] Build "Project Management" and "Label Management" tabs in `src/components/settings/WorkspaceSettingsModal.tsx` for CRUD operations.
+- [x] Integrate a GitHub-style Color Picker component in the "Label Management" tab.
+- [x] Implement a `Creatable Select` component for `TaskForm` and `EditTaskModal`.
+- [x] Wire the `Creatable Select` to fetch options (recently used sorted) via Tauri commands, ensuring "None" is pinned at the top.
+- [x] Update the timeline rendering UI to format task strings as `[{Project}] {Label} {Task Title}`.
+- [x] Implement the dynamic Badge component for labels with custom style calculation (Text/Border = original color, Background = original color + 10-20% opacity).
 
 ## 5. Risk Mitigation
-- **Potential Breaking Changes**: Adding a new Popover might interfere with existing `useOnClickOutside` or `TaskForm` collapse logic. The debounce implementation might cause lag if not configured correctly.
-- **Rollback Strategy**: Revert `TaskForm.tsx` changes and remove the new Tauri command and database queries.
+- **Potential Breaking Changes**: Modifying the core task insertion logic could break existing task creation if transactions fail. Schema changes without proper migration handling might corrupt existing local databases.
+- **Rollback Strategy**: Backup the SQLite database file before applying schema migrations. Revert Rust backend logic and UI changes if structural issues arise.
 
 ## 6. Final Verification Wave
 - [x] Run `cargo test` and `cargo check` (or equivalent backend validation)
 - [x] Run `npm run build` or linting (or equivalent frontend validation)
-- [x] Manual Spot Check instructions
-  - Open the `TaskForm`.
-  - Type a few characters into the title input that match an existing task.
-  - Verify that a dropdown appears with suggestions after a brief delay (debounce).
-  - Click a suggestion and verify the input updates correctly and the dropdown closes.
-  - Verify that excessive typing does not spam the backend.
+- [x] Manual Spot Check instructions:
+  - Open Settings, create a new Project and a Label (with a specific color).
+  - Open TaskForm, verify they appear in the select dropdown.
+  - Type a new non-existing project name in TaskForm and save the task.
+  - Verify the new project is saved to the DB and appears in Settings.
+  - Check the timeline to ensure the task renders the Badge correctly with the correct opacity styles.
