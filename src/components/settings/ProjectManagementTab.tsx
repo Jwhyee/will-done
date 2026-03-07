@@ -1,0 +1,119 @@
+import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/providers/ToastProvider";
+import { Project } from "@/types";
+
+export const ProjectManagementTab = ({}: { t: any }) => {
+  const { showToast } = useToast();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+
+  const fetchProjects = async () => {
+    try {
+      const data = await invoke<Project[]>("get_projects");
+      setProjects(data);
+    } catch (error: any) {
+      showToast(error.toString(), "error");
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const handleCreate = async () => {
+    if (!newProjectName.trim()) return;
+    try {
+      await invoke("create_project", { input: { name: newProjectName.trim() } });
+      setNewProjectName("");
+      fetchProjects();
+      showToast("Project created", "success");
+    } catch (error: any) {
+      showToast(error.toString(), "error");
+    }
+  };
+
+  const handleUpdate = async (id: number) => {
+    if (!editName.trim()) return;
+    try {
+      await invoke("update_project", { id, input: { name: editName.trim() } });
+      setEditingId(null);
+      fetchProjects();
+      showToast("Project updated", "success");
+    } catch (error: any) {
+      showToast(error.toString(), "error");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await invoke("delete_project", { id });
+      fetchProjects();
+      showToast("Project deleted", "success");
+    } catch (error: any) {
+      showToast(error.toString(), "error");
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="space-y-1.5">
+        <h3 className="text-sm font-bold text-text-primary">Projects</h3>
+        <p className="text-xs text-text-secondary">Manage your workspace projects.</p>
+      </div>
+
+      <div className="flex gap-2">
+        <Input 
+          value={newProjectName} 
+          onChange={(e) => setNewProjectName(e.target.value)}
+          placeholder="New project name..."
+          className="bg-surface border-border text-text-primary flex-1"
+          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleCreate())}
+        />
+        <Button onClick={(e) => { e.preventDefault(); handleCreate(); }} className="bg-text-primary text-background hover:bg-zinc-200">
+          <Plus size={16} />
+        </Button>
+      </div>
+
+      <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2">
+        {projects.map((project) => (
+          <div key={project.id} className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-surface group">
+            {editingId === project.id ? (
+              <div className="flex flex-1 items-center gap-2">
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="bg-background border-border text-sm h-8"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); handleUpdate(project.id); }
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                />
+                <Button size="icon" variant="ghost" onClick={(e) => { e.preventDefault(); handleUpdate(project.id); }} className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-500/10"><Check size={14} /></Button>
+                <Button size="icon" variant="ghost" onClick={(e) => { e.preventDefault(); setEditingId(null); }} className="h-8 w-8 text-text-secondary hover:text-text-primary"><X size={14} /></Button>
+              </div>
+            ) : (
+              <>
+                <span className="text-sm font-medium text-text-primary">{project.name}</span>
+                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-text-secondary hover:text-text-primary" onClick={(e) => { e.preventDefault(); setEditingId(project.id); setEditName(project.name); }}>
+                    <Edit2 size={14} />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-danger hover:text-danger hover:bg-danger/10" onClick={(e) => { e.preventDefault(); handleDelete(project.id); }}>
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};

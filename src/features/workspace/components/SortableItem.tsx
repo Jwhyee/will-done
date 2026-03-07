@@ -229,7 +229,22 @@ export const SortableItem = ({
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 {block.isUrgent && <AlertTriangle size={14} className="text-danger fill-danger/20" />}
-                <h4 className={`text-[15px] font-semibold tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-text-muted" : (isHovered ? "text-text-primary" : "text-text-secondary")}`}>{block.title}</h4>
+                <h4 className={`text-[15px] font-semibold tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-text-muted" : (isHovered ? "text-text-primary" : "text-text-secondary")}`}>
+                  {block.projectName && <span className="text-text-muted mr-2 font-bold">[{block.projectName}]</span>}
+                  {block.labelName && (
+                    <span 
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold mr-2 border"
+                      style={{
+                        color: block.labelColor || "#808080",
+                        borderColor: block.labelColor || "#808080",
+                        backgroundColor: `${block.labelColor || "#808080"}33`,
+                      }}
+                    >
+                      {block.labelName}
+                    </span>
+                  )}
+                  {block.title}
+                </h4>
               </div>
               <div className="flex items-center space-x-2">
                 <span className={`text-[12px] font-black uppercase tracking-widest ${block.status === "NOW" ? "text-accent" : (isDone ? "text-success" : "text-text-muted")}`}>{block.status}</span>

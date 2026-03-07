@@ -9,6 +9,9 @@ export interface TimeBlock {
   reviewMemo: string | null;
   planningMemo: string | null;
   isUrgent: boolean;
+  projectName: string | null;
+  labelName: string | null;
+  labelColor: string | null;
 }
 
 export interface Task {
@@ -16,6 +19,22 @@ export interface Task {
   workspaceId: number;
   title: string;
   planningMemo: string | null;
+  estimatedMinutes: number;
+  projectId: number | null;
+  labelId: number | null;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  lastUsed: string;
+}
+
+export interface Label {
+  id: number;
+  name: string;
+  color: string;
+  lastUsed: string;
 }
 
 export interface User {

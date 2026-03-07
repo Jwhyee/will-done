@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TimePicker } from "./TimePicker";
+import { CreatableSelect } from "@/components/ui/creatable-select";
 import { cn } from "@/lib/utils";
 import { useOnClickOutside } from "@/hooks/useOnClickOutside";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -181,6 +182,23 @@ export const TaskForm = ({ t, taskForm, onSubmit, onError, workspaceId }: TaskFo
                     {...taskForm.register("planningMemo")}
                     placeholder={t.main.planning_placeholder}
                     className="w-full bg-transparent text-sm font-medium text-text-secondary placeholder:text-text-muted resize-none focus:outline-none focus:ring-0 py-1 px-1 leading-relaxed transition-all duration-300 scrollbar-hide h-32"
+                  />
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  <CreatableSelect
+                    value={taskForm.watch("projectName")}
+                    onChange={(val: string) => taskForm.setValue("projectName", val)}
+                    placeholder="Project..."
+                    fetchCommand="get_projects"
+                    className="flex-1"
+                  />
+                  <CreatableSelect
+                    value={taskForm.watch("labelName")}
+                    onChange={(val: string) => taskForm.setValue("labelName", val)}
+                    placeholder="Label..."
+                    fetchCommand="get_labels"
+                    className="flex-1"
                   />
                 </div>
 

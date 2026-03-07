@@ -17,6 +17,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkspaceBasicTab } from "./WorkspaceBasicTab";
 import { WorkspaceTimeTab } from "./WorkspaceTimeTab";
 import { WorkspaceAdvancedTab } from "./WorkspaceAdvancedTab";
+import { ProjectManagementTab } from "./ProjectManagementTab";
+import { LabelManagementTab } from "./LabelManagementTab";
+import { Tag, FolderOpen } from "lucide-react";
 
 interface WorkspaceSettingsModalProps {
   workspaceId: number | null;
@@ -144,17 +147,25 @@ export const WorkspaceSettingsModal = ({
               <TabsList className="w-full h-11 bg-surface border border-border/50 p-1 mb-6 shrink-0 flex overflow-x-auto scrollbar-hide">
                 <TabsTrigger value="basic" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Settings2 size={14} />{t.sidebar.workspace_tab_basic}</TabsTrigger>
                 <TabsTrigger value="time" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Clock size={14} />{t.sidebar.workspace_tab_time}</TabsTrigger>
+                <TabsTrigger value="projects" className="flex-1 gap-2 whitespace-nowrap shrink-0"><FolderOpen size={14} />Projects</TabsTrigger>
+                <TabsTrigger value="labels" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Tag size={14} />Labels</TabsTrigger>
                 <TabsTrigger value="advanced" className="flex-1 gap-2 whitespace-nowrap shrink-0"><ShieldAlert size={14} />{t.sidebar.workspace_tab_advanced}</TabsTrigger>
               </TabsList>
 
               <div className="flex-1 overflow-hidden">
-                <TabsContent value="basic" className="h-full m-0 outline-none data-[state=inactive]:hidden">
+                <TabsContent value="basic" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
                   <WorkspaceBasicTab register={register} t={t} />
                 </TabsContent>
-                <TabsContent value="time" className="h-full m-0 outline-none data-[state=inactive]:hidden">
+                <TabsContent value="time" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
                   <WorkspaceTimeTab register={register} fields={fields} append={append} remove={remove} t={t} />
                 </TabsContent>
-                <TabsContent value="advanced" className="h-full m-0 outline-none data-[state=inactive]:hidden">
+                <TabsContent value="projects" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
+                  <ProjectManagementTab t={t} />
+                </TabsContent>
+                <TabsContent value="labels" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
+                  <LabelManagementTab t={t} />
+                </TabsContent>
+                <TabsContent value="advanced" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
                   <WorkspaceAdvancedTab setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} t={t} />
                 </TabsContent>
               </div>

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TimePicker } from "./TimePicker";
+import { CreatableSelect } from "@/components/ui/creatable-select";
 import { TimeBlock } from "@/types";
 
 interface EditTaskModalProps {
@@ -23,6 +24,8 @@ interface EditTaskModalProps {
         hours: number;
         minutes: number;
         reviewMemo: string;
+        projectName?: string;
+        labelName?: string;
     }) => Promise<void>;
 }
 
@@ -40,6 +43,8 @@ export const EditTaskModal = ({
         hours: z.number().min(0).max(23),
         minutes: z.number().min(0).max(59),
         reviewMemo: z.string().optional(),
+        projectName: z.string().optional(),
+        labelName: z.string().optional(),
     }).refine((data) => isDone || (data.hours > 0 || data.minutes > 0), {
         message: t.main.toast.set_duration,
         path: ["minutes"],
@@ -49,7 +54,7 @@ export const EditTaskModal = ({
 
     const form = useForm<EditFormValues>({
         resolver: zodResolver(editSchema),
-        defaultValues: { title: "", planningMemo: "", hours: 0, minutes: 30, reviewMemo: "" },
+        defaultValues: { title: "", planningMemo: "", hours: 0, minutes: 30, reviewMemo: "", projectName: "", labelName: "" },
     });
 
     useEffect(() => {
@@ -73,6 +78,8 @@ export const EditTaskModal = ({
                 hours: h,
                 minutes: m,
                 reviewMemo: editTaskBlock.reviewMemo || "",
+                projectName: editTaskBlock.projectName || "",
+                labelName: editTaskBlock.labelName || "",
             });
         }
     }, [editTaskBlock, form, isDone]);
@@ -86,6 +93,8 @@ export const EditTaskModal = ({
             hours: data.hours,
             minutes: data.minutes,
             reviewMemo: data.reviewMemo || "",
+            projectName: data.projectName,
+            labelName: data.labelName,
         });
         onClose();
     };
@@ -110,6 +119,27 @@ export const EditTaskModal = ({
                             className="w-full bg-background border border-border rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
                             placeholder={t.main.edit_task.name_placeholder}
                         />
+                    </div>
+
+                    <div className="flex gap-2">
+                        <div className="space-y-2 flex-1">
+                            <label className="text-xs font-bold text-text-secondary">Project</label>
+                            <CreatableSelect
+                                value={form.watch("projectName") || ""}
+                                onChange={(val: string) => form.setValue("projectName", val)}
+                                placeholder="Project..."
+                                fetchCommand="get_projects"
+                            />
+                        </div>
+                        <div className="space-y-2 flex-1">
+                            <label className="text-xs font-bold text-text-secondary">Label</label>
+                            <CreatableSelect
+                                value={form.watch("labelName") || ""}
+                                onChange={(val: string) => form.setValue("labelName", val)}
+                                placeholder="Label..."
+                                fetchCommand="get_labels"
+                            />
+                        </div>
                     </div>
 
                     {!isDone && (
