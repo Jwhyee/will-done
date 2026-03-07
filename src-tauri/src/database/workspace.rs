@@ -104,10 +104,52 @@ pub async fn delete_workspace(pool: &SqlitePool, id: i64) -> Result<()> {
     Ok(())
 }
 
+pub async fn search_task_titles(
+    pool: &sqlx::SqlitePool,
+    workspace_id: i64,
+    query: &str,
+    limit: i64,
+) -> Result<Vec<String>> {
+    let wildcard_query = format!("%{}%", query);
+    let titles: Vec<String> = sqlx::query_scalar(
+        "SELECT DISTINCT title FROM tasks WHERE workspace_id = ?1 AND title LIKE ?2 LIMIT ?3",
+    )
+    .bind(workspace_id)
+    .bind(&wildcard_query)
+    .bind(limit)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(titles)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use sqlx::sqlite::SqlitePool;
+
+    #[tokio::test]
+    async fn test_search_task_titles() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, estimated_minutes INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.unwrap();
+
+        let ws_id = sqlx::query("INSERT INTO workspaces (name) VALUES ('Test WS')").execute(&pool).await.unwrap().last_insert_rowid();
+
+        sqlx::query("INSERT INTO tasks (workspace_id, title) VALUES (?1, 'Apple Pie')").bind(ws_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (workspace_id, title) VALUES (?1, 'Apple Juice')").bind(ws_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (workspace_id, title) VALUES (?1, 'Banana')").bind(ws_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (workspace_id, title) VALUES (?1, 'Apple Pie')").bind(ws_id).execute(&pool).await.unwrap();
+
+        let titles = search_task_titles(&pool, ws_id, "App", 10).await.unwrap();
+        assert_eq!(titles.len(), 2);
+        assert!(titles.contains(&"Apple Pie".to_string()));
+        assert!(titles.contains(&"Apple Juice".to_string()));
+
+        let bananas = search_task_titles(&pool, ws_id, "Ban", 10).await.unwrap();
+        assert_eq!(bananas.len(), 1);
+        assert_eq!(bananas[0], "Banana");
+    }
 
     #[tokio::test]
     async fn test_create_workspace_transaction() {

@@ -210,6 +210,7 @@ pub fn run() {
             commands::workspace::update_workspace,
             commands::workspace::delete_workspace,
             commands::workspace::get_unplugged_times,
+            commands::workspace::suggest_task_titles,
             commands::timeline::get_greeting,
             commands::timeline::add_task,
             commands::timeline::get_timeline,

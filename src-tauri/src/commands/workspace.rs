@@ -39,3 +39,13 @@ pub async fn update_workspace(
 pub async fn delete_workspace(state: State<'_, DbState>, id: i64) -> Result<()> {
     database::workspace::delete_workspace(&state.pool, id).await
 }
+
+#[tauri::command]
+pub async fn suggest_task_titles(
+    state: State<'_, DbState>,
+    workspace_id: i64,
+    query: String,
+    limit: i64,
+) -> Result<Vec<String>> {
+    database::workspace::search_task_titles(&state.pool, workspace_id, &query, limit).await
+}
