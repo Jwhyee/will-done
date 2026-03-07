@@ -1,33 +1,35 @@
-# Project Planning and Architecture
+# Project Planning and Architecture: will-done
 
-## Overview
-This document outlines the planning and architecture of the **will-done** project, a desktop application for daily planning and retrospectives.
+## v1.0.0 - 2025-03-08 (Initialization)
 
-## Architecture
-The project follows a modern full-stack desktop application architecture using **Tauri**, **Rust**, **React**, and **SQLite**.
+### Architecture Overview
+The `will-done` project follows a **Modular Monolith** pattern on the backend and a **Feature-based Component Architecture** on the frontend. The system is designed to provide a low-latency, desktop-first experience for time-sensitive task management.
 
-### Frontend
-- **React (TypeScript)**: Used for building a responsive and interactive user interface.
-- **Vite**: Provides a fast development environment and build tool.
-- **Tailwind CSS & shadcn/ui**: Ensures a consistent and modern aesthetic with modular UI components.
-- **Framer Motion**: Adds smooth animations for a polished user experience.
-- **dnd-kit**: Implements advanced drag-and-drop functionality for task reordering and management.
+#### 1. Backend: Tauri/Rust/SQLite
+- **API Layer**: Tauri `invoke` handlers are thin wrappers around database service functions.
+- **Service Layer**: Logic for task scheduling, timeline reordering, and state transitions is implemented in pure Rust.
+- **Persistence**: SQLite with `sqlx` provides a robust, ACID-compliant local database.
+- **AI Engine**: Asynchronous interaction with Gemini models for analyzing task completion history and generating insights.
 
-### Backend
-- **Tauri**: Acts as the bridge between the frontend and the operating system, providing a secure and lightweight container.
-- **Rust**: Handles performance-critical tasks, system-level interactions, and database management.
-- **SQLite (sqlx)**: Provides a reliable and efficient local database for persistent storage.
-- **Tokio**: Enables asynchronous operations in Rust for better performance and responsiveness.
+#### 2. Frontend: React/TypeScript
+- **Atomic Components**: Basic UI primitives are managed via `shadcn/ui`.
+- **Feature Modules**: Business logic is encapsulated within feature folders (`workspace`, `retrospective`), each containing its own components and hooks.
+- **State Flow**: Unidirectional state management centered around the `useApp` hook, which acts as the primary synchronization point with the backend.
 
-### Core Features
-- **Workspace Management**: Users can organize their tasks into different workspaces (e.g., Home, Work).
-- **Time-Blocking**: A timeline-based approach for planning tasks throughout the logical day.
-- **AI Retrospectives**: Integration with Google's Gemini API to analyze daily performance and provide insights.
-- **Recurring Tasks**: Support for tasks that repeat on specific days of the week.
-- **Notifications**: System-level notifications for task transitions and health-care reminders.
+### Project Goals
+1. Provide a seamless "Timeline" experience where tasks are automatically scheduled based on estimated durations and priority.
+2. Enable data-driven self-improvement through AI-powered retrospectives.
+3. Maintain zero-latency UI by performing heavy calculations (like timeline shifts) in the Rust backend.
+4. Ensure privacy by keeping all task data in a local SQLite database.
 
----
+### Core Domain Models
+- **Workspace**: A container for a set of tasks, projects, and labels.
+- **TimeBlock**: A discrete unit of time in the timeline, representing a task's scheduled window.
+- **Task**: The abstract definition of work, which can be instantiated as one or more `TimeBlocks` (to support splitting).
+- **Retrospective**: An AI-generated summary of a user's productivity over a specific period.
 
-## Versioning
-- **v1.0.0 - 2026-03-06**: Initial version of the project documentation and knowledge base. Project setup with Tauri, React, and SQLite. Core features including Workspace management, Timeline, and Retrospective are implemented and being refined.
-- **v1.1.0 - 2026-03-07**: Bug fix for task deletion time-shift. Updated `delete_task`, `move_to_inbox`, and `handle_split_task_deletion` to correctly trigger timeline recalculation. Added automated tests for verification.
+### Future Roadmap (Inferred)
+- [ ] Implement proper SQL migrations.
+- [ ] Support recurring tasks (refactored out in current version).
+- [ ] Enhance AI models for better task title suggestions.
+- [ ] Add more granular analytics for time spent per project/label.
