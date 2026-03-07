@@ -9,13 +9,17 @@ export function CreatableSelect({
   onChange,
   placeholder,
   fetchCommand,
-  className
+  className,
+  noneLabel = "None",
+  createLabel = (val) => `Create "${val}"`
 }: {
   value: string;
   onChange: (val: string) => void;
   placeholder: string;
   fetchCommand: string;
   className?: string;
+  noneLabel?: string;
+  createLabel?: (val: string) => string;
 }) {
   const [options, setOptions] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState(value || "");
@@ -81,7 +85,7 @@ export function CreatableSelect({
             className="w-full text-left px-2 py-1.5 text-sm rounded-lg hover:bg-surface text-text-secondary italic flex items-center justify-between"
             onClick={() => handleSelect("")}
           >
-            None
+            {noneLabel}
             {inputValue === "" && <Check size={14} className="text-text-primary" />}
           </button>
           
@@ -91,7 +95,7 @@ export function CreatableSelect({
               className="w-full text-left px-2 py-1.5 text-sm rounded-lg hover:bg-surface text-text-primary flex items-center justify-between"
               onClick={() => handleSelect(inputValue)}
             >
-              <span className="truncate pr-2">Create "{inputValue}"</span>
+              <span className="truncate pr-2">{createLabel(inputValue)}</span>
             </button>
           )}
 

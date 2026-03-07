@@ -123,21 +123,25 @@ export const EditTaskModal = ({
 
                     <div className="flex gap-2">
                         <div className="space-y-2 flex-1">
-                            <label className="text-xs font-bold text-text-secondary">Project</label>
+                            <label className="text-xs font-bold text-text-secondary">{t.project_label.project}</label>
                             <CreatableSelect
                                 value={form.watch("projectName") || ""}
                                 onChange={(val: string) => form.setValue("projectName", val)}
-                                placeholder="Project..."
+                                placeholder={t.project_label.project_placeholder}
                                 fetchCommand="get_projects"
+                                noneLabel={t.project_label.none}
+                                createLabel={(val) => t.project_label.create.replace('{name}', val)}
                             />
                         </div>
                         <div className="space-y-2 flex-1">
-                            <label className="text-xs font-bold text-text-secondary">Label</label>
+                            <label className="text-xs font-bold text-text-secondary">{t.project_label.label}</label>
                             <CreatableSelect
                                 value={form.watch("labelName") || ""}
                                 onChange={(val: string) => form.setValue("labelName", val)}
-                                placeholder="Label..."
+                                placeholder={t.project_label.label_placeholder}
                                 fetchCommand="get_labels"
+                                noneLabel={t.project_label.none}
+                                createLabel={(val) => t.project_label.create.replace('{name}', val)}
                             />
                         </div>
                     </div>

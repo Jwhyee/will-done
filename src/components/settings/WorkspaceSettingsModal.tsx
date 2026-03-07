@@ -147,8 +147,8 @@ export const WorkspaceSettingsModal = ({
               <TabsList className="w-full h-11 bg-surface border border-border/50 p-1 mb-6 shrink-0 flex overflow-x-auto scrollbar-hide">
                 <TabsTrigger value="basic" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Settings2 size={14} />{t.sidebar.workspace_tab_basic}</TabsTrigger>
                 <TabsTrigger value="time" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Clock size={14} />{t.sidebar.workspace_tab_time}</TabsTrigger>
-                <TabsTrigger value="projects" className="flex-1 gap-2 whitespace-nowrap shrink-0"><FolderOpen size={14} />Projects</TabsTrigger>
-                <TabsTrigger value="labels" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Tag size={14} />Labels</TabsTrigger>
+                <TabsTrigger value="projects" className="flex-1 gap-2 whitespace-nowrap shrink-0"><FolderOpen size={14} />{t.project_label.manage_projects}</TabsTrigger>
+                <TabsTrigger value="labels" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Tag size={14} />{t.project_label.manage_labels}</TabsTrigger>
                 <TabsTrigger value="advanced" className="flex-1 gap-2 whitespace-nowrap shrink-0"><ShieldAlert size={14} />{t.sidebar.workspace_tab_advanced}</TabsTrigger>
               </TabsList>
 

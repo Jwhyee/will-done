@@ -189,16 +189,20 @@ export const TaskForm = ({ t, taskForm, onSubmit, onError, workspaceId }: TaskFo
                   <CreatableSelect
                     value={taskForm.watch("projectName")}
                     onChange={(val: string) => taskForm.setValue("projectName", val)}
-                    placeholder="Project..."
+                    placeholder={t.project_label.project_placeholder}
                     fetchCommand="get_projects"
                     className="flex-1"
+                    noneLabel={t.project_label.none}
+                    createLabel={(val) => t.project_label.create.replace('{name}', val)}
                   />
                   <CreatableSelect
                     value={taskForm.watch("labelName")}
                     onChange={(val: string) => taskForm.setValue("labelName", val)}
-                    placeholder="Label..."
+                    placeholder={t.project_label.label_placeholder}
                     fetchCommand="get_labels"
                     className="flex-1"
+                    noneLabel={t.project_label.none}
+                    createLabel={(val) => t.project_label.create.replace('{name}', val)}
                   />
                 </div>
 

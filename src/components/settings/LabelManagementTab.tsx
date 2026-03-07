@@ -13,7 +13,29 @@ const GITHUB_COLORS = [
   "#bfdadc", "#c5def5", "#bfd4f2", "#d4c5f9", "#ffffff", "#000000"
 ];
 
-export const LabelManagementTab = ({}: { t: any }) => {
+const ColorPicker = ({ color, onChange }: { color: string, onChange: (c: string) => void }) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button variant="outline" className="w-10 h-10 p-0 border-border bg-surface shrink-0 relative overflow-hidden" onClick={(e) => e.preventDefault()}>
+        <div className="absolute inset-0 m-1 rounded-sm" style={{ backgroundColor: color }} />
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-64 p-3 bg-surface-elevated border-border shadow-2xl rounded-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <div className="flex flex-wrap gap-2">
+        {GITHUB_COLORS.map((c) => (
+          <button
+            key={c}
+            className={`w-6 h-6 rounded-md border shadow-sm transition-transform hover:scale-110 active:scale-95 ${color === c ? 'ring-2 ring-text-primary ring-offset-1 ring-offset-surface-elevated' : 'border-border/50'}`}
+            style={{ backgroundColor: c }}
+            onClick={(e) => { e.preventDefault(); onChange(c); }}
+          />
+        ))}
+      </div>
+    </PopoverContent>
+  </Popover>
+);
+
+export const LabelManagementTab = ({ t }: { t: any }) => {
   const { showToast } = useToast();
   const [labels, setLabels] = useState<Label[]>([]);
   const [newLabelName, setNewLabelName] = useState("");
@@ -41,7 +63,7 @@ export const LabelManagementTab = ({}: { t: any }) => {
       await invoke("create_label", { input: { name: newLabelName.trim(), color: newLabelColor } });
       setNewLabelName("");
       fetchLabels();
-      showToast("Label created", "success");
+      showToast(t.project_label.label_created, "success");
     } catch (error: any) {
       showToast(error.toString(), "error");
     }
@@ -53,7 +75,7 @@ export const LabelManagementTab = ({}: { t: any }) => {
       await invoke("update_label", { id, input: { name: editName.trim(), color: editColor } });
       setEditingId(null);
       fetchLabels();
-      showToast("Label updated", "success");
+      showToast(t.project_label.label_updated, "success");
     } catch (error: any) {
       showToast(error.toString(), "error");
     }
@@ -63,39 +85,17 @@ export const LabelManagementTab = ({}: { t: any }) => {
     try {
       await invoke("delete_label", { id });
       fetchLabels();
-      showToast("Label deleted", "success");
+      showToast(t.project_label.label_deleted, "success");
     } catch (error: any) {
       showToast(error.toString(), "error");
     }
   };
 
-  const ColorPicker = ({ color, onChange }: { color: string, onChange: (c: string) => void }) => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="w-10 h-10 p-0 border-border bg-surface shrink-0 relative overflow-hidden" onClick={(e) => e.preventDefault()}>
-          <div className="absolute inset-0 m-1 rounded-sm" style={{ backgroundColor: color }} />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-3 bg-surface-elevated border-border shadow-2xl rounded-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <div className="flex flex-wrap gap-2">
-          {GITHUB_COLORS.map((c) => (
-            <button
-              key={c}
-              className={`w-6 h-6 rounded-md border shadow-sm transition-transform hover:scale-110 active:scale-95 ${color === c ? 'ring-2 ring-text-primary ring-offset-1 ring-offset-surface-elevated' : 'border-border/50'}`}
-              style={{ backgroundColor: c }}
-              onClick={(e) => { e.preventDefault(); onChange(c); }}
-            />
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="space-y-1.5">
-        <h3 className="text-sm font-bold text-text-primary">Labels</h3>
-        <p className="text-xs text-text-secondary">Manage your workspace labels.</p>
+        <h3 className="text-sm font-bold text-text-primary">{t.project_label.manage_labels}</h3>
+        <p className="text-xs text-text-secondary">{t.project_label.manage_labels_desc}</p>
       </div>
 
       <div className="flex gap-2">
@@ -103,7 +103,7 @@ export const LabelManagementTab = ({}: { t: any }) => {
         <Input 
           value={newLabelName} 
           onChange={(e) => setNewLabelName(e.target.value)}
-          placeholder="New label name..."
+          placeholder={t.project_label.new_label_placeholder}
           className="bg-surface border-border text-text-primary flex-1"
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleCreate())}
         />
