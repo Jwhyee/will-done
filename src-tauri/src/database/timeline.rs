@@ -34,9 +34,11 @@ pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: Nai
     let end_of_day = start_of_day + Duration::days(1) - Duration::seconds(1);
 
     let mut blocks = sqlx::query_as::<_, TimeBlock>(
-        "SELECT tb.*, t.planning_memo 
+        "SELECT tb.*, t.planning_memo, p.name as project_name, l.name as label_name, l.color as label_color 
          FROM time_blocks tb
          LEFT JOIN tasks t ON tb.task_id = t.id
+         LEFT JOIN projects p ON t.project_id = p.id
+         LEFT JOIN labels l ON t.label_id = l.id
          WHERE tb.workspace_id = ?1 AND tb.start_time >= ?2 AND tb.start_time <= ?3 
          ORDER BY tb.start_time ASC"
     )
@@ -75,6 +77,9 @@ pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: Nai
             review_memo: None,
             planning_memo: None,
             is_urgent: false,
+            project_name: None,
+            label_name: None,
+            label_color: None,
         });
     }
 
@@ -101,14 +106,44 @@ pub async fn add_task(pool: &SqlitePool, input: AddTaskInput) -> Result<()> {
 pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDateTime) -> Result<()> {
     let mut tx = pool.begin().await?;
 
+    let mut project_id = None;
+    if let Some(p_name) = &input.project_name {
+        if !p_name.trim().is_empty() {
+            let existing: Option<(i64,)> = sqlx::query_as("SELECT id FROM projects WHERE name = ?1").bind(p_name).fetch_optional(&mut *tx).await?;
+            if let Some((id,)) = existing {
+                project_id = Some(id);
+                sqlx::query("UPDATE projects SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).bind(id).execute(&mut *tx).await?;
+            } else {
+                let res = sqlx::query("INSERT INTO projects (name, last_used) VALUES (?1, ?2)").bind(p_name).bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&mut *tx).await?;
+                project_id = Some(res.last_insert_rowid());
+            }
+        }
+    }
+
+    let mut label_id = None;
+    if let Some(l_name) = &input.label_name {
+        if !l_name.trim().is_empty() {
+            let existing: Option<(i64,)> = sqlx::query_as("SELECT id FROM labels WHERE name = ?1").bind(l_name).fetch_optional(&mut *tx).await?;
+            if let Some((id,)) = existing {
+                label_id = Some(id);
+                sqlx::query("UPDATE labels SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).bind(id).execute(&mut *tx).await?;
+            } else {
+                let res = sqlx::query("INSERT INTO labels (name, color, last_used) VALUES (?1, '#808080', ?2)").bind(l_name).bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&mut *tx).await?;
+                label_id = Some(res.last_insert_rowid());
+            }
+        }
+    }
+
     // 1. 태스크 생성
     let task_result = sqlx::query(
-        "INSERT INTO tasks (workspace_id, title, planning_memo, estimated_minutes) VALUES (?1, ?2, ?3, ?4)",
+        "INSERT INTO tasks (workspace_id, title, planning_memo, estimated_minutes, project_id, label_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
     )
     .bind(input.workspace_id)
     .bind(&input.title)
     .bind(&input.planning_memo)
     .bind((input.hours * 60 + input.minutes) as i64)
+    .bind(project_id)
+    .bind(label_id)
     .execute(&mut *tx)
     .await?;
 
@@ -496,9 +531,39 @@ pub async fn update_task(pool: &SqlitePool, input: crate::models::UpdateTaskInpu
         .await?;
 
     if let Some(task_id) = block.task_id {
-        sqlx::query("UPDATE tasks SET title = ?1, planning_memo = ?2 WHERE id = ?3")
+        let mut project_id = None;
+        if let Some(p_name) = &input.project_name {
+            if !p_name.trim().is_empty() {
+                let existing: Option<(i64,)> = sqlx::query_as("SELECT id FROM projects WHERE name = ?1").bind(p_name).fetch_optional(&mut *tx).await?;
+                if let Some((id,)) = existing {
+                    project_id = Some(id);
+                    sqlx::query("UPDATE projects SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).bind(id).execute(&mut *tx).await?;
+                } else {
+                    let res = sqlx::query("INSERT INTO projects (name, last_used) VALUES (?1, ?2)").bind(p_name).bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&mut *tx).await?;
+                    project_id = Some(res.last_insert_rowid());
+                }
+            }
+        }
+
+        let mut label_id = None;
+        if let Some(l_name) = &input.label_name {
+            if !l_name.trim().is_empty() {
+                let existing: Option<(i64,)> = sqlx::query_as("SELECT id FROM labels WHERE name = ?1").bind(l_name).fetch_optional(&mut *tx).await?;
+                if let Some((id,)) = existing {
+                    label_id = Some(id);
+                    sqlx::query("UPDATE labels SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).bind(id).execute(&mut *tx).await?;
+                } else {
+                    let res = sqlx::query("INSERT INTO labels (name, color, last_used) VALUES (?1, '#808080', ?2)").bind(l_name).bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&mut *tx).await?;
+                    label_id = Some(res.last_insert_rowid());
+                }
+            }
+        }
+
+        sqlx::query("UPDATE tasks SET title = ?1, planning_memo = ?2, project_id = ?3, label_id = ?4 WHERE id = ?5")
             .bind(&input.title)
             .bind(&input.description)
+            .bind(project_id)
+            .bind(label_id)
             .bind(task_id)
             .execute(&mut *tx)
             .await?;
@@ -848,7 +913,9 @@ mod tests {
 
         sqlx::query("CREATE TABLE workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE unplugged_times (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, label TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, estimated_minutes INTEGER NOT NULL DEFAULT 0)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, last_used TEXT NOT NULL)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE labels (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, color TEXT NOT NULL, last_used TEXT NOT NULL)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, estimated_minutes INTEGER NOT NULL DEFAULT 0, project_id INTEGER REFERENCES projects(id), label_id INTEGER REFERENCES labels(id))").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE time_blocks (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, status TEXT NOT NULL, review_memo TEXT, planning_memo TEXT, is_urgent BOOLEAN NOT NULL DEFAULT 0)").execute(&pool).await.unwrap();
 
         pool
@@ -885,6 +952,8 @@ mod tests {
             minutes: 20,
             is_urgent: true,
             is_inbox: Some(false),
+            project_name: None,
+            label_name: None,
         };
 
         add_task_at(&pool, input, now_dt).await.unwrap();
@@ -1057,6 +1126,8 @@ mod tests {
             hours: 1,
             minutes: 0,
             review_memo: None,
+            project_name: None,
+            label_name: None,
         };
 
         update_task(&pool, input).await.unwrap();
@@ -1131,6 +1202,8 @@ mod tests {
             minutes: 0,
             is_urgent: false,
             is_inbox: Some(false),
+            project_name: None,
+            label_name: None,
         };
 
         add_task_at(&pool, input, now_dt).await.unwrap();
@@ -1176,6 +1249,8 @@ mod tests {
             minutes: 0,
             is_urgent: true,
             is_inbox: Some(false),
+            project_name: None,
+            label_name: None,
         };
 
         add_task_at(&pool, input, now_dt).await.unwrap();
@@ -1454,6 +1529,8 @@ mod tests {
             planning_memo: None,
             is_urgent: true,
             is_inbox: Some(false),
+            project_name: None,
+            label_name: None,
         };
 
         add_task_at(&pool, input, now_dt).await.unwrap();

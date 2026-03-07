@@ -1,5 +1,5 @@
 use sqlx::SqlitePool;
-use crate::models::{Workspace, UnpluggedTime, CreateWorkspaceInput};
+use crate::models::{Workspace, UnpluggedTime, CreateWorkspaceInput, Project, Label, ProjectInput, LabelInput};
 use crate::error::Result;
 
 pub async fn get_workspaces(pool: &SqlitePool) -> Result<Vec<Workspace>> {
@@ -104,6 +104,76 @@ pub async fn delete_workspace(pool: &SqlitePool, id: i64) -> Result<()> {
     Ok(())
 }
 
+pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<Project>> {
+    let projects = sqlx::query_as::<_, Project>("SELECT * FROM projects ORDER BY last_used DESC")
+        .fetch_all(pool)
+        .await?;
+    Ok(projects)
+}
+
+pub async fn create_project(pool: &SqlitePool, input: ProjectInput) -> Result<i64> {
+    let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let result = sqlx::query("INSERT INTO projects (name, last_used) VALUES (?1, ?2)")
+        .bind(&input.name)
+        .bind(&now)
+        .execute(pool)
+        .await?;
+    Ok(result.last_insert_rowid())
+}
+
+pub async fn update_project(pool: &SqlitePool, id: i64, input: ProjectInput) -> Result<()> {
+    sqlx::query("UPDATE projects SET name = ?1 WHERE id = ?2")
+        .bind(&input.name)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn delete_project(pool: &SqlitePool, id: i64) -> Result<()> {
+    sqlx::query("DELETE FROM projects WHERE id = ?1")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn get_labels(pool: &SqlitePool) -> Result<Vec<Label>> {
+    let labels = sqlx::query_as::<_, Label>("SELECT * FROM labels ORDER BY last_used DESC")
+        .fetch_all(pool)
+        .await?;
+    Ok(labels)
+}
+
+pub async fn create_label(pool: &SqlitePool, input: LabelInput) -> Result<i64> {
+    let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let result = sqlx::query("INSERT INTO labels (name, color, last_used) VALUES (?1, ?2, ?3)")
+        .bind(&input.name)
+        .bind(&input.color)
+        .bind(&now)
+        .execute(pool)
+        .await?;
+    Ok(result.last_insert_rowid())
+}
+
+pub async fn update_label(pool: &SqlitePool, id: i64, input: LabelInput) -> Result<()> {
+    sqlx::query("UPDATE labels SET name = ?1, color = ?2 WHERE id = ?3")
+        .bind(&input.name)
+        .bind(&input.color)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn delete_label(pool: &SqlitePool, id: i64) -> Result<()> {
+    sqlx::query("DELETE FROM labels WHERE id = ?1")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 pub async fn search_task_titles(
     pool: &sqlx::SqlitePool,
     workspace_id: i64,
@@ -196,5 +266,57 @@ mod tests {
         
         assert_eq!(ws_count.0, 0);
         assert_eq!(task_count.0, 0);
+    }
+
+    #[tokio::test]
+    async fn test_project_crud() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, last_used TEXT NOT NULL)").execute(&pool).await.unwrap();
+
+        // 1. Create Project
+        let project_id = create_project(&pool, ProjectInput { name: "Test Project".to_string() }).await.unwrap();
+        assert!(project_id > 0);
+
+        // 2. Get Projects
+        let projects = get_projects(&pool).await.unwrap();
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].name, "Test Project");
+
+        // 3. Update Project
+        update_project(&pool, project_id, ProjectInput { name: "Updated Project".to_string() }).await.unwrap();
+        let projects_updated = get_projects(&pool).await.unwrap();
+        assert_eq!(projects_updated[0].name, "Updated Project");
+
+        // 4. Delete Project
+        delete_project(&pool, project_id).await.unwrap();
+        let projects_after_delete = get_projects(&pool).await.unwrap();
+        assert!(projects_after_delete.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_label_crud() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE labels (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, color TEXT NOT NULL, last_used TEXT NOT NULL)").execute(&pool).await.unwrap();
+
+        // 1. Create Label
+        let label_id = create_label(&pool, LabelInput { name: "Bug".to_string(), color: "#FF0000".to_string() }).await.unwrap();
+        assert!(label_id > 0);
+
+        // 2. Get Labels
+        let labels = get_labels(&pool).await.unwrap();
+        assert_eq!(labels.len(), 1);
+        assert_eq!(labels[0].name, "Bug");
+        assert_eq!(labels[0].color, "#FF0000");
+
+        // 3. Update Label
+        update_label(&pool, label_id, LabelInput { name: "Feature".to_string(), color: "#00FF00".to_string() }).await.unwrap();
+        let labels_updated = get_labels(&pool).await.unwrap();
+        assert_eq!(labels_updated[0].name, "Feature");
+        assert_eq!(labels_updated[0].color, "#00FF00");
+
+        // 4. Delete Label
+        delete_label(&pool, label_id).await.unwrap();
+        let labels_after_delete = get_labels(&pool).await.unwrap();
+        assert!(labels_after_delete.is_empty());
     }
 }

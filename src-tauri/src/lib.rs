@@ -68,6 +68,8 @@ pub fn run() {
                         sqlx::query("DELETE FROM retrospectives").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM time_blocks").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM tasks").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM projects").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM labels").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM unplugged_times").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM workspaces").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM users").execute(&pool).await.ok();
@@ -185,8 +187,13 @@ pub fn run() {
                 
                 sqlx::query("CREATE TABLE IF NOT EXISTS workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS unplugged_times (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, label TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+                sqlx::query("CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, last_used TEXT NOT NULL)").execute(&pool).await.ok();
+                sqlx::query("CREATE TABLE IF NOT EXISTS labels (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, color TEXT NOT NULL, last_used TEXT NOT NULL)").execute(&pool).await.ok();
+
                 sqlx::query("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, estimated_minutes INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE tasks ADD COLUMN estimated_minutes INTEGER NOT NULL DEFAULT 0").execute(&pool).await.ok();
+                sqlx::query("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects (id) ON DELETE SET NULL").execute(&pool).await.ok();
+                sqlx::query("ALTER TABLE tasks ADD COLUMN label_id INTEGER REFERENCES labels (id) ON DELETE SET NULL").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS time_blocks (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, status TEXT NOT NULL, review_memo TEXT, is_urgent BOOLEAN NOT NULL DEFAULT 0, FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE time_blocks ADD COLUMN is_urgent BOOLEAN NOT NULL DEFAULT 0").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE time_blocks ADD COLUMN planning_memo TEXT").execute(&pool).await.ok();
@@ -211,6 +218,14 @@ pub fn run() {
             commands::workspace::delete_workspace,
             commands::workspace::get_unplugged_times,
             commands::workspace::suggest_task_titles,
+            commands::workspace::get_projects,
+            commands::workspace::create_project,
+            commands::workspace::update_project,
+            commands::workspace::delete_project,
+            commands::workspace::get_labels,
+            commands::workspace::create_label,
+            commands::workspace::update_label,
+            commands::workspace::delete_label,
             commands::timeline::get_greeting,
             commands::timeline::add_task,
             commands::timeline::get_timeline,
