@@ -249,6 +249,9 @@ pub async fn move_to_inbox(pool: &SqlitePool, block_id: i64) -> Result<()> {
 
             // 2. 각 블록이 차지하던 시간만큼 이후의 WILL 블록들을 앞으로 당김
             for b in &blocks {
+                if b.status == "DONE" {
+                    continue;
+                }
                 let start = NaiveDateTime::parse_from_str(&b.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
                 let end = NaiveDateTime::parse_from_str(&b.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
                 let duration = (end - start).num_minutes();
@@ -339,10 +342,34 @@ pub async fn move_all_to_timeline(pool: &SqlitePool, workspace_id: i64) -> Resul
 }
 
 pub async fn delete_task(pool: &SqlitePool, id: i64) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    let blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE task_id = ?1 ORDER BY start_time DESC")
+        .bind(id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+    if !blocks.is_empty() {
+        let workspace_id = blocks[0].workspace_id;
+
+        for b in &blocks {
+            if b.status == "DONE" {
+                continue;
+            }
+            let start = NaiveDateTime::parse_from_str(&b.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+            let end = NaiveDateTime::parse_from_str(&b.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+            let duration = (end - start).num_minutes();
+
+            shift_future_blocks(&mut tx, workspace_id, end, -duration).await?;
+        }
+    }
+
     sqlx::query("DELETE FROM tasks WHERE id = ?1")
         .bind(id)
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
+
+    tx.commit().await?;
     Ok(())
 }
 
@@ -395,6 +422,28 @@ pub async fn handle_split_task_deletion(pool: &SqlitePool, task_id: i64, keep_pa
             .await?;
     } else {
         // 전체 삭제 (ON DELETE CASCADE에 의해 연결된 블록들도 삭제됨)
+        // 1. 해당 태스크의 모든 블록 가져오기 (뒤에서부터 처리하기 위해 DESC 정렬)
+        let blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE task_id = ?1 ORDER BY start_time DESC")
+            .bind(task_id)
+            .fetch_all(&mut *tx)
+            .await?;
+
+        if !blocks.is_empty() {
+            let workspace_id = blocks[0].workspace_id;
+
+            // 2. 각 블록이 차지하던 시간만큼 이후의 WILL 블록들을 앞으로 당김 (DONE 제외)
+            for b in &blocks {
+                if b.status == "DONE" {
+                    continue;
+                }
+                let start = NaiveDateTime::parse_from_str(&b.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+                let end = NaiveDateTime::parse_from_str(&b.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+                let duration = (end - start).num_minutes();
+
+                shift_future_blocks(&mut tx, workspace_id, end, -duration).await?;
+            }
+        }
+
         sqlx::query("DELETE FROM tasks WHERE id = ?1")
             .bind(task_id)
             .execute(&mut *tx)
@@ -1592,5 +1641,57 @@ mod tests {
         assert_eq!(t1_past.status, "PENDING");
         // T1 future auto-resumes to NOW!
         assert_eq!(t1_future.status, "NOW");
+    }
+
+    #[tokio::test]
+    async fn test_delete_task_skips_done_blocks() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // T1: B1(DONE, 09:00-10:00), B2(WILL, 10:00-11:00)
+        // T2: Future task (WILL, 11:00-12:00)
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+        
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'T1', '2026-03-01T09:00:00', '2026-03-01T10:00:00', 'DONE')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 1, 1, 'T1', '2026-03-01T10:00:00', '2026-03-01T11:00:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 2, 1, 'T2', '2026-03-01T11:00:00', '2026-03-01T12:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // Delete T1
+        delete_task(&pool, 1).await.unwrap();
+
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+        
+        // Expected: T2 should have shifted only by B2's duration (60m), not B1's.
+        // T2 (11:00) - 60m = 10:00.
+        let t2 = blocks.iter().find(|b| b.id == 12).unwrap();
+        assert_eq!(t2.start_time, "2026-03-01T10:00:00");
+    }
+
+    #[tokio::test]
+    async fn test_delete_split_task_shifts_future() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // T1: Split task (NOW: 10:00-10:15, WILL: 10:45-11:00)
+        // T2: Future task (WILL: 11:00-12:00)
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+        
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'T1', '2026-03-01T10:00:00', '2026-03-01T10:15:00', 'NOW')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 1, 1, 'T1', '2026-03-01T10:45:00', '2026-03-01T11:00:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 2, 1, 'T2', '2026-03-01T11:00:00', '2026-03-01T12:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // Delete T1 entirely (keep_past = false)
+        handle_split_task_deletion(&pool, 1, false).await.unwrap();
+
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+        
+        // Expected: T2 should have shifted.
+        // B2 (11:00, -15m) -> 10:45
+        // B1 (10:15, -15m) -> 10:30
+        
+        let t2 = blocks.iter().find(|b| b.id == 12).unwrap();
+        assert_eq!(t2.start_time, "2026-03-01T10:30:00");
     }
 }
