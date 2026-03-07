@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
-use crate::models::User;
-use crate::error::Result;
+use crate::domain::User;
+use crate::domain::Result;
 
 pub async fn get_user(pool: &SqlitePool) -> Result<Option<User>> {
     let user = sqlx::query_as::<_, User>("SELECT id, nickname, gemini_api_key, lang, last_successful_model, is_notification_enabled, day_start_time FROM users WHERE id = 1")

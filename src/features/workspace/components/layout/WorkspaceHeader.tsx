@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { TaskForm } from "./TaskForm";
+import { TaskForm } from "../forms/TaskForm";
 import { User } from "@/types";
 
 interface WorkspaceHeaderProps {

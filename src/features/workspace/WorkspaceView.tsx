@@ -1,13 +1,13 @@
 import { format } from "date-fns";
 import { TimeBlock, Task, User, Workspace } from "@/types";
-import { TransitionModal } from "./components/TransitionModal";
-import { EditTaskModal } from "./components/EditTaskModal";
+import { TransitionModal } from "./components/modals/TransitionModal";
+import { EditTaskModal } from "./components/modals/EditTaskModal";
 import { useWorkspace } from "./hooks/useWorkspace";
-import { WorkspaceHeader } from "./components/WorkspaceHeader";
-import { WorkspaceTimeline } from "./components/WorkspaceTimeline";
-import { WorkspaceInbox } from "./components/WorkspaceInbox";
-import { WorkspaceDialogs } from "./components/WorkspaceDialogs";
-import { WorkspaceEmptyState } from "./components/WorkspaceEmptyState";
+import { WorkspaceHeader } from "./components/layout/WorkspaceHeader";
+import { WorkspaceTimeline } from "./components/timeline/WorkspaceTimeline";
+import { WorkspaceInbox } from "./components/inbox/WorkspaceInbox";
+import { WorkspaceDialogs } from "./components/modals/WorkspaceDialogs";
+import { WorkspaceEmptyState } from "./components/layout/WorkspaceEmptyState";
 
 interface WorkspaceViewProps {
   t: any;

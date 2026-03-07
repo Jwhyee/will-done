@@ -1,7 +1,7 @@
 use tauri::State;
-use crate::models::{Workspace, UnpluggedTime, CreateWorkspaceInput, DbState, Project, Label, ProjectInput, LabelInput};
+use crate::domain::{Workspace, UnpluggedTime, CreateWorkspaceInput, DbState, Project, Label, ProjectInput, LabelInput};
 use crate::database;
-use crate::error::Result;
+use crate::domain::Result;
 
 #[tauri::command]
 pub async fn create_workspace(

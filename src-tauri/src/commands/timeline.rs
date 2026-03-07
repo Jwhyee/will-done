@@ -1,8 +1,8 @@
 use tauri::State;
 use chrono::{Local, NaiveDate, Timelike};
-use crate::models::{Task, TimeBlock, AddTaskInput, TaskTransitionInput, UpdateTaskInput, DbState};
+use crate::domain::{Task, TimeBlock, AddTaskInput, TaskTransitionInput, UpdateTaskInput, DbState};
 use crate::database;
-use crate::error::{Result, AppError};
+use crate::domain::{Result, AppError};
 
 #[tauri::command]
 pub async fn get_today_completed_duration(state: State<'_, DbState>, workspace_id: i64) -> Result<i64> {

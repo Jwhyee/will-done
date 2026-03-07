@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
-use crate::models::{Workspace, UnpluggedTime, CreateWorkspaceInput, Project, Label, ProjectInput, LabelInput};
-use crate::error::Result;
+use crate::domain::{Workspace, UnpluggedTime, CreateWorkspaceInput, Project, Label, ProjectInput, LabelInput};
+use crate::domain::Result;
 
 pub async fn get_workspaces(pool: &SqlitePool) -> Result<Vec<Workspace>> {
     let workspaces = sqlx::query_as::<_, Workspace>("SELECT * FROM workspaces")

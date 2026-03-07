@@ -1,8 +1,8 @@
 use tauri::State;
 use chrono::NaiveDateTime;
-use crate::models::{Retrospective, DbState, GeminiModel, GeminiModelsResponse, GeminiRequest, GeminiContent, GeminiPart, GeminiSystemInstruction, GeminiResponse};
+use crate::domain::{Retrospective, DbState, GeminiModel, GeminiModelsResponse, GeminiRequest, GeminiContent, GeminiPart, GeminiSystemInstruction, GeminiResponse};
 use crate::database;
-use crate::error::{Result, AppError};
+use crate::domain::{Result, AppError};
 
 #[tauri::command]
 pub async fn generate_retrospective(

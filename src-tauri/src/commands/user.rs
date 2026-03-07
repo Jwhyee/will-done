@@ -1,7 +1,7 @@
 use tauri::State;
-use crate::models::{User, DbState};
+use crate::domain::{User, DbState};
 use crate::database;
-use crate::error::{Result, AppError};
+use crate::domain::{Result, AppError};
 
 #[tauri::command]
 pub async fn get_user(state: State<'_, DbState>) -> Result<Option<User>> {

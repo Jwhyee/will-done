@@ -10,7 +10,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { TimePicker } from "./TimePicker";
+import { TimePicker } from "../forms/TimePicker";
 import { CreatableSelect } from "@/components/ui/creatable-select";
 import { TimeBlock } from "@/types";
 

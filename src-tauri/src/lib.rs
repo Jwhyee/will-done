@@ -1,5 +1,4 @@
-pub mod error;
-pub mod models;
+pub mod domain;
 pub mod database;
 pub mod commands;
 
@@ -7,7 +6,7 @@ use std::fs;
 use tauri::{Manager, Emitter, Listener};
 use sqlx::sqlite::SqlitePool;
 use serde_json;
-use crate::models::DbState;
+use crate::domain::DbState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

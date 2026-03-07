@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Task } from "@/types";
-import { DroppableArea } from "./DroppableArea";
+import { DroppableArea } from "../timeline/DroppableArea";
 import { InboxItem } from "./InboxItem";
 
 interface WorkspaceInboxProps {

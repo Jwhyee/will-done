@@ -37,13 +37,13 @@ import { Workspace, User } from "@/types";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PrimarySidebar } from "@/components/layout/PrimarySidebar";
 import { OnboardingView } from "@/features/onboarding/OnboardingView";
-import { WorkspaceCreateModal } from "@/features/workspace/components/WorkspaceCreateModal";
+import { WorkspaceCreateModal } from "@/features/workspace/components/modals/WorkspaceCreateModal";
 import { WorkspaceView } from "@/features/workspace/WorkspaceView";
 import { RetrospectiveView } from "@/features/retrospective/RetrospectiveView";
-import { GlobalSettingsModal } from "@/components/settings/GlobalSettingsModal";
-import { WorkspaceSettingsModal } from "@/components/settings/WorkspaceSettingsModal";
-import { InboxItem } from "@/features/workspace/components/InboxItem";
-import { SortableItem } from "@/features/workspace/components/SortableItem";
+import { GlobalSettingsModal } from "@/features/settings/GlobalSettingsModal";
+import { WorkspaceSettingsModal } from "@/features/workspace/components/settings/WorkspaceSettingsModal";
+import { InboxItem } from "@/features/workspace/components/inbox/InboxItem";
+import { SortableItem } from "@/features/workspace/components/timeline/SortableItem";
 
 // Hooks
 import { useApp } from "@/hooks/useApp";

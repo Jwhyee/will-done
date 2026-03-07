@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use chrono::Local;
-use crate::models::Retrospective;
-use crate::error::Result;
+use crate::domain::Retrospective;
+use crate::domain::Result;
 
 pub async fn get_saved_retrospectives(
     pool: &SqlitePool,

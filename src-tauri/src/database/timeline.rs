@@ -1,7 +1,7 @@
 use sqlx::{SqlitePool, Sqlite, Transaction, Row};
 use chrono::{NaiveDateTime, Duration, NaiveTime, NaiveDate, Local};
-use crate::models::{Task, TimeBlock, UnpluggedTime, AddTaskInput, TaskTransitionInput};
-use crate::error::{Result, AppError};
+use crate::domain::{Task, TimeBlock, UnpluggedTime, AddTaskInput, TaskTransitionInput};
+use crate::domain::{Result, AppError};
 
 pub async fn get_today_completed_duration(pool: &SqlitePool, workspace_id: i64, day_start_time: &str) -> Result<i64> {
     let now = Local::now();
@@ -470,7 +470,7 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
 
         if let Some(fid) = first_incomplete.0 {
             if fid != input.block_id {
-                return Err(crate::error::AppError::InvalidInput("Only the first active block of a split task can be transitioned.".to_string()));
+                return Err(crate::domain::AppError::InvalidInput("Only the first active block of a split task can be transitioned.".to_string()));
             }
         } else {
             // 모든 블록이 DONE인 경우, 마지막 블록만 수정 가능하도록 유지 (필요 시)
@@ -479,7 +479,7 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
                 .fetch_one(&mut *tx)
                 .await?;
             if last_id.0 != input.block_id {
-                return Err(crate::error::AppError::InvalidInput("Only the last block of a completed split task can be modified.".to_string()));
+                return Err(crate::domain::AppError::InvalidInput("Only the last block of a completed split task can be modified.".to_string()));
             }
         }
     }
@@ -548,7 +548,7 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
 
             shift_future_blocks(&mut tx, block.workspace_id, current_end, extra).await?;
         },
-        _ => return Err(crate::error::AppError::InvalidInput("Invalid action".to_string())),
+        _ => return Err(crate::domain::AppError::InvalidInput("Invalid action".to_string())),
     }
 
     tx.commit().await?;
@@ -571,7 +571,7 @@ pub async fn get_active_dates(pool: &SqlitePool, workspace_id: i64) -> Result<Ve
     Ok(dates)
 }
 
-pub async fn update_task(pool: &SqlitePool, input: crate::models::UpdateTaskInput) -> Result<()> {
+pub async fn update_task(pool: &SqlitePool, input: crate::domain::UpdateTaskInput) -> Result<()> {
     let mut tx = pool.begin().await?;
 
     let block: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = ?1")
@@ -671,7 +671,7 @@ pub async fn update_block_status(pool: &SqlitePool, block_id: i64, status: &str)
 
         if let Some(fid) = first_incomplete.0 {
             if fid != block_id {
-                return Err(crate::error::AppError::InvalidInput("Only the first active block of a split task can be modified.".to_string()));
+                return Err(crate::domain::AppError::InvalidInput("Only the first active block of a split task can be modified.".to_string()));
             }
         } else {
             let last_id: (i64,) = sqlx::query_as("SELECT MAX(id) FROM time_blocks WHERE task_id = ?1")
@@ -679,7 +679,7 @@ pub async fn update_block_status(pool: &SqlitePool, block_id: i64, status: &str)
                 .fetch_one(&mut *tx)
                 .await?;
             if last_id.0 != block_id {
-                return Err(crate::error::AppError::InvalidInput("Only the last block of a completed split task can be modified.".to_string()));
+                return Err(crate::domain::AppError::InvalidInput("Only the last block of a completed split task can be modified.".to_string()));
             }
         }
     }
@@ -1168,7 +1168,7 @@ mod tests {
         sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'Task B', '2026-03-01T09:30:00', '2026-03-01T10:30:00', 'WILL')").execute(&pool).await.unwrap();
 
         // 2. Update Task A: Change duration from 30m to 60m
-        let input = crate::models::UpdateTaskInput {
+        let input = crate::domain::UpdateTaskInput {
             block_id: 10,
             title: "Task A Updated".to_string(),
             description: Some("New desc".to_string()),
@@ -1220,7 +1220,7 @@ mod tests {
         assert!(result.is_ok());
 
         // 3. Complete the first block
-        let transition_input = crate::models::TaskTransitionInput {
+        let transition_input = crate::domain::TaskTransitionInput {
             block_id: 10,
             action: "COMPLETE_ON_TIME".to_string(),
             extra_minutes: None,
