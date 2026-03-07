@@ -22,7 +22,7 @@ export function CreatableSelect({
   createLabel?: (val: string) => string;
 }) {
   const [options, setOptions] = useState<any[]>([]);
-  const [inputValue, setInputValue] = useState(value || "");
+  const [searchTerm, setSearchTerm] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -35,16 +35,12 @@ export function CreatableSelect({
       }
     };
     if (isOpen) {
+      setSearchTerm("");
       fetchOptions();
     }
   }, [isOpen, fetchCommand]);
 
-  useEffect(() => {
-    setInputValue(value || "");
-  }, [value]);
-
   const handleSelect = (val: string) => {
-    setInputValue(val);
     onChange(val);
     setIsOpen(false);
   };
@@ -52,18 +48,18 @@ export function CreatableSelect({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleSelect(inputValue);
+      handleSelect(searchTerm || value);
     }
   };
 
-  const filteredOptions = options.filter(opt => opt.name.toLowerCase().includes(inputValue.toLowerCase()));
+  const filteredOptions = options.filter(opt => opt.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <button className={`flex items-center justify-between px-3 py-2 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-accent ${className || ""}`}>
-          <span className={inputValue ? "text-text-primary" : "text-text-muted truncate pr-2 max-w-[150px]"}>
-            {inputValue || placeholder}
+        <button className={`flex items-center justify-between px-3 py-2 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-accent w-full ${className || ""}`}>
+          <span className={value ? "text-text-primary" : "text-text-muted truncate pr-2 max-w-[150px]"}>
+            {value || placeholder}
           </span>
           <ChevronDown size={14} className="text-text-secondary opacity-50 shrink-0" />
         </button>
@@ -71,8 +67,8 @@ export function CreatableSelect({
       <PopoverContent className="w-48 p-0 bg-surface-elevated border-border rounded-xl shadow-xl" align="start">
         <div className="p-2 border-b border-border">
           <Input 
-            value={inputValue} 
-            onChange={e => setInputValue(e.target.value)} 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)} 
             onKeyDown={handleKeyDown}
             placeholder={placeholder} 
             className="h-8 text-sm bg-surface border-border"
@@ -86,16 +82,16 @@ export function CreatableSelect({
             onClick={() => handleSelect("")}
           >
             {noneLabel}
-            {inputValue === "" && <Check size={14} className="text-text-primary" />}
+            {value === "" && <Check size={14} className="text-text-primary" />}
           </button>
           
-          {filteredOptions.length === 0 && inputValue !== "" && (
+          {searchTerm !== "" && !options.some(opt => opt.name.toLowerCase() === searchTerm.toLowerCase()) && (
             <button 
               type="button"
               className="w-full text-left px-2 py-1.5 text-sm rounded-lg hover:bg-surface text-text-primary flex items-center justify-between"
-              onClick={() => handleSelect(inputValue)}
+              onClick={() => handleSelect(searchTerm)}
             >
-              <span className="truncate pr-2">{createLabel(inputValue)}</span>
+              <span className="truncate pr-2">{createLabel(searchTerm)}</span>
             </button>
           )}
 
@@ -107,7 +103,7 @@ export function CreatableSelect({
               onClick={() => handleSelect(opt.name)}
             >
               <span className="truncate pr-2">{opt.name}</span>
-              {inputValue === opt.name && <Check size={14} className="text-text-primary shrink-0" />}
+              {value === opt.name && <Check size={14} className="text-text-primary shrink-0" />}
             </button>
           ))}
         </div>

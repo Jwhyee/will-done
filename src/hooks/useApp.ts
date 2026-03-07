@@ -299,6 +299,8 @@ export function useApp() {
           hours: data.hours,
           minutes: data.minutes,
           reviewMemo: data.reviewMemo,
+          projectName: data.projectName,
+          labelName: data.labelName,
         }
       });
       fetchMainData();
