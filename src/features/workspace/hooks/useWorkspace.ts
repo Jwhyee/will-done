@@ -51,6 +51,8 @@ export const useWorkspace = ({
       minutes: z.number().min(0).max(59),
       planningMemo: z.string().optional(),
       isUrgent: z.boolean(),
+      projectName: z.string().optional(),
+      labelName: z.string().optional(),
     })
     .refine((data) => data.hours > 0 || data.minutes > 0, {
       message: "Duration must be at least 1 minute",
@@ -61,7 +63,7 @@ export const useWorkspace = ({
 
   const taskForm = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: { title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false },
+    defaultValues: { title: "", hours: 0, minutes: 30, planningMemo: "", isUrgent: false, projectName: "", labelName: "" },
   });
 
   const handleTaskSubmit = async (data: TaskFormValues, isInbox: boolean = false) => {
