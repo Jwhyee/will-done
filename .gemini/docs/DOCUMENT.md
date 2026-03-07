@@ -33,3 +33,11 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - [ ] Support recurring tasks (refactored out in current version).
 - [ ] Enhance AI models for better task title suggestions.
 - [ ] Add more granular analytics for time spent per project/label.
+
+## v1.1.0 - 2026-03-07 (Workspace Settings Refactoring)
+
+### Architecture Changes
+- **View Transition**: Migrated "Workspace Settings" from a modal-based interface (`WorkspaceSettingsModal.tsx`) to a dedicated page-based view (`WorkspaceSettingsView.tsx`).
+- **State Management**: Added `workspace_settings` state to `ViewState` in `useApp.ts` to support full-page navigation for workspace configuration.
+- **Improved UX**: The new dedicated view provides a more spacious layout for project and label management, improving scalability for future feature additions.
+- **Cleanup**: Deprecated and removed the legacy `WorkspaceSettingsModal.tsx`.

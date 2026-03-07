@@ -1,63 +1,69 @@
-# Execution Plan: Completion Modal Bug Fix & UX Improvement
+# Execution Plan: Refactor Workspace Settings to Dedicated Page
 
 ## 1. Goal
-Fix the infinite loop bug where the Completion Modal (Transition Modal) keeps reopening after being closed via click-outside or the 'X' button. Improve UX by adding a "Continue" button and unifying all cancellation logic to safely abort the completion process.
+Refactor the "Workspace Settings" from a restricted modal to a full-screen dedicated page view. This improves scalability for future features (like detailed project/label management) and provides a better UX for complex configuration tasks.
 
 ## 2. Scope
 ### In-Scope
-- Add a "Continue" (진행 중) button to the `TransitionModal`.
-- Unify event handlers for the "Continue" button, 'X' button, and Click-outside (`onInteractOutside`).
-- Implement a "dismissal" mechanism in `useApp.ts` to prevent the auto-opening logic from re-triggering the modal for the same task block immediately after cancellation.
-- Ensure state is fully reset when the modal is closed.
+- Introduce a new `workspace_settings` view state in the application.
+- Create a `WorkspaceSettingsView` component that implements the settings UI.
+- Update `App.tsx` to handle the transition to the settings view.
+- Update `PrimarySidebar` to trigger the new view instead of the modal.
+- Implement a "Back" button and ensure navigation returns to the main workspace view.
+- Preserve all existing functionality: Basic settings, Time settings, Project/Label management, and Workspace deletion.
 ### Out-of-Scope
-- Changing the backend logic for task completion (unless absolutely necessary for state synchronization).
-- Redesigning the entire transition flow.
+- Redesigning the underlying settings logic or backend commands.
+- Changing the global "Global Settings" modal (keep it as a modal for now).
 
 ## 3. Architecture Impact
 ```text
 src/
-├── lib/
-│   └── i18n.ts             # Add new translation keys
 ├── hooks/
-│   └── useApp.ts           # Implement dismissal logic to stop infinite loop
-└── features/
-    └── workspace/
-        └── components/
-            └── modals/
-                └── TransitionModal/
-                    ├── index.tsx             # Unify event handlers and close logic
-                    └── CompletionSection.tsx # Add "Continue" button
+│   └── useApp.ts           # Add 'workspace_settings' to ViewState
+├── features/
+│   └── workspace/
+│       ├── WorkspaceSettingsView.tsx  # New dedicated view component
+│       └── components/
+│           └── settings/
+│               └── WorkspaceSettingsModal.tsx # REMOVED
+└── App.tsx                 # Update renderView and remove Modal usage
 ```
 
 ## 4. Execution Plan
 
-### Phase 1: Preparation & Internationalization
-- [x] Add `continue_btn` translation key to `main.transition` in `src/lib/i18n.ts` for both `ko` and `en`.
-    - `ko`: "계속 진행"
-    - `en`: "Still working"
+### Phase 1: Infrastructure & State
+- [x] Add `workspace_settings` to `ViewState` union in `src/hooks/useApp.ts`.
+- [x] Add `settingsWorkspaceId` state to `useApp.ts` (or manage it in `AppContent`) to track which workspace is being edited.
 
-### Phase 2: Core Logic (Infinite Loop Fix)
-- [x] Modify `useApp.ts` to include a `dismissedBlockId` state or similar mechanism.
-- [x] Update `fetchMainData` in `useApp.ts` to skip auto-opening the `TransitionModal` if the current active block's ID matches `dismissedBlockId`.
-- [x] Update `onTransition` or create a new `onDismissTransition` to update this state.
+### Phase 2: Core View Implementation
+- [x] Create `src/features/workspace/WorkspaceSettingsView.tsx`.
+    - Adapt the layout from `WorkspaceSettingsModal.tsx` to a full-page layout.
+    - Implement a header with a "Back" button that sets view back to `main`.
+    - Reuse existing tab components: `WorkspaceBasicTab`, `WorkspaceTimeTab`, `ProjectManagementTab`, `LabelManagementTab`, `WorkspaceAdvancedTab`.
+    - Implement the deletion confirmation dialog within the new view.
 
-### Phase 3: UI Implementation & Event Integration
-- [x] Update `TransitionModal/CompletionSection.tsx` to include the "Continue" button below the submit button.
-- [x] Update `TransitionModal/index.tsx` to:
-    - Add an 'X' button to `DialogHeader` (or ensure shadcn/ui Dialog's default close button is visible and hooked up).
-    - Map the new "Continue" button, 'X' button, and `onOpenChange` (which handles click-outside) to a single `handleCancel` function.
-    - Ensure `handleCancel` calls the dismissal logic in `useApp.ts`.
+### Phase 3: Interface Integration
+- [x] Update `App.tsx`:
+    - Add `case "workspace_settings"` to `renderView`.
+    - Remove `WorkspaceSettingsModal` component and its associated local states if moved to `useApp`.
+    - Update `onOpenWorkspaceSettings` in `PrimarySidebar` props to trigger the view change.
+- [x] Update `PrimarySidebar.tsx`:
+    - Ensure the settings icon triggers the navigation correctly.
+
+### Phase 4: Refinement & Cleanup
+- [x] Ensure "Save Changes" correctly updates the workspace and provides feedback.
+- [x] Verify that deleting a workspace correctly redirects the user.
+- [x] Remove `src/features/workspace/components/settings/WorkspaceSettingsModal.tsx` after verification.
 
 ## 5. Risk Mitigation
-- **Potential Breaking Changes**: If the dismissal state is not cleared appropriately, the auto-modal might not appear when it should (e.g., if the user manually extends the task and it ends again).
-- **Rollback Strategy**: Revert `useApp.ts` logic to the previous auto-opening condition and remove the new UI components.
+- **Potential Breaking Changes**: Interruption of the settings flow if navigation state is lost on refresh (should be handled by `init` logic in `useApp`).
+- **Rollback Strategy**: Revert `App.tsx` and `useApp.ts` changes; restore `WorkspaceSettingsModal.tsx` usage.
 
 ## 6. Final Verification Wave
-- [x] Run `cargo check` to ensure backend stability (though minimal changes expected).
-- [x] Run `npm run build` or `tsc` to verify frontend types.
-- [ ] **Manual Spot Check**:
-    1. Start a task and wait for it to end (or manually set end time to past).
-    2. Verify `TransitionModal` opens automatically.
-    3. Click outside the modal. Verify it closes and DOES NOT reopen in 1 second.
-    4. Verify the "Continue" button exists and performs the same closing action.
-    5. Refresh the app and ensure the modal can reappear if the task is still in "NOW" status and past its end time (or decide if dismissal should persist).
+- [x] Run `cargo check` and `npm run build` (tsc) to ensure no type regressions.
+- [x] **Manual Spot Check**:
+    1. Open workspace settings from the sidebar.
+    2. Verify all tabs (Basic, Time, Projects, Labels, Advanced) load and function.
+    3. Change a setting and save. Verify the update is reflected in the UI.
+    4. Click the "Back" button and ensure it returns to the correct workspace view.
+    5. Test workspace deletion and ensure it redirects correctly.
