@@ -24,6 +24,7 @@ interface WorkspaceViewProps {
   onTaskSubmit: (data: any, isInbox?: boolean) => Promise<void>;
   onEditTaskSubmit: (blockId: number, data: any) => Promise<void>;
   onTransition: (block: TimeBlock, action: string, extraMinutes?: number, reviewMemo?: string) => Promise<void>;
+  onDismissTransition: (blockId: number) => void;
   onMoveToInbox: (blockId: number) => Promise<void>;
   onDeleteTask: (taskId: number) => Promise<void>;
   onHandleSplitTaskDeletion: (taskId: number, keepPast: boolean) => Promise<void>;
@@ -42,7 +43,7 @@ interface WorkspaceViewProps {
 
 export const WorkspaceView = ({
   t, user, workspacesCount, greeting, currentTime, logicalDate, selectedDate, onDateChange,
-  timeline, inboxTasks, activeWorkspaceId, onTaskSubmit, onEditTaskSubmit, onTransition,
+  timeline, inboxTasks, activeWorkspaceId, onTaskSubmit, onEditTaskSubmit, onTransition, onDismissTransition,
   onMoveToInbox, onDeleteTask, onHandleSplitTaskDeletion, onMoveAllToTimeline, onMoveToTimeline,
   onMoveTaskStep, onMoveTaskToPriority, onMoveTaskToBottom,
   onOpenRetrospective, onCreateWorkspace, transitionBlock, setTransitionBlock, workspaces, overId,
@@ -93,7 +94,18 @@ export const WorkspaceView = ({
         }}
       />
 
-      <TransitionModal t={t} transitionBlock={transitionBlock} onClose={() => setTransitionBlock(null)} onTransition={async (action, extra, memo) => { if (transitionBlock) await onTransition(transitionBlock, action, extra, memo); }} currentTime={currentTime} />
+      <TransitionModal
+        t={t}
+        transitionBlock={transitionBlock}
+        onClose={() => {
+          if (transitionBlock) onDismissTransition(transitionBlock.id);
+          setTransitionBlock(null);
+        }}
+        onTransition={async (action, extra, memo) => {
+          if (transitionBlock) await onTransition(transitionBlock, action, extra, memo);
+        }}
+        currentTime={currentTime}
+      />
       <EditTaskModal t={t} editTaskBlock={editTaskBlock} onClose={() => setEditTaskBlock(null)} onEditTaskSubmit={handleEditTaskSubmit} />
     </div>
   );

@@ -83,6 +83,7 @@ function AppContent() {
     onTaskSubmit,
     onEditTaskSubmit,
     onTransition,
+    onDismissTransition,
     onMoveTaskStep,
     onMoveTaskToPriority,
     onMoveTaskToBottom,
@@ -161,6 +162,7 @@ function AppContent() {
               onTaskSubmit={onTaskSubmit}
               onEditTaskSubmit={onEditTaskSubmit}
               onTransition={onTransition}
+              onDismissTransition={onDismissTransition}
               onMoveToInbox={async (blockId) => {
                 await invoke("move_to_inbox", { blockId });
                 fetchMainData();

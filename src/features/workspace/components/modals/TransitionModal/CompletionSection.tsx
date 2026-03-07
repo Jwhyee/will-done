@@ -12,6 +12,7 @@ interface CompletionSectionProps {
   agoMinutes: number;
   setAgoMinutes: (min: number) => void;
   handleComplete: () => Promise<void>;
+  onCancel: () => void;
   endTime: string;
   currentTime: Date;
 }
@@ -25,6 +26,7 @@ export const CompletionSection = ({
   agoMinutes,
   setAgoMinutes,
   handleComplete,
+  onCancel,
   endTime,
   currentTime,
 }: CompletionSectionProps) => {
@@ -96,6 +98,14 @@ export const CompletionSection = ({
         className="w-full h-12 bg-text-primary text-background hover:bg-text-primary/90 font-black rounded-xl text-sm shadow-md transition-all active:scale-[0.98] mt-2"
       >
         {t.main.transition.submit_btn}
+      </Button>
+
+      <Button
+        variant="ghost"
+        onClick={onCancel}
+        className="w-full h-10 text-text-secondary hover:text-text-primary hover:bg-surface font-bold rounded-xl text-xs transition-all active:scale-[0.98]"
+      >
+        {t.main.transition.continue_btn}
       </Button>
     </div>
   );

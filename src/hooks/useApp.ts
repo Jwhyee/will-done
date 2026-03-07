@@ -53,6 +53,7 @@ export function useApp() {
   const [overId, setOverId] = useState<string | null>(null);
   const [isWorkspaceCreateModalOpen, setIsWorkspaceCreateModalOpen] = useState(false);
   const [todayCompletedDuration, setTodayCompletedDuration] = useState<number>(0);
+  const [dismissedBlockId, setDismissedBlockId] = useState<number | null>(null);
   const lastNotifiedBlockId = useRef<number | null>(null);
 
   const { showToast } = useToast();
@@ -85,7 +86,7 @@ export function useApp() {
 
       if (isToday) {
         const active = list.find(b => b.status === "NOW");
-        if (active && new Date(active.endTime) < now && !transitionBlock) {
+        if (active && new Date(active.endTime) < now && !transitionBlock && dismissedBlockId !== active.id) {
           // Check if this is a split task (has a future part with same taskId)
           const hasFuturePart = list.some(b => b.taskId === active.taskId && b.id !== active.id && b.status === "WILL");
 
@@ -318,6 +319,7 @@ export function useApp() {
         }
       });
       setTransitionBlock(null);
+      setDismissedBlockId(null); // Clear dismissal on successful transition
 
       // Update duration and check threshold
       const newDuration = await invoke<number>("get_today_completed_duration", { workspaceId: activeWorkspaceId });
@@ -334,6 +336,11 @@ export function useApp() {
       console.error("Transition failed:", error);
     }
   };
+
+  const onDismissTransition = useCallback((blockId: number) => {
+    setDismissedBlockId(blockId);
+    setTransitionBlock(null);
+  }, []);
 
   const onMoveTaskStep = async (blockId: number, direction: "up" | "down") => {
     if (!activeWorkspaceId) return;
@@ -401,6 +408,7 @@ export function useApp() {
     onTaskSubmit,
     onEditTaskSubmit,
     onTransition,
+    onDismissTransition,
     onMoveTaskStep,
     onMoveTaskToPriority,
     onMoveTaskToBottom,

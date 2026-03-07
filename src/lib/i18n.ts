@@ -128,6 +128,7 @@ export const translations = {
         not_yet_warning: "아직 목표 시간이 되지 않았습니다.",
         modal_title: "태스크 완료",
         modal_desc: "[{title}] 태스크를 완료하시겠습니까?",
+        continue_btn: "계속 진행",
       },
       status: {
         overdue: "시간 초과",
@@ -409,6 +410,7 @@ export const translations = {
         not_yet_warning: "Target time has not been reached yet.",
         modal_title: "Task Finished",
         modal_desc: "Are you sure you want to finish [{title}]?",
+        continue_btn: "Still working",
       },
       status: {
         overdue: "Overdue",

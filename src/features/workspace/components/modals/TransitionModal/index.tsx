@@ -70,7 +70,7 @@ export const TransitionModal = ({
 
   return (
     <Dialog open={!!transitionBlock} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[440px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-6 antialiased [&>button]:hidden overflow-hidden">
+      <DialogContent className="sm:max-w-[440px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-6 antialiased overflow-hidden">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-xl font-black tracking-tighter text-text-primary">
             {t.main.transition.modal_title || t.main.transition.title}
@@ -103,6 +103,7 @@ export const TransitionModal = ({
               agoMinutes={agoMinutes}
               setAgoMinutes={setAgoMinutes}
               handleComplete={handleComplete}
+              onCancel={resetAndClose}
               endTime={transitionBlock.endTime}
               currentTime={currentTime}
             />
