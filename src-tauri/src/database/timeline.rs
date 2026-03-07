@@ -21,8 +21,8 @@ pub async fn get_today_completed_duration(pool: &SqlitePool, workspace_id: i64, 
          WHERE workspace_id = ?1 AND status IN ('DONE', 'PENDING') AND start_time >= ?2 AND start_time <= ?3"
     )
     .bind(workspace_id)
-    .bind(start_of_day.format("%Y-%m-%dT%H:%M:%S").to_string())
-    .bind(end_of_day.format("%Y-%m-%dT%H:%M:%S").to_string())
+    .bind(start_of_day.format("%Y-%m-%dT%H:%M:00").to_string())
+    .bind(end_of_day.format("%Y-%m-%dT%H:%M:00").to_string())
     .fetch_one(pool)
     .await?;
 
@@ -43,8 +43,8 @@ pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: Nai
          ORDER BY tb.start_time ASC"
     )
     .bind(workspace_id)
-    .bind(start_of_day.format("%Y-%m-%dT%H:%M:%S").to_string())
-    .bind(end_of_day.format("%Y-%m-%dT%H:%M:%S").to_string())
+    .bind(start_of_day.format("%Y-%m-%dT%H:%M:00").to_string())
+    .bind(end_of_day.format("%Y-%m-%dT%H:%M:00").to_string())
     .fetch_all(pool)
     .await?;
 
@@ -71,8 +71,8 @@ pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: Nai
             task_id: None,
             workspace_id,
             title: ut.label,
-            start_time: ut_start_dt.format("%Y-%m-%dT%H:%M:%S").to_string(),
-            end_time: ut_end_dt.format("%Y-%m-%dT%H:%M:%S").to_string(),
+            start_time: ut_start_dt.format("%Y-%m-%dT%H:%M:00").to_string(),
+            end_time: ut_end_dt.format("%Y-%m-%dT%H:%M:00").to_string(),
             status: "UNPLUGGED".to_string(),
             review_memo: None,
             planning_memo: None,
@@ -112,9 +112,9 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
             let existing: Option<(i64,)> = sqlx::query_as("SELECT id FROM projects WHERE name = ?1").bind(p_name).fetch_optional(&mut *tx).await?;
             if let Some((id,)) = existing {
                 project_id = Some(id);
-                sqlx::query("UPDATE projects SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).bind(id).execute(&mut *tx).await?;
+                sqlx::query("UPDATE projects SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:00").to_string()).bind(id).execute(&mut *tx).await?;
             } else {
-                let res = sqlx::query("INSERT INTO projects (name, last_used) VALUES (?1, ?2)").bind(p_name).bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&mut *tx).await?;
+                let res = sqlx::query("INSERT INTO projects (name, last_used) VALUES (?1, ?2)").bind(p_name).bind(Local::now().format("%Y-%m-%dT%H:%M:00").to_string()).execute(&mut *tx).await?;
                 project_id = Some(res.last_insert_rowid());
             }
         }
@@ -126,9 +126,9 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
             let existing: Option<(i64,)> = sqlx::query_as("SELECT id FROM labels WHERE name = ?1").bind(l_name).fetch_optional(&mut *tx).await?;
             if let Some((id,)) = existing {
                 label_id = Some(id);
-                sqlx::query("UPDATE labels SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).bind(id).execute(&mut *tx).await?;
+                sqlx::query("UPDATE labels SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:00").to_string()).bind(id).execute(&mut *tx).await?;
             } else {
-                let res = sqlx::query("INSERT INTO labels (name, color, last_used) VALUES (?1, '#808080', ?2)").bind(l_name).bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&mut *tx).await?;
+                let res = sqlx::query("INSERT INTO labels (name, color, last_used) VALUES (?1, '#808080', ?2)").bind(l_name).bind(Local::now().format("%Y-%m-%dT%H:%M:00").to_string()).execute(&mut *tx).await?;
                 label_id = Some(res.last_insert_rowid());
             }
         }
@@ -193,7 +193,7 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
         if let Some(block) = current_now {
             // 1. 현재 태스크 중단 -> PENDING 처리 (파트1)
             sqlx::query("UPDATE time_blocks SET end_time = ?1, status = 'PENDING' WHERE id = ?2")
-                .bind(now_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
+                .bind(now_dt.format("%Y-%m-%dT%H:%M:00").to_string())
                 .bind(block.id)
                 .execute(&mut *tx)
                 .await?;
@@ -511,7 +511,7 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
             }
 
             sqlx::query("UPDATE time_blocks SET status = 'DONE', end_time = ?1, review_memo = ?2 WHERE id = ?3")
-                .bind(end_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
+                .bind(end_dt.format("%Y-%m-%dT%H:%M:00").to_string())
                 .bind(input.review_memo)
                 .bind(input.block_id)
                 .execute(&mut *tx)
@@ -522,7 +522,7 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
                 "SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE' AND start_time >= ?2 ORDER BY start_time ASC LIMIT 1"
             )
             .bind(block.workspace_id)
-            .bind(end_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
+            .bind(end_dt.format("%Y-%m-%dT%H:%M:00").to_string())
             .fetch_optional(&mut *tx)
             .await?;
 
@@ -541,7 +541,7 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
             let new_end = current_end + Duration::minutes(extra);
 
             sqlx::query("UPDATE time_blocks SET end_time = ?1 WHERE id = ?2")
-                .bind(new_end.format("%Y-%m-%dT%H:%M:%S").to_string())
+                .bind(new_end.format("%Y-%m-%dT%H:%M:00").to_string())
                 .bind(input.block_id)
                 .execute(&mut *tx)
                 .await?;
@@ -586,9 +586,9 @@ pub async fn update_task(pool: &SqlitePool, input: crate::domain::UpdateTaskInpu
                 let existing: Option<(i64,)> = sqlx::query_as("SELECT id FROM projects WHERE name = ?1").bind(p_name).fetch_optional(&mut *tx).await?;
                 if let Some((id,)) = existing {
                     project_id = Some(id);
-                    sqlx::query("UPDATE projects SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).bind(id).execute(&mut *tx).await?;
+                    sqlx::query("UPDATE projects SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:00").to_string()).bind(id).execute(&mut *tx).await?;
                 } else {
-                    let res = sqlx::query("INSERT INTO projects (name, last_used) VALUES (?1, ?2)").bind(p_name).bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&mut *tx).await?;
+                    let res = sqlx::query("INSERT INTO projects (name, last_used) VALUES (?1, ?2)").bind(p_name).bind(Local::now().format("%Y-%m-%dT%H:%M:00").to_string()).execute(&mut *tx).await?;
                     project_id = Some(res.last_insert_rowid());
                 }
             }
@@ -600,9 +600,9 @@ pub async fn update_task(pool: &SqlitePool, input: crate::domain::UpdateTaskInpu
                 let existing: Option<(i64,)> = sqlx::query_as("SELECT id FROM labels WHERE name = ?1").bind(l_name).fetch_optional(&mut *tx).await?;
                 if let Some((id,)) = existing {
                     label_id = Some(id);
-                    sqlx::query("UPDATE labels SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).bind(id).execute(&mut *tx).await?;
+                    sqlx::query("UPDATE labels SET last_used = ?1 WHERE id = ?2").bind(Local::now().format("%Y-%m-%dT%H:%M:00").to_string()).bind(id).execute(&mut *tx).await?;
                 } else {
-                    let res = sqlx::query("INSERT INTO labels (name, color, last_used) VALUES (?1, '#808080', ?2)").bind(l_name).bind(Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()).execute(&mut *tx).await?;
+                    let res = sqlx::query("INSERT INTO labels (name, color, last_used) VALUES (?1, '#808080', ?2)").bind(l_name).bind(Local::now().format("%Y-%m-%dT%H:%M:00").to_string()).execute(&mut *tx).await?;
                     label_id = Some(res.last_insert_rowid());
                 }
             }
@@ -641,7 +641,7 @@ pub async fn update_task(pool: &SqlitePool, input: crate::domain::UpdateTaskInpu
         let new_end_dt = start_dt + Duration::minutes(new_duration);
 
         sqlx::query("UPDATE time_blocks SET end_time = ?1 WHERE id = ?2")
-            .bind(new_end_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
+            .bind(new_end_dt.format("%Y-%m-%dT%H:%M:00").to_string())
             .bind(input.block_id)
             .execute(&mut *tx)
             .await?;
@@ -844,8 +844,8 @@ async fn reorder_internal(tx: &mut Transaction<'_, Sqlite>, workspace_id: i64, b
             let new_end = current_time + Duration::minutes(duration_min);
             
             sqlx::query("UPDATE time_blocks SET start_time = ?1, end_time = ?2 WHERE id = ?3")
-                .bind(current_time.format("%Y-%m-%dT%H:%M:%S").to_string())
-                .bind(new_end.format("%Y-%m-%dT%H:%M:%S").to_string())
+                .bind(current_time.format("%Y-%m-%dT%H:%M:00").to_string())
+                .bind(new_end.format("%Y-%m-%dT%H:%M:00").to_string())
                 .bind(block.id)
                 .execute(&mut **tx)
                 .await?;
@@ -901,8 +901,8 @@ async fn schedule_task_blocks(
             let block_status = if first { status } else { "WILL" };
             sqlx::query("INSERT INTO time_blocks (task_id, workspace_id, title, start_time, end_time, status, is_urgent) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
                 .bind(task_id).bind(workspace_id).bind(title)
-                .bind(current_start.format("%Y-%m-%dT%H:%M:%S").to_string())
-                .bind(end.format("%Y-%m-%dT%H:%M:%S").to_string())
+                .bind(current_start.format("%Y-%m-%dT%H:%M:00").to_string())
+                .bind(end.format("%Y-%m-%dT%H:%M:00").to_string())
                 .bind(block_status)
                 .bind(is_urgent)
                 .execute(&mut **tx).await?;
@@ -923,7 +923,7 @@ async fn shift_future_blocks(
 ) -> Result<()> {
     let blocks: Vec<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND start_time >= ?2 AND status IN ('WILL', 'PENDING')")
         .bind(workspace_id)
-        .bind(after_dt.format("%Y-%m-%dT%H:%M:%S").to_string())
+        .bind(after_dt.format("%Y-%m-%dT%H:%M:00").to_string())
         .fetch_all(&mut **tx)
         .await?;
 
@@ -932,8 +932,8 @@ async fn shift_future_blocks(
         let new_end = NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap() + Duration::minutes(shift_minutes);
         
         sqlx::query("UPDATE time_blocks SET start_time = ?1, end_time = ?2 WHERE id = ?3")
-            .bind(new_start.format("%Y-%m-%dT%H:%M:%S").to_string())
-            .bind(new_end.format("%Y-%m-%dT%H:%M:%S").to_string())
+            .bind(new_start.format("%Y-%m-%dT%H:%M:00").to_string())
+            .bind(new_end.format("%Y-%m-%dT%H:%M:00").to_string())
             .bind(block.id)
             .execute(&mut **tx)
             .await?;
@@ -1512,7 +1512,7 @@ mod tests {
 
         shift_future_blocks(&mut tx, 1, original_end, diff).await.unwrap();
         sqlx::query("UPDATE time_blocks SET end_time = ?1, status = 'DONE' WHERE id = 10")
-            .bind(early_end.format("%Y-%m-%dT%H:%M:%S").to_string())
+            .bind(early_end.format("%Y-%m-%dT%H:%M:00").to_string())
             .execute(&mut *tx).await.unwrap();
         tx.commit().await.unwrap();
 
@@ -1693,5 +1693,33 @@ mod tests {
         
         let t2 = blocks.iter().find(|b| b.id == 12).unwrap();
         assert_eq!(t2.start_time, "2026-03-01T10:30:00");
+    }
+
+    #[tokio::test]
+    async fn test_time_normalization_on_add_task() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // Pass now_dt with non-zero seconds: 10:15:34
+        let now_dt = NaiveDateTime::parse_from_str("2026-03-01T10:15:34", "%Y-%m-%dT%H:%M:%S").unwrap();
+        let input = AddTaskInput {
+            workspace_id: 1,
+            title: "Normalize Me".to_string(),
+            hours: 0,
+            minutes: 30,
+            planning_memo: None,
+            is_urgent: true,
+            is_inbox: Some(false),
+            project_name: None,
+            label_name: None,
+        };
+
+        add_task_at(&pool, input, now_dt).await.unwrap();
+
+        let blocks = get_timeline(&pool, 1, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap(), "04:00").await.unwrap();
+        
+        // Should be 10:15:00
+        assert_eq!(blocks[0].start_time, "2026-03-01T10:15:00");
+        assert_eq!(blocks[0].end_time, "2026-03-01T10:45:00");
     }
 }

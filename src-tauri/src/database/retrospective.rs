@@ -56,7 +56,7 @@ pub async fn save_retrospective(
     date_label: &str,
     used_model: Option<&str>,
 ) -> Result<Retrospective> {
-    let now = Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let now = Local::now().format("%Y-%m-%dT%H:%M:00").to_string();
     let result = sqlx::query(
         "INSERT INTO retrospectives (workspace_id, retro_type, content, date_label, created_at, used_model) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
     )

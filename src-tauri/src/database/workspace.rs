@@ -112,7 +112,7 @@ pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<Project>> {
 }
 
 pub async fn create_project(pool: &SqlitePool, input: ProjectInput) -> Result<i64> {
-    let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:00").to_string();
     let result = sqlx::query("INSERT INTO projects (name, last_used) VALUES (?1, ?2)")
         .bind(&input.name)
         .bind(&now)
@@ -146,7 +146,7 @@ pub async fn get_labels(pool: &SqlitePool) -> Result<Vec<Label>> {
 }
 
 pub async fn create_label(pool: &SqlitePool, input: LabelInput) -> Result<i64> {
-    let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:00").to_string();
     let result = sqlx::query("INSERT INTO labels (name, color, last_used) VALUES (?1, ?2, ?3)")
         .bind(&input.name)
         .bind(&input.color)

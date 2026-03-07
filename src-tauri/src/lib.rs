@@ -95,7 +95,7 @@ pub fn run() {
                             now.date_naive()
                         };
                         let yesterday_logical = today_logical - chrono::Duration::days(1);
-                        let now_str = now.format("%Y-%m-%dT%H:%M:%S").to_string();
+                        let now_str = now.format("%Y-%m-%dT%H:%M:00").to_string();
 
                         for (i, logical_date) in [yesterday_logical, today_logical].iter().enumerate() {
                             let offset = (i as i64) * 100;
@@ -201,6 +201,10 @@ pub fn run() {
                 sqlx::query("ALTER TABLE retrospectives ADD COLUMN used_model TEXT").execute(&pool).await.ok();
 
                 sqlx::query("DROP TABLE IF EXISTS recurring_tasks").execute(&pool).await.ok();
+
+                // Normalization: Ensure all time blocks and unplugged times have :00 seconds
+                sqlx::query("UPDATE time_blocks SET start_time = strftime('%Y-%m-%dT%H:%M:00', start_time), end_time = strftime('%Y-%m-%dT%H:%M:00', end_time)").execute(&pool).await.ok();
+                sqlx::query("UPDATE unplugged_times SET start_time = strftime('%H:%M', start_time), end_time = strftime('%H:%M', end_time)").execute(&pool).await.ok();
 
                 app_handle.manage(DbState { pool });
             });
