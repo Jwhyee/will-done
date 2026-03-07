@@ -41,3 +41,11 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - **State Management**: Added `workspace_settings` state to `ViewState` in `useApp.ts` to support full-page navigation for workspace configuration.
 - **Improved UX**: The new dedicated view provides a more spacious layout for project and label management, improving scalability for future feature additions.
 - **Cleanup**: Deprecated and removed the legacy `WorkspaceSettingsModal.tsx`.
+
+## v1.2.0 - 2026-03-07 (Bug Fix: Task Transition & Promotion)
+
+### Improvements
+- **Automatic Task Promotion**: Updated `process_task_transition` to automatically promote the next `WILL` or `PENDING` task to `NOW` when the current task is completed.
+- **Dynamic Time-Shifting**: Implemented logic to pull up subsequent tasks when a task is completed early or "on time" (if there was a gap), eliminating unintended gaps in the timeline and maintaining task continuity.
+- **Improved Next Block Lookup**: Refined the SQL query to find the logical next task by filtering based on the current block's `start_time`, preventing incorrect promotion of past `PENDING` tasks.
+- **Enhanced Test Coverage**: Added comprehensive unit tests in `src-tauri/src/database/timeline.rs` to verify auto-promotion and time-shifting across various scenarios (early completion, gaps, etc.).
