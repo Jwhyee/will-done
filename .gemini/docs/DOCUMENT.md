@@ -30,3 +30,4 @@ The project follows a modern full-stack desktop application architecture using *
 
 ## Versioning
 - **v1.0.0 - 2026-03-06**: Initial version of the project documentation and knowledge base. Project setup with Tauri, React, and SQLite. Core features including Workspace management, Timeline, and Retrospective are implemented and being refined.
+- **v1.1.0 - 2026-03-07**: Bug fix for task deletion time-shift. Updated `delete_task`, `move_to_inbox`, and `handle_split_task_deletion` to correctly trigger timeline recalculation. Added automated tests for verification.
