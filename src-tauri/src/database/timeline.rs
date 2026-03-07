@@ -1,5 +1,5 @@
 use sqlx::{SqlitePool, Sqlite, Transaction, Row};
-use chrono::{NaiveDateTime, Duration, NaiveTime, NaiveDate, Local};
+use chrono::{NaiveDateTime, Duration, NaiveTime, NaiveDate, Local, Timelike};
 use crate::domain::{Task, TimeBlock, UnpluggedTime, AddTaskInput, TaskTransitionInput};
 use crate::domain::{Result, AppError};
 
@@ -494,13 +494,11 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
                 NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap()
             };
 
-            if input.action != "COMPLETE_ON_TIME" {
-                let original_end = NaiveDateTime::parse_from_str(&block.end_time, "%Y-%m-%dT%H:%M:%S").unwrap();
-                let diff = (end_dt - original_end).num_minutes();
-                if diff != 0 {
-                    shift_future_blocks(&mut tx, block.workspace_id, original_end, diff).await?;
-                }
-            }
+            // Normalize end_dt to minutes
+            let end_dt = NaiveDateTime::new(
+                end_dt.date(),
+                NaiveTime::from_hms_opt(end_dt.hour(), end_dt.minute(), 0).unwrap()
+            );
 
             // 동일 task_id를 가진 모든 블록을 DONE으로 업데이트 (상태 동기화)
             if let Some(task_id) = block.task_id {
@@ -517,22 +515,30 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
                 .execute(&mut *tx)
                 .await?;
 
-            // Auto-resume logic: if the next sequential task is PENDING, set it to NOW
+            // Auto-promotion logic: find the logical next block
             let next_block: Option<TimeBlock> = sqlx::query_as(
-                "SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status != 'DONE' AND start_time >= ?2 ORDER BY start_time ASC LIMIT 1"
+                "SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status IN ('WILL', 'PENDING') AND id != ?2 AND start_time >= ?3 ORDER BY start_time ASC LIMIT 1"
             )
             .bind(block.workspace_id)
-            .bind(end_dt.format("%Y-%m-%dT%H:%M:00").to_string())
+            .bind(input.block_id)
+            .bind(&block.start_time)
             .fetch_optional(&mut *tx)
             .await?;
 
             if let Some(nb) = next_block {
-                if nb.status == "PENDING" {
-                    sqlx::query("UPDATE time_blocks SET status = 'NOW' WHERE id = ?1")
-                        .bind(nb.id)
-                        .execute(&mut *tx)
-                        .await?;
+                let nb_start = NaiveDateTime::parse_from_str(&nb.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+                let diff = (end_dt - nb_start).num_minutes();
+                
+                // Shift all future blocks (including next_block) to start at end_dt
+                if diff != 0 {
+                    shift_future_blocks(&mut tx, block.workspace_id, nb_start, diff).await?;
                 }
+                
+                // Promote next block to NOW
+                sqlx::query("UPDATE time_blocks SET status = 'NOW' WHERE id = ?1")
+                    .bind(nb.id)
+                    .execute(&mut *tx)
+                    .await?;
             }
         },
         "DELAY" => {
@@ -1641,6 +1647,106 @@ mod tests {
         assert_eq!(t1_past.status, "PENDING");
         // T1 future auto-resumes to NOW!
         assert_eq!(t1_future.status, "NOW");
+    }
+
+    #[tokio::test]
+    async fn test_auto_promotion_and_shifting_on_early_completion() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // Task A: 10:00 - 11:00 (NOW)
+        // Task B: 11:00 - 12:00 (WILL)
+        // Task C: 12:00 - 13:00 (WILL)
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'Task A')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'Task B')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (3, 1, 'Task C')").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'Task A', '2026-03-01T10:00:00', '2026-03-01T11:00:00', 'NOW')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'Task B', '2026-03-01T11:00:00', '2026-03-01T12:00:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 3, 1, 'Task C', '2026-03-01T12:00:00', '2026-03-01T13:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // 10:30에 Task A를 완료 (COMPLETE_AGO)
+        // Since we can't easily mock Local::now(), we calculate extra_minutes dynamically to reach 10:30 on 2026-03-01.
+        // Wait, Local::now() is TODAY. Our test data is 2026-03-01.
+        // If TODAY is not 2026-03-01, COMPLETE_AGO will set end_dt to TODAY 10:30.
+        // This might move the task to today!
+        
+        // Okay, I should probably use a date closer to "now" or just mock the logic.
+        // But for the sake of the test, I will update the test data to use today's date.
+        let today = Local::now().date_naive();
+        let t_str = today.format("%Y-%m-%d").to_string();
+        
+        sqlx::query("UPDATE time_blocks SET start_time = ?1 || SUBSTR(start_time, 11), end_time = ?1 || SUBSTR(end_time, 11)").bind(&t_str).execute(&pool).await.unwrap();
+
+        let target_time = NaiveDateTime::new(today, NaiveTime::from_hms_opt(10, 30, 0).unwrap());
+        let now = Local::now().naive_local();
+        let extra = (now - target_time).num_minutes();
+        
+        let transition_input = crate::domain::TaskTransitionInput {
+            block_id: 10,
+            action: "COMPLETE_AGO".to_string(),
+            extra_minutes: Some(if extra > 0 { extra as i32 } else { 0 }),
+            review_memo: None,
+        };
+        
+        process_task_transition(&pool, transition_input).await.unwrap();
+
+        // 검증
+        let blocks = get_timeline(&pool, 1, today, "04:00").await.unwrap();
+        
+        // Task A (DONE)
+        assert_eq!(blocks[0].title, "Task A");
+        assert_eq!(blocks[0].status, "DONE");
+        // end_time should be target_time (normalized to minutes)
+        assert_eq!(blocks[0].end_time, format!("{}T10:30:00", t_str));
+
+        // Task B (NOW, 10:30-11:30)
+        assert_eq!(blocks[1].title, "Task B");
+        assert_eq!(blocks[1].status, "NOW"); 
+        assert_eq!(blocks[1].start_time, format!("{}T10:30:00", t_str));
+        assert_eq!(blocks[1].end_time, format!("{}T11:30:00", t_str));
+        
+        // Task C (WILL, 11:30-12:30)
+        assert_eq!(blocks[2].title, "Task C");
+        assert_eq!(blocks[2].start_time, format!("{}T11:30:00", t_str));
+    }
+
+    #[tokio::test]
+    async fn test_auto_promotion_with_gap() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // Task A: 10:00 - 10:30 (NOW)
+        // Gap: 10:30 - 11:00
+        // Task B: 11:00 - 12:00 (WILL)
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'Task A')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'Task B')").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'Task A', '2026-03-01T10:00:00', '2026-03-01T10:30:00', 'NOW')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 2, 1, 'Task B', '2026-03-01T11:00:00', '2026-03-01T12:00:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // Use today's date for Local::now() compatibility
+        let today = Local::now().date_naive();
+        let t_str = today.format("%Y-%m-%d").to_string();
+        sqlx::query("UPDATE time_blocks SET start_time = ?1 || SUBSTR(start_time, 11), end_time = ?1 || SUBSTR(end_time, 11)").bind(&t_str).execute(&pool).await.unwrap();
+
+        // Task A를 정해진 시간에 완료 (COMPLETE_ON_TIME)
+        let transition_input = crate::domain::TaskTransitionInput {
+            block_id: 10,
+            action: "COMPLETE_ON_TIME".to_string(),
+            extra_minutes: None,
+            review_memo: None,
+        };
+        
+        process_task_transition(&pool, transition_input).await.unwrap();
+
+        // 검증
+        let blocks = get_timeline(&pool, 1, today, "04:00").await.unwrap();
+        
+        // Task B (Should be promoted to NOW and pulled up to 10:30)
+        assert_eq!(blocks[1].title, "Task B");
+        assert_eq!(blocks[1].status, "NOW");
+        assert_eq!(blocks[1].start_time, format!("{}T10:30:00", t_str));
     }
 
     #[tokio::test]
