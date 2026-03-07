@@ -3,12 +3,10 @@ import { TimeBlock, Task, User, Workspace } from "@/types";
 import { TransitionModal } from "./components/TransitionModal";
 import { EditTaskModal } from "./components/EditTaskModal";
 import { useWorkspace } from "./hooks/useWorkspace";
-import { useRecurringTasks } from "./hooks/useRecurringTasks";
 import { WorkspaceHeader } from "./components/WorkspaceHeader";
 import { WorkspaceTimeline } from "./components/WorkspaceTimeline";
 import { WorkspaceInbox } from "./components/WorkspaceInbox";
 import { WorkspaceDialogs } from "./components/WorkspaceDialogs";
-import { RoutineSuggestionBar } from "./components/RoutineSuggestionBar";
 import { WorkspaceEmptyState } from "./components/WorkspaceEmptyState";
 
 interface WorkspaceViewProps {
@@ -50,7 +48,6 @@ export const WorkspaceView = ({
   onOpenRetrospective, onCreateWorkspace, transitionBlock, setTransitionBlock, workspaces, overId,
 }: WorkspaceViewProps) => {
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
-  const { tasks: recurringTasks } = useRecurringTasks(activeWorkspaceId);
   const {
     hoverTaskId, setHoverTaskId, deleteTaskProps, setDeleteTaskProps, isSplitDelete, setIsSplitDelete,
     moveAllConfirm, setMoveAllConfirm, exceededConfirm, setExceededConfirm, isInboxOpen, setIsInboxOpen,
@@ -59,32 +56,6 @@ export const WorkspaceView = ({
 
   const dailyProgress = calculateProgress();
   const isPastView = !!selectedDate && format(selectedDate, "yyyy-MM-dd") !== format(logicalDate, "yyyy-MM-dd");
-
-  const routineSuggestions = (() => {
-    if (isPastView || !activeWorkspaceId) return [];
-    const currentDay = logicalDate.getDay();
-    
-    // Normalize titles for comparison
-    const existingTitles = new Set([
-      ...timeline.map(b => b.title.trim().toLowerCase()),
-      ...inboxTasks.map(t => t.title.trim().toLowerCase())
-    ]);
-
-    return recurringTasks.filter((rt) => {
-      try {
-        const days = JSON.parse(rt.daysOfWeek) as number[];
-        const isToday = days.includes(currentDay);
-        const alreadyAdded = existingTitles.has(rt.title.trim().toLowerCase());
-        return isToday && !alreadyAdded;
-      } catch { return false; }
-    });
-  })();
-
-  const handleInstantiateRoutine = async (task: any) => {
-    const hours = Math.floor(task.duration / 60);
-    const minutes = task.duration % 60;
-    await handleTaskSubmit({ title: task.title, hours, minutes, planningMemo: task.planningMemo || "", isUrgent: false });
-  };
 
   if (workspacesCount === 0) return <WorkspaceEmptyState t={t} onCreateWorkspace={onCreateWorkspace} />;
 
@@ -96,12 +67,6 @@ export const WorkspaceView = ({
         taskForm={taskForm} onTaskSubmit={handleTaskSubmit} onTaskError={handleTaskError} onOpenInbox={() => setIsInboxOpen(true)}
         onOpenRetrospective={onOpenRetrospective} isPastView={isPastView}
       />
-
-      {!isPastView && routineSuggestions.length > 0 && (
-        <div className="px-8 mt-4 shrink-0">
-          <RoutineSuggestionBar suggestions={routineSuggestions} onInstantiate={handleInstantiateRoutine} t={t} />
-        </div>
-      )}
 
       <WorkspaceTimeline
         t={t} timeline={timeline} inboxTasksCount={inboxTasks.length} currentTime={currentTime} onTransition={setTransitionBlock}

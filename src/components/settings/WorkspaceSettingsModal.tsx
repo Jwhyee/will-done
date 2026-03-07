@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useForm, useFieldArray } from "react-hook-form";
-import { AlertTriangle, Settings2, Clock, ShieldAlert, Repeat } from "lucide-react";
+import { AlertTriangle, Settings2, Clock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/providers/ToastProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useRecurringTasks } from "@/features/workspace/hooks/useRecurringTasks";
 import { WorkspaceBasicTab } from "./WorkspaceBasicTab";
 import { WorkspaceTimeTab } from "./WorkspaceTimeTab";
-import { WorkspaceRoutineTab } from "./WorkspaceRoutineTab";
 import { WorkspaceAdvancedTab } from "./WorkspaceAdvancedTab";
 
 interface WorkspaceSettingsModalProps {
@@ -43,7 +41,6 @@ export const WorkspaceSettingsModal = ({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
   const [targetWorkspaceName, setTargetWorkspaceName] = useState("");
-  const { tasks: recurringTasks, addTask, deleteTask: removeRecurringTask } = useRecurringTasks(workspaceId);
 
   const { register, handleSubmit, control, reset } = useForm({
     defaultValues: {
@@ -147,7 +144,6 @@ export const WorkspaceSettingsModal = ({
               <TabsList className="w-full h-11 bg-surface border border-border/50 p-1 mb-6 shrink-0 flex overflow-x-auto scrollbar-hide">
                 <TabsTrigger value="basic" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Settings2 size={14} />{t.sidebar.workspace_tab_basic}</TabsTrigger>
                 <TabsTrigger value="time" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Clock size={14} />{t.sidebar.workspace_tab_time}</TabsTrigger>
-                <TabsTrigger value="routine" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Repeat size={14} />{t.sidebar.workspace_tab_routine}</TabsTrigger>
                 <TabsTrigger value="advanced" className="flex-1 gap-2 whitespace-nowrap shrink-0"><ShieldAlert size={14} />{t.sidebar.workspace_tab_advanced}</TabsTrigger>
               </TabsList>
 
@@ -157,9 +153,6 @@ export const WorkspaceSettingsModal = ({
                 </TabsContent>
                 <TabsContent value="time" className="h-full m-0 outline-none data-[state=inactive]:hidden">
                   <WorkspaceTimeTab register={register} fields={fields} append={append} remove={remove} t={t} />
-                </TabsContent>
-                <TabsContent value="routine" className="h-full m-0 outline-none data-[state=inactive]:hidden">
-                  <WorkspaceRoutineTab recurringTasks={recurringTasks} addTask={addTask} removeRecurringTask={removeRecurringTask} t={t} />
                 </TabsContent>
                 <TabsContent value="advanced" className="h-full m-0 outline-none data-[state=inactive]:hidden">
                   <WorkspaceAdvancedTab setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} t={t} />
