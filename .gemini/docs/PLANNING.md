@@ -1,58 +1,63 @@
-# Execution Plan: Task Deletion Time-Shift Bug Fix
+# Execution Plan: Completion Modal Bug Fix & UX Improvement
 
 ## 1. Goal
-Fix the bug where deleting a task (specifically one placed immediately after a 'NOW' task) fails to trigger the time-shift recalculation, causing subsequent 'WILL' tasks to retain incorrect start/end times.
+Fix the infinite loop bug where the Completion Modal (Transition Modal) keeps reopening after being closed via click-outside or the 'X' button. Improve UX by adding a "Continue" button and unifying all cancellation logic to safely abort the completion process.
 
 ## 2. Scope
 ### In-Scope
-- Update the Rust backend task deletion logic (e.g., `delete_task`) to trigger timeline recalculation (time-shift) immediately after a task is removed.
-- Ensure the deletion and recalculation happen safely within a database transaction or sequence.
-- Ensure the frontend timeline UI correctly and immediately synchronizes with the newly calculated times after a deletion.
+- Add a "Continue" (진행 중) button to the `TransitionModal`.
+- Unify event handlers for the "Continue" button, 'X' button, and Click-outside (`onInteractOutside`).
+- Implement a "dismissal" mechanism in `useApp.ts` to prevent the auto-opening logic from re-triggering the modal for the same task block immediately after cancellation.
+- Ensure state is fully reset when the modal is closed.
 ### Out-of-Scope
-- Completely rewriting the time calculation engine if it already functions correctly for other operations (like drag-and-drop or task completion).
-- Refactoring frontend UI components unrelated to the timeline view.
+- Changing the backend logic for task completion (unless absolutely necessary for state synchronization).
+- Redesigning the entire transition flow.
 
 ## 3. Architecture Impact
 ```text
-src-tauri/
-└── src/
-    ├── commands/
-    │   └── workspace.rs
-    └── database/
-        └── workspace.rs
 src/
+├── lib/
+│   └── i18n.ts             # Add new translation keys
+├── hooks/
+│   └── useApp.ts           # Implement dismissal logic to stop infinite loop
 └── features/
     └── workspace/
-        ├── WorkspaceView.tsx
-        └── hooks/
-            └── useWorkspace.ts
+        └── components/
+            └── modals/
+                └── TransitionModal/
+                    ├── index.tsx             # Unify event handlers and close logic
+                    └── CompletionSection.tsx # Add "Continue" button
 ```
 
 ## 4. Execution Plan
-*(Use `- [ ]` for all actionable steps. Break down into atomic tasks.)*
 
-### Phase 1: Preparation & Infrastructure
-- [x] Locate the backend task deletion handler (e.g., `delete_task` in `src-tauri/src/commands/workspace.rs` and `src-tauri/src/database/workspace.rs`).
-- [x] Identify the exact Rust function responsible for reordering (`sort_order`) and recalculating timeline times.
+### Phase 1: Preparation & Internationalization
+- [x] Add `continue_btn` translation key to `main.transition` in `src/lib/i18n.ts` for both `ko` and `en`.
+    - `ko`: "계속 진행"
+    - `en`: "Still working"
 
-### Phase 2: Core Domain / Backend Logic
-- [x] Modify the deletion database operation to wrap both the `DELETE` statement and the subsequent timeline recalculation within a robust flow (e.g., a database transaction).
-- [x] Ensure that after the task is deleted, the recalculation logic correctly shifts the times of all subsequent 'WILL' tasks forward.
-- [x] Return the fully updated list of tasks (or ensure a success signal prompts the frontend to refetch).
+### Phase 2: Core Logic (Infinite Loop Fix)
+- [x] Modify `useApp.ts` to include a `dismissedBlockId` state or similar mechanism.
+- [x] Update `fetchMainData` in `useApp.ts` to skip auto-opening the `TransitionModal` if the current active block's ID matches `dismissedBlockId`.
+- [x] Update `onTransition` or create a new `onDismissTransition` to update this state.
 
-### Phase 3: Interfaces / Frontend UI
-- [x] Update the frontend deletion function (e.g., inside `useWorkspace.ts`) to handle the backend response, either by updating the local state with the returned recalculated tasks or by triggering a timeline refetch.
-- [x] Confirm that `WorkspaceView.tsx` (or related timeline components) immediately reflects the new times without requiring a page reload.
+### Phase 3: UI Implementation & Event Integration
+- [x] Update `TransitionModal/CompletionSection.tsx` to include the "Continue" button below the submit button.
+- [x] Update `TransitionModal/index.tsx` to:
+    - Add an 'X' button to `DialogHeader` (or ensure shadcn/ui Dialog's default close button is visible and hooked up).
+    - Map the new "Continue" button, 'X' button, and `onOpenChange` (which handles click-outside) to a single `handleCancel` function.
+    - Ensure `handleCancel` calls the dismissal logic in `useApp.ts`.
 
 ## 5. Risk Mitigation
-- **Potential Breaking Changes**: Triggering complex recalculation queries within the deletion transaction could cause database locks or slow down the UI if not optimized.
-- **Rollback Strategy**: Revert the backend `delete_task` command to its previous state and decouple the recalculation if performance issues or deadlocks occur.
+- **Potential Breaking Changes**: If the dismissal state is not cleared appropriately, the auto-modal might not appear when it should (e.g., if the user manually extends the task and it ends again).
+- **Rollback Strategy**: Revert `useApp.ts` logic to the previous auto-opening condition and remove the new UI components.
 
 ## 6. Final Verification Wave
-- [x] Run `cargo test` and `cargo check` (or equivalent backend validation)
-- [x] Run `npm run build` or linting (or equivalent frontend validation)
-- [x] Manual Spot Check instructions:
-  - Create a new task.
-  - Move the new task to be sequentially right after the currently running ('NOW') task.
-  - Delete this task.
-  - Observe the timeline: Verify that the start and end times of all subsequent 'WILL' tasks immediately shift forward by the duration of the deleted task.
+- [x] Run `cargo check` to ensure backend stability (though minimal changes expected).
+- [x] Run `npm run build` or `tsc` to verify frontend types.
+- [ ] **Manual Spot Check**:
+    1. Start a task and wait for it to end (or manually set end time to past).
+    2. Verify `TransitionModal` opens automatically.
+    3. Click outside the modal. Verify it closes and DOES NOT reopen in 1 second.
+    4. Verify the "Continue" button exists and performs the same closing action.
+    5. Refresh the app and ensure the modal can reappear if the task is still in "NOW" status and past its end time (or decide if dismissal should persist).
