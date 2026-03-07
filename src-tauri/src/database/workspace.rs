@@ -1,5 +1,5 @@
 use sqlx::SqlitePool;
-use crate::models::{Workspace, UnpluggedTime, CreateWorkspaceInput, RecurringTask, CreateRecurringTaskInput};
+use crate::models::{Workspace, UnpluggedTime, CreateWorkspaceInput};
 use crate::error::Result;
 
 pub async fn get_workspaces(pool: &SqlitePool) -> Result<Vec<Workspace>> {
@@ -44,24 +44,6 @@ pub async fn create_workspace(
         .bind(ut.end_time)
         .execute(&mut *tx)
         .await?;
-    }
-
-    if let Some(recurring_tasks) = input.recurring_tasks {
-        let created_at = chrono::Local::now().to_rfc3339();
-        for rt in recurring_tasks {
-            let days_of_week_json = serde_json::to_string(&rt.days_of_week)?;
-            sqlx::query(
-                "INSERT INTO recurring_tasks (workspace_id, title, planning_memo, duration, days_of_week, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            )
-            .bind(workspace_id)
-            .bind(rt.title)
-            .bind(rt.planning_memo)
-            .bind(rt.duration)
-            .bind(days_of_week_json)
-            .bind(&created_at)
-            .execute(&mut *tx)
-            .await?;
-        }
     }
 
     tx.commit().await?;
@@ -110,70 +92,12 @@ pub async fn update_workspace(
         .await?;
     }
 
-    if let Some(recurring_tasks) = input.recurring_tasks {
-        let created_at = chrono::Local::now().to_rfc3339();
-        sqlx::query("DELETE FROM recurring_tasks WHERE workspace_id = ?1")
-            .bind(id)
-            .execute(&mut *tx)
-            .await?;
-            
-        for rt in recurring_tasks {
-            let days_of_week_json = serde_json::to_string(&rt.days_of_week)?;
-            sqlx::query(
-                "INSERT INTO recurring_tasks (workspace_id, title, planning_memo, duration, days_of_week, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            )
-            .bind(id)
-            .bind(rt.title)
-            .bind(rt.planning_memo)
-            .bind(rt.duration)
-            .bind(days_of_week_json)
-            .bind(&created_at)
-            .execute(&mut *tx)
-            .await?;
-        }
-    }
-
     tx.commit().await?;
     Ok(())
 }
 
 pub async fn delete_workspace(pool: &SqlitePool, id: i64) -> Result<()> {
     sqlx::query("DELETE FROM workspaces WHERE id = ?1")
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
-pub async fn get_recurring_tasks(pool: &SqlitePool, workspace_id: i64) -> Result<Vec<RecurringTask>> {
-    let list = sqlx::query_as::<_, RecurringTask>("SELECT * FROM recurring_tasks WHERE workspace_id = ?1 ORDER BY created_at DESC")
-        .bind(workspace_id)
-        .fetch_all(pool)
-        .await?;
-    Ok(list)
-}
-
-pub async fn add_recurring_task(pool: &SqlitePool, input: CreateRecurringTaskInput) -> Result<i64> {
-    let days_of_week_json = serde_json::to_string(&input.days_of_week)?;
-    let created_at = chrono::Local::now().to_rfc3339();
-
-    let result = sqlx::query(
-        "INSERT INTO recurring_tasks (workspace_id, title, planning_memo, duration, days_of_week, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-    )
-    .bind(input.workspace_id)
-    .bind(input.title)
-    .bind(input.planning_memo)
-    .bind(input.duration)
-    .bind(days_of_week_json)
-    .bind(created_at)
-    .execute(pool)
-    .await?;
-
-    Ok(result.last_insert_rowid())
-}
-
-pub async fn delete_recurring_task(pool: &SqlitePool, id: i64) -> Result<()> {
-    sqlx::query("DELETE FROM recurring_tasks WHERE id = ?1")
         .bind(id)
         .execute(pool)
         .await?;
@@ -197,7 +121,6 @@ mod tests {
             core_time_end: Some("18:00".to_string()),
             role_intro: Some("Engineer".to_string()),
             unplugged_times: vec![],
-            recurring_tasks: None,
         };
 
         let mut tx = pool.begin().await.unwrap();
@@ -231,37 +154,5 @@ mod tests {
         
         assert_eq!(ws_count.0, 0);
         assert_eq!(task_count.0, 0);
-    }
-
-    #[tokio::test]
-    async fn test_recurring_tasks_crud() {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query("CREATE TABLE workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE recurring_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, planning_memo TEXT, duration INTEGER NOT NULL DEFAULT 0, days_of_week TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.unwrap();
-
-        // 1. Setup workspace
-        let ws_id = sqlx::query("INSERT INTO workspaces (name) VALUES (?1)").bind("Test WS").execute(&pool).await.unwrap().last_insert_rowid();
-
-        // 2. Add recurring task
-        let input = CreateRecurringTaskInput {
-            workspace_id: ws_id,
-            title: "Routine A".to_string(),
-            planning_memo: Some("Plan A".to_string()),
-            duration: 60,
-            days_of_week: vec![1, 3, 5],
-        };
-        let task_id = add_recurring_task(&pool, input).await.unwrap();
-
-        // 3. Get recurring tasks
-        let list = get_recurring_tasks(&pool, ws_id).await.unwrap();
-        assert_eq!(list.len(), 1);
-        assert_eq!(list[0].title, "Routine A");
-        assert_eq!(list[0].days_of_week, "[1,3,5]");
-        assert_eq!(list[0].duration, 60);
-
-        // 4. Delete recurring task
-        delete_recurring_task(&pool, task_id).await.unwrap();
-        let list_after = get_recurring_tasks(&pool, ws_id).await.unwrap();
-        assert_eq!(list_after.len(), 0);
     }
 }
