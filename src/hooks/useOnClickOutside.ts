@@ -15,6 +15,12 @@ export const useOnClickOutside = <T extends HTMLElement = HTMLElement>(
         return;
       }
 
+      // Ignore clicks inside Radix popovers and dialogs
+      const target = event.target as HTMLElement;
+      if (target?.closest && (target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="dialog"]') || target.closest('.time-picker-popover'))) {
+        return;
+      }
+
       handler(event);
     };
 
