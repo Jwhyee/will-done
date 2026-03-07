@@ -245,8 +245,8 @@ export const translations = {
     project_label: {
       project: "프로젝트",
       label: "라벨",
-      project_placeholder: "Project...",
-      label_placeholder: "Label...",
+      project_placeholder: "프로젝트",
+      label_placeholder: "라벨",
       manage_projects: "프로젝트",
       manage_labels: "라벨",
       manage_projects_desc: "워크스페이스 프로젝트를 관리합니다.",
@@ -527,8 +527,8 @@ export const translations = {
     project_label: {
       project: "Project",
       label: "Label",
-      project_placeholder: "Project...",
-      label_placeholder: "Label...",
+      project_placeholder: "Project",
+      label_placeholder: "Label",
       manage_projects: "Projects",
       manage_labels: "Labels",
       manage_projects_desc: "Manage your workspace projects.",

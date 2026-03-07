@@ -19,12 +19,13 @@ import { translations, getLang, type Lang } from "@/lib/i18n";
 import { TimeBlock, Task, User, Workspace, Retrospective } from "@/types";
 import { validateDropPosition } from "@/features/workspace/utils/dndValidation";
 
-export type ViewState = "loading" | "onboarding" | "workspace_setup" | "main" | "retrospective";
+export type ViewState = "loading" | "onboarding" | "workspace_setup" | "main" | "retrospective" | "workspace_settings";
 
 export function useApp() {
   const [view, setView] = useState<ViewState>("loading");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<number | null>(null);
+  const [settingsWorkspaceId, setSettingsWorkspaceId] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [greeting, setGreeting] = useState<string>("");
   const [timeline, setTimeline] = useState<TimeBlock[]>([]);
@@ -379,6 +380,8 @@ export function useApp() {
     setWorkspaces,
     activeWorkspaceId,
     setActiveWorkspaceId,
+    settingsWorkspaceId,
+    setSettingsWorkspaceId,
     user,
     setUser,
     greeting,

@@ -39,9 +39,9 @@ import { PrimarySidebar } from "@/components/layout/PrimarySidebar";
 import { OnboardingView } from "@/features/onboarding/OnboardingView";
 import { WorkspaceCreateModal } from "@/features/workspace/components/modals/WorkspaceCreateModal";
 import { WorkspaceView } from "@/features/workspace/WorkspaceView";
+import { WorkspaceSettingsView } from "@/features/workspace/WorkspaceSettingsView";
 import { RetrospectiveView } from "@/features/retrospective/RetrospectiveView";
 import { GlobalSettingsModal } from "@/features/settings/GlobalSettingsModal";
-import { WorkspaceSettingsModal } from "@/features/workspace/components/settings/WorkspaceSettingsModal";
 import { InboxItem } from "@/features/workspace/components/inbox/InboxItem";
 import { SortableItem } from "@/features/workspace/components/timeline/SortableItem";
 
@@ -56,6 +56,8 @@ function AppContent() {
     setWorkspaces,
     activeWorkspaceId,
     setActiveWorkspaceId,
+    settingsWorkspaceId,
+    setSettingsWorkspaceId,
     user,
     setUser,
     greeting,
@@ -90,8 +92,6 @@ function AppContent() {
   } = useApp();
 
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
-  const [isWorkspaceSettingsOpen, setIsWorkspaceSettingsOpen] = useState(false);
-  const [settingsWorkspaceId, setSettingsWorkspaceId] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -127,6 +127,33 @@ function AppContent() {
             }}
           />
         ) : null;
+      case "workspace_settings":
+        return settingsWorkspaceId ? (
+          <WorkspaceSettingsView
+            workspaceId={settingsWorkspaceId}
+            onBack={() => setView("main")}
+            onWorkspaceUpdate={async () => {
+              fetchMainData();
+              const wsList = await invoke<Workspace[]>("get_workspaces");
+              setWorkspaces(wsList);
+            }}
+            onWorkspaceDelete={async (id) => {
+              const wsList = await invoke<Workspace[]>("get_workspaces");
+              setWorkspaces(wsList);
+              if (wsList.length === 0) {
+                setActiveWorkspaceId(null);
+                setView("onboarding");
+              } else {
+                if (activeWorkspaceId === id) {
+                  setActiveWorkspaceId(wsList[0].id);
+                }
+                setView("main");
+              }
+            }}
+            workspaceCount={workspaces.length}
+            t={t}
+          />
+        ) : null;
       case "main":
       default:
         return (
@@ -140,7 +167,7 @@ function AppContent() {
                 onOpenSettings={() => setIsGlobalSettingsOpen(true)}
                 onOpenWorkspaceSettings={(id) => {
                   setSettingsWorkspaceId(id);
-                  setIsWorkspaceSettingsOpen(true);
+                  setView("workspace_settings");
                 }}
                 t={t}
               />
@@ -267,32 +294,6 @@ function AppContent() {
           t={t}
         />
       )}
-
-      {/* Workspace Settings Modal */}
-      <WorkspaceSettingsModal
-        workspaceId={settingsWorkspaceId}
-        isOpen={isWorkspaceSettingsOpen}
-        onClose={() => {
-          setIsWorkspaceSettingsOpen(false);
-          setSettingsWorkspaceId(null);
-        }}
-        onWorkspaceUpdate={async () => {
-          fetchMainData();
-          const wsList = await invoke<Workspace[]>("get_workspaces");
-          setWorkspaces(wsList);
-        }}
-        onWorkspaceDelete={async (id) => {
-          const wsList = await invoke<Workspace[]>("get_workspaces");
-          setWorkspaces(wsList);
-          if (wsList.length === 0) {
-            setActiveWorkspaceId(null);
-          } else if (activeWorkspaceId === id) {
-            setActiveWorkspaceId(wsList[0].id);
-          }
-        }}
-        workspaceCount={workspaces.length}
-        t={t}
-      />
 
       {/* Workspace Create Modal */}
       <WorkspaceCreateModal

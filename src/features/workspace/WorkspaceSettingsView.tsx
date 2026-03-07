@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useForm, useFieldArray } from "react-hook-form";
-import { AlertTriangle, Settings2, Clock, ShieldAlert } from "lucide-react";
+import { 
+  AlertTriangle, 
+  Settings2, 
+  Clock, 
+  ShieldAlert, 
+  Tag, 
+  FolderOpen,
+  ArrowLeft,
+  Save
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,32 +23,29 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/providers/ToastProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { WorkspaceBasicTab } from "./WorkspaceBasicTab";
-import { WorkspaceTimeTab } from "./WorkspaceTimeTab";
-import { WorkspaceAdvancedTab } from "./WorkspaceAdvancedTab";
-import { ProjectManagementTab } from "./ProjectManagementTab";
-import { LabelManagementTab } from "./LabelManagementTab";
-import { Tag, FolderOpen } from "lucide-react";
+import { WorkspaceBasicTab } from "./components/settings/WorkspaceBasicTab";
+import { WorkspaceTimeTab } from "./components/settings/WorkspaceTimeTab";
+import { WorkspaceAdvancedTab } from "./components/settings/WorkspaceAdvancedTab";
+import { ProjectManagementTab } from "./components/settings/ProjectManagementTab";
+import { LabelManagementTab } from "./components/settings/LabelManagementTab";
 
-interface WorkspaceSettingsModalProps {
-  workspaceId: number | null;
-  isOpen: boolean;
-  onClose: () => void;
+interface WorkspaceSettingsViewProps {
+  workspaceId: number;
+  onBack: () => void;
   onWorkspaceUpdate: () => void;
-  onWorkspaceDelete?: (id: number) => void;
+  onWorkspaceDelete: (id: number) => void;
   workspaceCount: number;
   t: any;
 }
 
-export const WorkspaceSettingsModal = ({
+export const WorkspaceSettingsView = ({
   workspaceId,
-  isOpen,
-  onClose,
+  onBack,
   onWorkspaceUpdate,
   onWorkspaceDelete,
   workspaceCount,
   t,
-}: WorkspaceSettingsModalProps) => {
+}: WorkspaceSettingsViewProps) => {
   const { showToast } = useToast();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
@@ -62,7 +68,7 @@ export const WorkspaceSettingsModal = ({
 
   useEffect(() => {
     const fetchWorkspaceData = async () => {
-      if (isOpen && workspaceId) {
+      if (workspaceId) {
         try {
           const ws = await invoke<any>("get_workspace", { id: workspaceId });
           const ut = await invoke<any[]>("get_unplugged_times", { workspaceId });
@@ -84,7 +90,7 @@ export const WorkspaceSettingsModal = ({
       }
     };
     fetchWorkspaceData();
-  }, [isOpen, workspaceId, reset, showToast]);
+  }, [workspaceId, reset, showToast]);
 
   const onSubmit = async (data: any) => {
     if (!workspaceId) return;
@@ -101,7 +107,6 @@ export const WorkspaceSettingsModal = ({
       });
       await onWorkspaceUpdate();
       showToast(t.main.toast.workspace_updated, "success");
-      onClose();
     } catch (error: any) {
       showToast(error.toString(), "error");
     }
@@ -122,63 +127,88 @@ export const WorkspaceSettingsModal = ({
       await invoke("delete_workspace", { id: workspaceId });
       showToast(t.sidebar.workspace_deleted, "success");
       setIsDeleteConfirmOpen(false);
-      onClose();
-      if (onWorkspaceDelete) onWorkspaceDelete(workspaceId);
+      onWorkspaceDelete(workspaceId);
     } catch (error: any) {
       showToast(error.toString(), "error");
     }
   };
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-[500px] h-[640px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-2xl p-0 flex flex-col overflow-hidden antialiased">
-          <DialogHeader className="p-8 pb-4 shrink-0 space-y-1.5">
-            <DialogTitle className="text-2xl font-black tracking-tighter text-text-primary leading-none">
-              {t.sidebar.workspace}
-            </DialogTitle>
-            <DialogDescription className="text-sm text-text-secondary leading-relaxed">
+    <div className="flex flex-col h-full bg-background overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
+      <header className="shrink-0 h-20 border-b border-border/40 px-8 flex items-center justify-between bg-surface/30 backdrop-blur-xl sticky top-0 z-10">
+        <div className="flex items-center gap-6">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onBack}
+            className="rounded-full hover:bg-surface-elevated transition-all active:scale-90"
+          >
+            <ArrowLeft className="text-text-secondary" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-tight">
+              {t.sidebar.workspace} <span className="text-text-tertiary ml-2 font-medium text-lg tracking-normal">/ {targetWorkspaceName}</span>
+            </h1>
+            <p className="text-sm text-text-secondary font-medium">
               {t.sidebar.workspace_settings_desc}
-            </DialogDescription>
-          </DialogHeader>
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Button 
+            type="button"
+            onClick={handleSubmit(onSubmit)}
+            className="bg-text-primary text-background hover:bg-zinc-200 font-bold h-11 px-6 rounded-xl text-sm transition-all shadow-xl active:scale-95 flex items-center gap-2"
+          >
+            <Save size={16} />
+            {t.sidebar.save_changes}
+          </Button>
+        </div>
+      </header>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
-            <Tabs defaultValue="basic" className="flex-1 flex flex-col overflow-hidden px-8">
-              <TabsList className="w-full h-11 bg-surface border border-border/50 p-1 mb-6 shrink-0 flex overflow-x-auto scrollbar-hide">
-                <TabsTrigger value="basic" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Settings2 size={14} />{t.sidebar.workspace_tab_basic}</TabsTrigger>
-                <TabsTrigger value="time" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Clock size={14} />{t.sidebar.workspace_tab_time}</TabsTrigger>
-                <TabsTrigger value="projects" className="flex-1 gap-2 whitespace-nowrap shrink-0"><FolderOpen size={14} />{t.project_label.manage_projects}</TabsTrigger>
-                <TabsTrigger value="labels" className="flex-1 gap-2 whitespace-nowrap shrink-0"><Tag size={14} />{t.project_label.manage_labels}</TabsTrigger>
-                <TabsTrigger value="advanced" className="flex-1 gap-2 whitespace-nowrap shrink-0"><ShieldAlert size={14} />{t.sidebar.workspace_tab_advanced}</TabsTrigger>
-              </TabsList>
+      <main className="flex-1 overflow-hidden flex flex-col max-w-5xl mx-auto w-full px-8 py-10">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
+          <Tabs defaultValue="basic" className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="w-full h-12 bg-surface border border-border/50 p-1.5 mb-8 shrink-0 flex gap-1 justify-start overflow-x-auto scrollbar-hide rounded-2xl">
+              <TabsTrigger value="basic" className="px-6 gap-2 whitespace-nowrap rounded-xl"><Settings2 size={16} />{t.sidebar.workspace_tab_basic}</TabsTrigger>
+              <TabsTrigger value="time" className="px-6 gap-2 whitespace-nowrap rounded-xl"><Clock size={16} />{t.sidebar.workspace_tab_time}</TabsTrigger>
+              <TabsTrigger value="projects" className="px-6 gap-2 whitespace-nowrap rounded-xl"><FolderOpen size={16} />{t.project_label.manage_projects}</TabsTrigger>
+              <TabsTrigger value="labels" className="px-6 gap-2 whitespace-nowrap rounded-xl"><Tag size={16} />{t.project_label.manage_labels}</TabsTrigger>
+              <TabsTrigger value="advanced" className="px-6 gap-2 whitespace-nowrap rounded-xl text-danger data-[state=active]:bg-danger/10"><ShieldAlert size={16} />{t.sidebar.workspace_tab_advanced}</TabsTrigger>
+            </TabsList>
 
-              <div className="flex-1 overflow-hidden">
-                <TabsContent value="basic" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
+            <div className="flex-1 overflow-y-auto pr-4 -mr-4 pb-20 scrollbar-hide">
+              <TabsContent value="basic" className="m-0 outline-none">
+                <div className="bg-surface-elevated/40 border border-border/40 rounded-3xl p-8 shadow-sm">
                   <WorkspaceBasicTab register={register} t={t} />
-                </TabsContent>
-                <TabsContent value="time" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
+                </div>
+              </TabsContent>
+              <TabsContent value="time" className="m-0 outline-none">
+                <div className="bg-surface-elevated/40 border border-border/40 rounded-3xl p-8 shadow-sm">
                   <WorkspaceTimeTab register={register} fields={fields} append={append} remove={remove} t={t} />
-                </TabsContent>
-                <TabsContent value="projects" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
+                </div>
+              </TabsContent>
+              <TabsContent value="projects" className="m-0 outline-none">
+                <div className="bg-surface-elevated/40 border border-border/40 rounded-3xl p-8 shadow-sm">
                   <ProjectManagementTab t={t} />
-                </TabsContent>
-                <TabsContent value="labels" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
+                </div>
+              </TabsContent>
+              <TabsContent value="labels" className="m-0 outline-none">
+                <div className="bg-surface-elevated/40 border border-border/40 rounded-3xl p-8 shadow-sm">
                   <LabelManagementTab t={t} />
-                </TabsContent>
-                <TabsContent value="advanced" className="h-full m-0 outline-none data-[state=inactive]:hidden overflow-y-auto pr-2 pb-10">
+                </div>
+              </TabsContent>
+              <TabsContent value="advanced" className="m-0 outline-none">
+                <div className="bg-danger/5 border border-danger/20 rounded-3xl p-8 shadow-sm">
                   <WorkspaceAdvancedTab setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} t={t} />
-                </TabsContent>
-              </div>
-            </Tabs>
-
-            <div className="p-8 pt-4 bg-surface-elevated shrink-0 border-t border-border/50">
-              <Button type="submit" className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-12 rounded-xl text-sm transition-all shadow-xl active:scale-95">
-                {t.sidebar.save_changes}
-              </Button>
+                </div>
+              </TabsContent>
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </Tabs>
+        </form>
+      </main>
 
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <DialogContent className="sm:max-w-[420px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-8 antialiased">
@@ -201,6 +231,6 @@ export const WorkspaceSettingsModal = ({
           </div>
         </DialogContent>
       </Dialog>
-    </ >
+    </div>
   );
 };
