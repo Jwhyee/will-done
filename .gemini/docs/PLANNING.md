@@ -1,69 +1,56 @@
-# Execution Plan: Refactor Workspace Settings to Dedicated Page
+# Execution Plan: Enforce Zero Seconds for Time Blocks
 
 ## 1. Goal
-Refactor the "Workspace Settings" from a restricted modal to a full-screen dedicated page view. This improves scalability for future features (like detailed project/label management) and provides a better UX for complex configuration tasks.
+Ensure that all `start_time` and `end_time` data stored in the `time_blocks` table (and related tables like `unplugged_times`) always have the seconds part set to `00`. This provides a cleaner UI and consistent time calculations across the application.
 
 ## 2. Scope
 ### In-Scope
-- Introduce a new `workspace_settings` view state in the application.
-- Create a `WorkspaceSettingsView` component that implements the settings UI.
-- Update `App.tsx` to handle the transition to the settings view.
-- Update `PrimarySidebar` to trigger the new view instead of the modal.
-- Implement a "Back" button and ensure navigation returns to the main workspace view.
-- Preserve all existing functionality: Basic settings, Time settings, Project/Label management, and Workspace deletion.
+- **Database Migration**: Normalize existing data in `time_blocks` and `unplugged_times` to set seconds to `00`.
+- **Backend Logic**: Update Rust code to truncate seconds to `00` before inserting or updating time-related fields.
+- **API Layer**: Ensure Tauri commands correctly format timestamps sent to the database.
+- **Verification**: Update and run tests to ensure normalization is correctly applied.
+
 ### Out-of-Scope
-- Redesigning the underlying settings logic or backend commands.
-- Changing the global "Global Settings" modal (keep it as a modal for now).
+- Changing the storage type (keeping it as ISO-8601 strings in SQLite).
+- Modifying the frontend UI (as it already lacks second-level precision).
 
 ## 3. Architecture Impact
 ```text
-src/
-├── hooks/
-│   └── useApp.ts           # Add 'workspace_settings' to ViewState
-├── features/
-│   └── workspace/
-│       ├── WorkspaceSettingsView.tsx  # New dedicated view component
-│       └── components/
-│           └── settings/
-│               └── WorkspaceSettingsModal.tsx # REMOVED
-└── App.tsx                 # Update renderView and remove Modal usage
+src-tauri/
+├── src/
+│   ├── lib.rs              # Database setup & one-time migration
+│   ├── database/
+│   │   └── timeline.rs     # Time formatting logic for time_blocks
+│   └── commands/
+│       └── retrospective.rs # Time formatting logic for range queries
 ```
 
 ## 4. Execution Plan
 
-### Phase 1: Infrastructure & State
-- [x] Add `workspace_settings` to `ViewState` union in `src/hooks/useApp.ts`.
-- [x] Add `settingsWorkspaceId` state to `useApp.ts` (or manage it in `AppContent`) to track which workspace is being edited.
+### Phase 1: Database Migration & Setup
+- [x] Add a normalization migration in `src-tauri/src/lib.rs` within the `setup` block.
+    - SQL: `UPDATE time_blocks SET start_time = strftime('%Y-%m-%dT%H:%M:00', start_time), end_time = strftime('%Y-%m-%dT%H:%M:00', end_time);`
+    - SQL: `UPDATE unplugged_times SET start_time = strftime('%H:%M', start_time), end_time = strftime('%H:%M', end_time);`
 
-### Phase 2: Core View Implementation
-- [x] Create `src/features/workspace/WorkspaceSettingsView.tsx`.
-    - Adapt the layout from `WorkspaceSettingsModal.tsx` to a full-page layout.
-    - Implement a header with a "Back" button that sets view back to `main`.
-    - Reuse existing tab components: `WorkspaceBasicTab`, `WorkspaceTimeTab`, `ProjectManagementTab`, `LabelManagementTab`, `WorkspaceAdvancedTab`.
-    - Implement the deletion confirmation dialog within the new view.
+### Phase 2: Backend Logic Refinement
+- [x] Update `src-tauri/src/database/timeline.rs`:
+    - Replace all occurrences of `.format("%Y-%m-%dT%H:%M:%S")` with `.format("%Y-%m-%dT%H:%M:00")` when saving to the database.
+    - Specifically check functions: `add_task_at`, `process_task_transition`, `update_task`, `reorder_internal`, `schedule_task_blocks`, and `shift_future_blocks`.
+- [x] Update `src-tauri/src/commands/retrospective.rs`:
+    - Ensure `start_of_range` and `end_of_range` are formatted with `:00` seconds.
 
-### Phase 3: Interface Integration
-- [x] Update `App.tsx`:
-    - Add `case "workspace_settings"` to `renderView`.
-    - Remove `WorkspaceSettingsModal` component and its associated local states if moved to `useApp`.
-    - Update `onOpenWorkspaceSettings` in `PrimarySidebar` props to trigger the view change.
-- [x] Update `PrimarySidebar.tsx`:
-    - Ensure the settings icon triggers the navigation correctly.
-
-### Phase 4: Refinement & Cleanup
-- [x] Ensure "Save Changes" correctly updates the workspace and provides feedback.
-- [x] Verify that deleting a workspace correctly redirects the user.
-- [x] Remove `src/features/workspace/components/settings/WorkspaceSettingsModal.tsx` after verification.
+### Phase 3: Test Updates & Validation
+- [x] Update Rust unit tests in `src-tauri/src/database/timeline.rs` to reflect the strictly normalized timestamps.
+- [x] Add a new test case to verify that `add_task_at` correctly truncates current time seconds to `00`.
 
 ## 5. Risk Mitigation
-- **Potential Breaking Changes**: Interruption of the settings flow if navigation state is lost on refresh (should be handled by `init` logic in `useApp`).
-- **Rollback Strategy**: Revert `App.tsx` and `useApp.ts` changes; restore `WorkspaceSettingsModal.tsx` usage.
+- **Potential Breaking Changes**: If any logic depends on precise seconds for duration calculations, it might shift by a few seconds. However, the app's smallest unit is 1 minute, so this is negligible.
+- **Rollback Strategy**: Existing data can be restored if a backup exists, or the migration can be reversed (though unnecessary as normalization is the goal).
 
 ## 6. Final Verification Wave
-- [x] Run `cargo check` and `npm run build` (tsc) to ensure no type regressions.
-- [x] **Manual Spot Check**:
-    1. Open workspace settings from the sidebar.
-    2. Verify all tabs (Basic, Time, Projects, Labels, Advanced) load and function.
-    3. Change a setting and save. Verify the update is reflected in the UI.
-    4. Click the "Back" button and ensure it returns to the correct workspace view.
-    5. Test workspace deletion and ensure it redirects correctly.
+- [x] Run `cargo test` to ensure all backend logic remains correct.
+- [x] Run `cargo check` to verify no compilation errors.
+- [ ] **Manual Spot Check**:
+    1. Add a new task and check the database file (using a SQLite browser or `sqlite3` CLI) to ensure seconds are `00`.
+    2. Complete a task and verify the `end_time` in the DB has `00` seconds.
+    3. Reorder tasks and verify the updated `start_time` and `end_time` are still normalized.
