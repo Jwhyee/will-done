@@ -1,5 +1,6 @@
 pub mod domain;
 pub mod database;
+pub mod services;
 pub mod commands;
 
 use std::fs;
