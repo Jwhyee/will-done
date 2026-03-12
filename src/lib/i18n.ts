@@ -238,6 +238,12 @@ export const translations = {
       select_another_range: "다른 기간을 선택하거나 회고를 생성해 보세요.",
       duplicate_error: "이미 해당 기간의 회고가 존재합니다.",
       no_tasks_error: "해당 기간에 완료된 태스크가 없습니다.",
+      quota_exhausted: {
+        title: "API 사용량 초과",
+        description: "오늘 사용할 수 있는 모든 Gemini 모델의 할당량이 소진되었습니다. 잠시 후 다시 시도하거나, 강제로 재시도할 수 있습니다.",
+        retry_btn: "강제 재시도",
+        close_btn: "닫기",
+      },
     },
     project_label: {
       project: "프로젝트",
@@ -517,6 +523,12 @@ export const translations = {
       select_another_range: "Please select another range or generate a retrospective.",
       duplicate_error: "A retrospective for this period already exists.",
       no_tasks_error: "No completed tasks found for the selected period.",
+      quota_exhausted: {
+        title: "API Quota Exhausted",
+        description: "All available Gemini models have exhausted their quotas for today. You can try again later or force a retry now.",
+        retry_btn: "Force Retry",
+        close_btn: "Close",
+      },
     },
     project_label: {
       project: "Project",

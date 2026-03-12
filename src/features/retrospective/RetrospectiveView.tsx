@@ -14,6 +14,8 @@ import { useToast } from "@/providers/ToastProvider";
 import { cn } from "@/lib/utils";
 import { DateSelector } from "./components/DateSelector";
 import { calculateRange } from "./utils";
+import { useGemini } from "./hooks/useGemini";
+import { QuotaExhaustedModal } from "./components/QuotaExhaustedModal";
 
 interface RetrospectiveViewProps {
   workspaceId: number;
@@ -36,6 +38,14 @@ export const RetrospectiveView = ({
   const { showToast } = useToast();
   const [isCopied, setIsCopied] = useState(false);
 
+  const {
+    isGenerating,
+    isQuotaExhausted,
+    setIsQuotaExhausted,
+    checkQuota,
+    generateRetrospective: runGenerate,
+  } = useGemini(t);
+
   const [inputValue, setInputValue] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -45,7 +55,6 @@ export const RetrospectiveView = ({
   const [browseDateLabel, setBrowseDateLabel] = useState("");
   const [foundRetro, setFoundRetro] = useState<Retrospective | null>(null);
 
-  const [isGenerating, setIsGenerating] = useState(false);
   const [genMessage, setGenMessage] = useState("");
   const [activeDates, setActiveDates] = useState<string[]>([]);
 
@@ -91,16 +100,22 @@ export const RetrospectiveView = ({
     fetchSavedRetro();
   }, [browseDateLabel, workspaceId, tab]);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (forceRetry: boolean = false) => {
     if (retroType === "DAILY" && !activeDates.includes(startDate)) {
       showToast(t.main.toast.no_data_for_date, "error");
       return;
     }
-    setIsGenerating(true);
-    setGenMessage(t.retrospective.gen_message);
-    try {
-      const retro = await invoke<Retrospective>("generate_retrospective", { workspaceId, startDate, endDate, retroType, dateLabel });
 
+    if (!forceRetry) {
+      const exhausted = await checkQuota();
+      if (exhausted) return;
+    }
+
+    setGenMessage(t.retrospective.gen_message);
+    const retro = await runGenerate({ workspaceId, startDate, endDate, retroType, dateLabel, forceRetry });
+    setGenMessage("");
+
+    if (retro) {
       if (user.isNotificationEnabled) {
         let permission = await isPermissionGranted();
         if (!permission) permission = await requestPermission() === 'granted';
@@ -114,12 +129,6 @@ export const RetrospectiveView = ({
         }
       }
       onShowSavedRetro(retro);
-    } catch (error: any) {
-      if (error.toString().includes("already exists")) showToast(t.retrospective.duplicate_error, "error");
-      else if (error.toString().includes("No completed tasks")) showToast(t.retrospective.no_tasks_error, "error");
-      else showToast(`Error: ${error}`, "error");
-    } finally {
-      setIsGenerating(false); setGenMessage("");
     }
   };
 
@@ -202,7 +211,7 @@ export const RetrospectiveView = ({
               </div>
 
               <Button
-                onClick={handleGenerate}
+                onClick={() => handleGenerate()}
                 disabled={isGenerating}
                 className="w-full bg-text-primary text-background hover:bg-zinc-200 h-14 rounded-2xl font-black text-lg shadow-xl active:scale-95 disabled:opacity-50 transition-all duration-300 group"
               >
@@ -295,6 +304,16 @@ export const RetrospectiveView = ({
           )}
         </div>
       </main>
+
+      <QuotaExhaustedModal
+        t={t}
+        isOpen={isQuotaExhausted}
+        onClose={() => setIsQuotaExhausted(false)}
+        onRetry={() => {
+          setIsQuotaExhausted(false);
+          handleGenerate(true);
+        }}
+      />
     </div>
   );
 };
