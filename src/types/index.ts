@@ -5,7 +5,7 @@ export interface TimeBlock {
   title: string;
   startTime: string;
   endTime: string;
-  status: "DONE" | "NOW" | "WILL" | "UNPLUGGED" | "PENDING";
+  status: "DONE" | "NOW" | "WILL" | "UNPLUGGED" | "PENDING" | "CONTINUED";
   reviewMemo: string | null;
   planningMemo: string | null;
   isUrgent: boolean;
