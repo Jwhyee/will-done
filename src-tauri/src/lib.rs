@@ -79,7 +79,7 @@ pub fn run() {
                         println!("🚀 [Dev Mode] Seeding database...");
                         
                         // 1. User & Workspace
-                        sqlx::query("INSERT INTO users (id, nickname, gemini_api_key, lang, is_notification_enabled, day_start_time) VALUES (1, 'TEST', 'dummy_key', 'ko', 1, '04:00')").execute(&pool).await.ok();
+                        sqlx::query("INSERT INTO users (id, nickname, gemini_api_key, lang, is_notification_enabled, is_free_user, day_start_time) VALUES (1, 'TEST', 'dummy_key', 'ko', 1, 1, '04:00')").execute(&pool).await.ok();
                         sqlx::query("INSERT INTO workspaces (id, name, core_time_start, core_time_end) VALUES (1, 'HOME', '10:00', '20:00')").execute(&pool).await.ok();
 
                         // 1.1 Unplugged Times
@@ -178,10 +178,11 @@ pub fn run() {
                 }
                 
                 // Migrations
-                sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT, is_notification_enabled BOOLEAN NOT NULL DEFAULT 0, day_start_time TEXT NOT NULL DEFAULT '04:00')").execute(&pool).await.ok();
+                sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT, is_notification_enabled BOOLEAN NOT NULL DEFAULT 0, is_free_user BOOLEAN NOT NULL DEFAULT 1, day_start_time TEXT NOT NULL DEFAULT '04:00')").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE users ADD COLUMN lang TEXT NOT NULL DEFAULT 'en'").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE users ADD COLUMN last_successful_model TEXT").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE users ADD COLUMN is_notification_enabled BOOLEAN NOT NULL DEFAULT 0").execute(&pool).await.ok();
+                sqlx::query("ALTER TABLE users ADD COLUMN is_free_user BOOLEAN NOT NULL DEFAULT 1").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE users ADD COLUMN day_start_time TEXT NOT NULL DEFAULT '04:00'").execute(&pool).await.ok();
                 
                 sqlx::query("CREATE TABLE IF NOT EXISTS workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.ok();

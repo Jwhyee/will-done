@@ -15,9 +15,10 @@ pub async fn save_user(
     gemini_api_key: Option<String>,
     lang: String,
     is_notification_enabled: bool,
+    is_free_user: bool,
     day_start_time: String,
 ) -> Result<User> {
-    database::user::save_user(&state.pool, &nickname, gemini_api_key.as_deref(), &lang, is_notification_enabled, &day_start_time).await?;
+    database::user::save_user(&state.pool, &nickname, gemini_api_key.as_deref(), &lang, is_notification_enabled, is_free_user, &day_start_time).await?;
     database::user::get_user(&state.pool).await?.ok_or(AppError::NotFound("User not found after save".to_string()))
 }
 

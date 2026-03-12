@@ -9,5 +9,6 @@ pub struct User {
     pub lang: String,
     pub last_successful_model: Option<String>,
     pub is_notification_enabled: bool,
+    pub is_free_user: bool,
     pub day_start_time: String,
 }

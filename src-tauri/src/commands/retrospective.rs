@@ -204,7 +204,7 @@ pub async fn fetch_available_models(
 
 async fn internal_fetch_available_models(api_key: &str) -> Result<Vec<GeminiModel>> {
     let client = reqwest::Client::new();
-    let url = format!("https://generativelanguage.googleapis.com/v1/models?key={}", api_key);
+    let url = format!("https://generativelanguage.googleapis.com/v1beta/models?key={}", api_key);
     let res = client.get(url).send().await?;
     
     if !res.status().is_success() {
