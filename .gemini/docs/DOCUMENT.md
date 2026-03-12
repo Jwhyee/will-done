@@ -67,7 +67,14 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - **Onboarding/Settings UI**: Introduced a "Free User" checkbox in the API Key configuration section, defaulting to checked.
 - **Future-Proofing**: This field will enable specialized error handling (e.g., immediate failure for 429s on free tier vs. retry logic for paid tier) in subsequent updates.
 
-## v1.5.0 - 2026-03-12 (Frontend Refactoring: Logic & View Separation)
+## v1.5.0 - 2026-03-12 (Backend 3-Layer Architecture Strict Separation)
+
+### Architecture Changes
+- **Strict 3-Layer Pattern**: Refactored the entire Rust backend from a Fat Controller pattern to a strict `Commands (IPC) -> Services (Business Logic) -> Database (DAL)` architecture.
+- **Service Layer Isolation**: Extracted all date math, validation, and AI fallback orchestration into the new `src/services` module.
+- **Zero-Breakage**: Maintained 100% compatibility with existing frontend `invoke` signatures while completely overhauling the internal backend structure.
+
+## v1.6.0 - 2026-03-12 (Frontend Refactoring: Logic & View Separation)
 
 ### Architecture Changes
 - **3-Layer Separation**: Defined a strict frontend architecture:
@@ -76,3 +83,26 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
   - **Layer 3: API Layer**: Standardized wrappers for Tauri IPC (`invoke`) to improve type safety and reusability.
 - **Refactoring Strategy**: Targeted "Fat Components" (Onboarding, Retrospective) for decomposition into smaller, more maintainable units while ensuring zero UI breakage.
 - **Improved Maintainability**: This architectural shift reduces component complexity and makes the codebase more modular and easier to test.
+
+## v1.7.0 - 2026-03-12 (Core Logic & Operational Mechanism Refinement)
+
+### Deep Context Analysis: Operational Mechanisms
+
+#### 1. Timeline Scheduling & Auto-Promotion
+- **Mechanism**: Tasks are scheduled as `TimeBlocks` with `status` (NOW, WILL, DONE, PENDING).
+- **Core Logic**: When a `NOW` task is completed (via `process_task_transition`), the system automatically identifies the next logical task. If a gap exists, subsequent tasks are "pulled up" to the current time to maintain continuity.
+- **Logical Date**: All timeline queries respect the `Logical Day` setting (default 04:00 AM). Queries filter blocks by `logical_date` derived from the user's `day_start_time`.
+
+#### 2. Frontend 3-Layer Communication
+- **API Layer (`src/features/*/api/index.ts`)**: Acts as the single point of truth for IPC. Uses typed `invoke` calls.
+- **Hook Layer (`src/features/*/hooks/`)**: Manages UI state, loading indicators, and error handling. Orchestrates complex UI-side interactions (e.g., Dnd validation).
+- **View Layer**: Components are purely functional, receiving data and callbacks via props.
+
+#### 3. AI Retrospective Workflow
+- **Data Gathering**: Fetches `DONE` time blocks for a specific logical date.
+- **Gemini Integration**: Sends structured task history to Gemini API. Supports both free and paid tiers (`is_free_user`).
+- **Quota Management**: Logs usage to `ai_usage_logs` and checks for daily exhausted states before generation attempts.
+
+#### 4. Event-Driven UI Updates
+- **Notifications**: System-wide notifications (via `tauri_plugin_notification`) are intercepted in `lib.rs` to emit global events (e.g., `open-transition-modal`).
+- **App Provider**: `AppProvider.tsx` and `useApp.ts` act as the global state hub, listening for these events to trigger UI transitions (e.g., showing the transition modal).
