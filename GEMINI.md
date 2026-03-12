@@ -12,14 +12,19 @@ Before starting any implementation or planning task, you MUST adhere to the foll
 * **Frontend**: React, Tailwind CSS, shadcn/ui, Framer Motion, react-hook-form, Zod.
 * **Backend**: Tauri, Rust, SQLite (rusqlite/sqlx), tokio.
 
-## 2. Development Principles
+## 2. Development Principles & Architecture
 When executing a task from `PLANNING.md`, apply these core principles to your code generation:
 
-* **Strict Separation**: Do not mix Frontend and Backend development in a single context. Ensure Tauri commands act as a clean API layer between React and Rust.
+* **3-Layer Architecture (Backend)**: Strictly enforce `Commands (IPC)` -> `Services (Business Logic)` -> `Database (DAL)`. 
+  * `Commands` must be thin wrappers. 
+  * `Services` must handle orchestrations, date math, and validation. 
+  * `Database` must only handle pure SQL queries.
+* **Transaction & State Management**: Service layer functions must accept database connections or `&mut sqlx::Transaction` to ensure atomicity during complex state transitions. Inject global states (like `reqwest::Client`) instead of re-instantiating them.
+* **Cross-Domain Rules**: Maintain strict unidirectional flow between domains to avoid circular dependencies in Rust.
 * **Refactoring Discipline**: Proactively split files (Hooks, Components, or Rust Modules) as soon as they meet the complexity thresholds (e.g., 250+ lines, 5+ hooks). Maintain modularity.
 * **TDD for Backend**: For Rust/SQLite business logic, you MUST write `#[test]` unit tests first to verify edge cases before exposing and binding Tauri commands.
-* **Schema Autonomy**: Infer and design the optimal SQLite schema (`rusqlite` or `sqlx`) based on the domain models described in the documentation. Ensure data integrity.
 
-## 3. Workflow Awareness
-* **Execution Boundary**: You will be driven by specific commands (`/plan`, `/work`). When executing `/work`, focus ONLY on implementing the single task assigned to you. Do not anticipate or implement future tasks in the current run.
+## 4. Workflow Awareness
+
+* **Execution Boundary**: You will be driven by specific commands (`/plan`, `/work`). When executing `/work`, focus ONLY on implementing the single task assigned to you in the agreed Execution Plan. Do not anticipate or implement future tasks in the current run.
 * **Verification**: Ensure your generated code passes standard checks (`cargo check`, `cargo test`, `pnpm build` equivalence) logically before finalizing the file modification.
