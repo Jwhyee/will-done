@@ -26,6 +26,7 @@ export const useRetrospective = ({
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [isQuotaExhausted, setIsQuotaExhausted] = useState(false);
+  const [isDuplicateConfirmOpen, setIsDuplicateConfirmOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   const [inputValue, setInputValue] = useState("");
@@ -93,13 +94,13 @@ export const useRetrospective = ({
     }
   };
 
-  const handleGenerate = async (forceRetry: boolean = false) => {
+  const handleGenerate = async (forceRetry: boolean = false, overwrite: boolean = false) => {
     if (retroType === "DAILY" && !activeDates.includes(startDate)) {
       showToast(t.main.toast.no_data_for_date, "error");
       return;
     }
 
-    if (!forceRetry) {
+    if (!forceRetry && !overwrite) {
       const exhausted = await checkQuota();
       if (exhausted) return;
     }
@@ -114,10 +115,12 @@ export const useRetrospective = ({
         endDate,
         retroType,
         dateLabel,
-        forceRetry
+        forceRetry,
+        overwrite
       });
       
       setIsQuotaExhausted(false);
+      setIsDuplicateConfirmOpen(false);
       setGenMessage("");
 
       if (retro) {
@@ -155,7 +158,7 @@ export const useRetrospective = ({
       if (errStr.includes("QUOTA_EXHAUSTED")) {
         setIsQuotaExhausted(true);
       } else if (errStr.includes("already exists")) {
-        showToast(t.retrospective.duplicate_error, "error");
+        setIsDuplicateConfirmOpen(true);
       } else if (errStr.includes("No completed tasks")) {
         showToast(t.retrospective.no_tasks_error, "error");
       } else {
@@ -164,6 +167,11 @@ export const useRetrospective = ({
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleConfirmOverwrite = () => {
+    setIsDuplicateConfirmOpen(false);
+    handleGenerate(false, true);
   };
 
   const handleCopy = (content: string) => {
@@ -178,6 +186,8 @@ export const useRetrospective = ({
     isGenerating,
     isQuotaExhausted,
     setIsQuotaExhausted,
+    isDuplicateConfirmOpen,
+    setIsDuplicateConfirmOpen,
     isCopied,
     inputValue,
     setInputValue,
@@ -187,6 +197,7 @@ export const useRetrospective = ({
     genMessage,
     activeDates,
     handleGenerate,
+    handleConfirmOverwrite,
     handleCopy,
   };
 };

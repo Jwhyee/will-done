@@ -8,6 +8,7 @@ export interface GenerateRetrospectiveParams {
   retroType: "DAILY";
   dateLabel: string;
   forceRetry: boolean;
+  overwrite: boolean;
 }
 
 export const retrospectiveApi = {

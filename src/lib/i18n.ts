@@ -237,6 +237,8 @@ export const translations = {
       no_data_for_label: "해당 기간의 회고가 없습니다.",
       select_another_range: "다른 기간을 선택하거나 회고를 생성해 보세요.",
       duplicate_error: "이미 해당 기간의 회고가 존재합니다.",
+      duplicate_confirm_title: "이미 회고가 존재합니다.",
+      duplicate_confirm_desc: "해당 날짜에 이미 생성된 회고가 있습니다. 새로 생성하여 덮어쓰시겠습니까?",
       no_tasks_error: "해당 기간에 완료된 태스크가 없습니다.",
       quota_exhausted: {
         title: "API 사용량 초과",
@@ -522,6 +524,8 @@ export const translations = {
       no_data_for_label: "No retrospective found for this period.",
       select_another_range: "Please select another range or generate a retrospective.",
       duplicate_error: "A retrospective for this period already exists.",
+      duplicate_confirm_title: "Retrospective Already Exists",
+      duplicate_confirm_desc: "A retrospective for this date already exists. Would you like to generate a new one and overwrite it?",
       no_tasks_error: "No completed tasks found for the selected period.",
       quota_exhausted: {
         title: "API Quota Exhausted",

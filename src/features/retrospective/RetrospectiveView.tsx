@@ -4,6 +4,7 @@ import { RetroSidebar } from "./components/RetroSidebar";
 import { CreateTabContent } from "./components/CreateTabContent";
 import { BrowseTabContent } from "./components/BrowseTabContent";
 import { QuotaExhaustedModal } from "./components/QuotaExhaustedModal";
+import { DuplicateConfirmModal } from "./components/DuplicateConfirmModal";
 
 interface RetrospectiveViewProps {
   workspaceId: number;
@@ -26,6 +27,8 @@ export const RetrospectiveView = ({
     isGenerating,
     isQuotaExhausted,
     setIsQuotaExhausted,
+    isDuplicateConfirmOpen,
+    setIsDuplicateConfirmOpen,
     isCopied,
     inputValue,
     setInputValue,
@@ -35,6 +38,7 @@ export const RetrospectiveView = ({
     genMessage,
     activeDates,
     handleGenerate,
+    handleConfirmOverwrite,
     handleCopy,
   } = useRetrospective({ workspaceId, user, t, onShowSavedRetro });
 
@@ -81,6 +85,13 @@ export const RetrospectiveView = ({
           setIsQuotaExhausted(false);
           handleGenerate(true);
         }}
+      />
+
+      <DuplicateConfirmModal
+        t={t}
+        isOpen={isDuplicateConfirmOpen}
+        onClose={() => setIsDuplicateConfirmOpen(false)}
+        onConfirm={handleConfirmOverwrite}
       />
     </div>
   );
