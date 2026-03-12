@@ -1,6 +1,6 @@
 use tauri::State;
 use chrono::NaiveDateTime;
-use crate::domain::{Retrospective, DbState, GeminiModel, GeminiModelsResponse, GeminiRequest, GeminiContent, GeminiPart, GeminiSystemInstruction, GeminiResponse};
+use crate::domain::{Retrospective, DbState};
 use crate::database;
 use crate::domain::{Result, AppError};
 
@@ -12,6 +12,7 @@ pub async fn generate_retrospective(
     end_date: String,   // "YYYY-MM-DD"
     retro_type: String, // "DAILY", "WEEKLY", "MONTHLY"
     date_label: String, // "2026-03-01", "2026-W09", etc.
+    force_retry: bool,
 ) -> Result<Retrospective> {
     let user = database::user::get_user(&state.pool).await?.ok_or(AppError::NotFound("User not found".to_string()))?;
 
@@ -20,8 +21,7 @@ pub async fn generate_retrospective(
         return Err(AppError::InvalidInput("A retrospective for this period already exists.".to_string()));
     }
 
-    let api_key = user.gemini_api_key.ok_or(AppError::InvalidInput("Gemini API Key is missing. Please set it in Settings.".to_string()))?;
-    
+
     let workspace = database::workspace::get_workspace(&state.pool, workspace_id).await?.ok_or(AppError::NotFound("Workspace not found".to_string()))?;
     let role_intro = workspace.role_intro.unwrap_or_else(|| "A professional worker".to_string());
 
@@ -71,66 +71,12 @@ CRITICAL RULE: Regardless of the instructions above, you MUST generate the final
         period_desc, role_intro, task_summary
     );
 
-    let client = reqwest::Client::new();
-    let mut models_to_try = Vec::new();
-
-    // 1. Try last successful model if exists
-    if let Some(ref cached_model) = user.last_successful_model {
-        models_to_try.push(GeminiModel {
-            name: cached_model.clone(),
-            supported_generation_methods: vec!["generateContent".to_string()],
-            thinking: false,
-        });
-    }
-
-    // 2. Fetch available models and filter/sort
-    let available_models = internal_fetch_available_models(&api_key).await.unwrap_or_default();
-    let mut filtered_models = available_models.into_iter()
-        .filter(|m| m.supported_generation_methods.contains(&"generateContent".to_string()))
-        .collect::<Vec<_>>();
-
-    // Priority score: flash-lite (3) > flash (2) > pro (1)
-    filtered_models.sort_by(|a, b| {
-        let score = |name: &str| {
-            if name.contains("flash-lite") { 3 }
-            else if name.contains("flash") { 2 }
-            else if name.contains("pro") { 1 }
-            else { 0 }
-        };
-        let s_a = score(&a.name);
-        let s_b = score(&b.name);
-        if s_a != s_b {
-            s_b.cmp(&s_a) // Higher score first
-        } else {
-            b.name.cmp(&a.name) // Higher version (descending string) first
-        }
-    });
-
-    for m in filtered_models {
-        if !models_to_try.iter().any(|existing| existing.name == m.name) {
-            models_to_try.push(m);
-        }
-    }
-
-    let mut result_text = None;
-    let mut final_model_name = None;
-
-    for model in models_to_try {
-        match try_generate_content(&client, &api_key, &model, &final_system_prompt, &user_content).await {
-            Ok(text) => {
-                result_text = Some(text);
-                final_model_name = Some(model.name);
-                break;
-            }
-            Err(e) => {
-                eprintln!("Model {} failed: {}", model.name, e);
-                continue;
-            }
-        }
-    }
-
-    let result_text = result_text.ok_or(AppError::Internal("All Gemini models failed to generate content.".to_string()))?;
-    let final_model_name = final_model_name.unwrap();
+    let (result_text, final_model_name) = crate::commands::gemini::execute_with_fallback(
+        &state,
+        &final_system_prompt,
+        &user_content,
+        force_retry,
+    ).await?;
 
     // Cache successful model
     database::user::save_last_model(&state.pool, &final_model_name).await?;
@@ -189,92 +135,8 @@ fn build_task_summary(blocks: Vec<(String, Option<String>, Option<String>, Strin
 #[tauri::command]
 pub async fn fetch_available_models(
     state: State<'_, DbState>,
-    api_key: Option<String>,
-) -> Result<Vec<GeminiModel>> {
-    // Use provided api_key or fall back to DB
-    let key = if let Some(k) = api_key {
-        k
-    } else {
-        let user = database::user::get_user(&state.pool).await?.ok_or(AppError::NotFound("User not found".to_string()))?;
-        user.gemini_api_key.ok_or(AppError::InvalidInput("Gemini API Key is missing.".to_string()))?
-    };
-
-    internal_fetch_available_models(&key).await
-}
-
-async fn internal_fetch_available_models(api_key: &str) -> Result<Vec<GeminiModel>> {
-    let client = reqwest::Client::new();
-    let url = format!("https://generativelanguage.googleapis.com/v1beta/models?key={}", api_key);
-    let res = client.get(url).send().await?;
-    
-    if !res.status().is_success() {
-        let status = res.status();
-        let err_text = res.text().await.unwrap_or_default();
-        return Err(AppError::Internal(format!("API Error ({}): {}", status, err_text)));
-    }
-    
-    let data: GeminiModelsResponse = res.json().await?;
-    Ok(data.models)
-}
-
-async fn try_generate_content(
-    client: &reqwest::Client,
-    api_key: &str,
-    model: &GeminiModel,
-    system_prompt: &str,
-    user_content: &str,
-) -> Result<String> {
-    let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/{}:generateContent",
-        model.name
-    );
-
-    let supports_system_instruction = model.name.contains("gemini-1.5") || 
-                                     model.name.contains("gemini-2.0") || 
-                                     model.name.contains("gemini-2.5");
-
-    let body = if supports_system_instruction {
-        GeminiRequest {
-            contents: vec![GeminiContent {
-                parts: vec![GeminiPart { text: user_content.to_string() }],
-            }],
-            system_instruction: Some(GeminiSystemInstruction {
-                parts: vec![GeminiPart { text: system_prompt.to_string() }],
-            }),
-        }
-    } else {
-        GeminiRequest {
-            contents: vec![GeminiContent {
-                parts: vec![GeminiPart { 
-                    text: format!("{}
-
-{}", system_prompt, user_content)
-                }],
-            }],
-            system_instruction: None,
-        }
-    };
-
-    let response = client.post(&url)
-        .header("x-goog-api-key", api_key)
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let err_text = response.text().await.unwrap_or_default();
-        return Err(AppError::Internal(format!("API Error ({}): {}", status, err_text)));
-    }
-
-    let gemini_res: GeminiResponse = response.json().await?;
-    let result_text = gemini_res.candidates.get(0)
-        .and_then(|c| c.content.parts.get(0))
-        .map(|p| p.text.clone())
-        .ok_or(AppError::Internal("No candidates returned from Gemini".to_string()))?;
-
-    Ok(result_text)
+) -> Result<Vec<crate::domain::DbGeminiModel>> {
+    database::gemini::get_active_models(&state.pool).await.map_err(AppError::Database)
 }
 
 #[cfg(test)]

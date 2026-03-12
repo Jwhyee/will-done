@@ -72,6 +72,8 @@ pub fn run() {
                         sqlx::query("DELETE FROM unplugged_times").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM workspaces").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM users").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM gemini_models").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM ai_usage_logs").execute(&pool).await.ok();
                         println!("✅ [Dev Mode] Database cleared.");
                     }
 
@@ -202,6 +204,9 @@ pub fn run() {
                 sqlx::query("CREATE TABLE IF NOT EXISTS retrospectives (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, retro_type TEXT NOT NULL, content TEXT NOT NULL, date_label TEXT NOT NULL, created_at TEXT NOT NULL, used_model TEXT, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE retrospectives ADD COLUMN used_model TEXT").execute(&pool).await.ok();
 
+                sqlx::query(crate::database::gemini::CREATE_GEMINI_MODELS_TABLE).execute(&pool).await.ok();
+                sqlx::query(crate::database::gemini::CREATE_AI_USAGE_LOGS_TABLE).execute(&pool).await.ok();
+
                 sqlx::query("DROP TABLE IF EXISTS recurring_tasks").execute(&pool).await.ok();
 
                 // Normalization: Ensure all time blocks and unplugged times have :00 seconds
@@ -209,6 +214,22 @@ pub fn run() {
                 sqlx::query("UPDATE unplugged_times SET start_time = strftime('%H:%M', start_time), end_time = strftime('%H:%M', end_time)").execute(&pool).await.ok();
 
                 app_handle.manage(DbState { pool });
+
+                // Sync Gemini models on startup
+                let sync_handle = app_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    let state = sync_handle.state::<DbState>();
+                    if let Ok(Some(user)) = crate::database::user::get_user(&state.pool).await {
+                        if let Some(api_key) = user.gemini_api_key {
+                            println!("🔄 Syncing Gemini models...");
+                            if let Err(e) = crate::database::gemini::fetch_and_sync_models(&state.pool, &api_key).await {
+                                eprintln!("❌ Failed to sync Gemini models: {}", e);
+                            } else {
+                                println!("✅ Gemini models synced successfully.");
+                            }
+                        }
+                    }
+                });
             });
             Ok(())
         })
@@ -253,7 +274,8 @@ pub fn run() {
             commands::retrospective::generate_retrospective,
             commands::retrospective::get_saved_retrospectives,
             commands::retrospective::get_latest_saved_retrospective,
-            commands::retrospective::fetch_available_models
+            commands::retrospective::fetch_available_models,
+            commands::gemini::check_daily_exhausted_log
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

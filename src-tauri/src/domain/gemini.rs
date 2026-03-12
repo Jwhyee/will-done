@@ -45,3 +45,19 @@ pub struct GeminiModel {
     #[serde(default)]
     pub thinking: bool,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, sqlx::FromRow)]
+pub struct DbGeminiModel {
+    pub model_name: String,
+    pub version: f64,
+    pub lineup: String,
+    pub thinkable: bool,
+    pub sort_order: i32,
+    pub is_active: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, sqlx::FromRow)]
+pub struct AiUsageLog {
+    pub date: String, // YYYY-MM-DD
+    pub status: String, // 'EXHAUSTED'
+}
