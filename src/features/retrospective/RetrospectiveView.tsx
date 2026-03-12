@@ -8,14 +8,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   format,
-  parse,
-  isValid,
 } from "date-fns";
 import { Retrospective, User } from "@/types";
 import { useToast } from "@/providers/ToastProvider";
 import { cn } from "@/lib/utils";
 import { DateSelector } from "./components/DateSelector";
-import { getWeekKey, calculateRange } from "./utils";
+import { calculateRange } from "./utils";
 
 interface RetrospectiveViewProps {
   workspaceId: number;
@@ -33,8 +31,8 @@ export const RetrospectiveView = ({
   onShowSavedRetro
 }: RetrospectiveViewProps) => {
   const [tab, setTab] = useState<"create" | "browse">("create");
-  const [retroType, setRetroType] = useState<"DAILY" | "WEEKLY" | "MONTHLY">("DAILY");
-  const [browseType, setBrowseType] = useState<"DAILY" | "WEEKLY" | "MONTHLY">("DAILY");
+  const retroType = "DAILY" as const;
+  const browseType = "DAILY" as const;
   const { showToast } = useToast();
   const [isCopied, setIsCopied] = useState(false);
 
@@ -70,51 +68,17 @@ export const RetrospectiveView = ({
     fetchActiveDates();
   }, [workspaceId]);
 
-  const handleTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
-    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(new Date(), "yyyy-MM-dd");
-    let newValue = latestActive;
-
-    if (newType === "MONTHLY") {
-      newValue = latestActive.substring(0, 7);
-    } else if (newType === "WEEKLY") {
-      try {
-        const d = parse(latestActive, "yyyy-MM-dd", new Date());
-        newValue = getWeekKey(isValid(d) ? d : new Date());
-      } catch (e) { newValue = `${latestActive.split("-")[0]}|${latestActive.split("-")[1]}|1`; }
-    }
-
-    setRetroType(newType);
-    setInputValue(newValue);
-  };
-
-  const handleBrowseTypeChange = (newType: "DAILY" | "WEEKLY" | "MONTHLY") => {
-    const latestActive = activeDates.length > 0 ? activeDates[activeDates.length - 1] : format(new Date(), "yyyy-MM-dd");
-    let newValue = latestActive;
-
-    if (newType === "MONTHLY") {
-      newValue = latestActive.substring(0, 7);
-    } else if (newType === "WEEKLY") {
-      try {
-        const d = parse(latestActive, "yyyy-MM-dd", new Date());
-        newValue = getWeekKey(isValid(d) ? d : new Date());
-      } catch (e) { newValue = `${latestActive.split("-")[0]}|${latestActive.split("-")[1]}|1`; }
-    }
-
-    setBrowseType(newType);
-    setBrowseInputValue(newValue);
-  };
-
   useEffect(() => {
     if (!inputValue) return;
-    const { start, end, label } = calculateRange(inputValue, retroType, t);
+    const { start, end, label } = calculateRange(inputValue, retroType);
     setStartDate(start); setEndDate(end); setDateLabel(label);
-  }, [inputValue, retroType, t]);
+  }, [inputValue, retroType]);
 
   useEffect(() => {
     if (!browseInputValue) return;
-    const { label } = calculateRange(browseInputValue, browseType, t);
+    const { label } = calculateRange(browseInputValue, browseType);
     setBrowseDateLabel(label);
-  }, [browseInputValue, browseType, t]);
+  }, [browseInputValue, browseType]);
 
   useEffect(() => {
     const fetchSavedRetro = async () => {
@@ -218,30 +182,10 @@ export const RetrospectiveView = ({
 
               <div className="p-6 bg-surface border border-border rounded-2xl space-y-6 shadow-xl relative overflow-hidden group">
                 <div className="space-y-3">
-                  <div className="flex gap-2">
-                    {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((type) => (
-                      <Button
-                        key={type}
-                        variant={retroType === type ? "default" : "outline"}
-                        onClick={() => handleTypeChange(type)}
-                        className={cn(
-                          "flex-1 font-bold h-10 rounded-xl border-border text-xs transition-all",
-                          retroType === type ? "shadow-md scale-[1.01]" : "hover:bg-surface-elevated"
-                        )}
-                      >
-                        {type === "DAILY" ? t.retrospective.daily : type === "WEEKLY" ? t.retrospective.weekly : t.retrospective.monthly}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
                   <DateSelector
-                    type={retroType}
                     value={inputValue}
                     onChange={setInputValue}
                     activeDates={activeDates}
-                    t={t}
                   />
                 </div>
 
@@ -286,27 +230,10 @@ export const RetrospectiveView = ({
               </div>
 
               <div className="p-6 bg-surface border border-border rounded-2xl space-y-6 shadow-xl relative">
-                <div className="flex gap-2">
-                  {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((type) => (
-                    <Button
-                      key={type}
-                      variant={browseType === type ? "default" : "outline"}
-                      onClick={() => handleBrowseTypeChange(type)}
-                      className={cn(
-                        "flex-1 font-bold h-10 rounded-xl border-border text-xs transition-all",
-                        browseType === type ? "shadow-md scale-[1.01]" : "hover:bg-surface-elevated"
-                      )}
-                    >
-                      {type === "DAILY" ? t.retrospective?.daily : type === "WEEKLY" ? t.retrospective?.weekly : t.retrospective?.monthly}
-                    </Button>
-                  ))}
-                </div>
                 <DateSelector
-                  type={browseType}
                   value={browseInputValue}
                   onChange={setBrowseInputValue}
                   activeDates={activeDates}
-                  t={t}
                 />
               </div>
 

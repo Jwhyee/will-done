@@ -49,7 +49,7 @@ export interface User {
 export interface Retrospective {
   id: number;
   workspaceId: number;
-  retroType: "DAILY" | "WEEKLY" | "MONTHLY";
+  retroType: "DAILY";
   content: string;
   dateLabel: string;
   createdAt: string;
