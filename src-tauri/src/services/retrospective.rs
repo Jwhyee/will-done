@@ -13,6 +13,7 @@ pub async fn generate_retrospective(
     date_label: &str, // "2026-03-01", "2026-W09", etc.
     force_retry: bool,
     overwrite: bool,
+    target_model: Option<String>,
 ) -> Result<Retrospective> {
     let user = database::user::get_user(pool).await?.ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
 
@@ -86,12 +87,25 @@ CRITICAL RULE: Regardless of the instructions above, you MUST generate the final
         period_desc, role_intro, task_summary
     );
 
-    let (result_text, final_model_name) = services::gemini::execute_with_fallback(
-        pool,
-        &final_system_prompt,
-        &user_content,
-        force_retry,
-    ).await?;
+    let (result_text, final_model_name) = match target_model {
+        Some(model_name) => {
+            let res = services::gemini::execute_single_model(
+                pool,
+                &model_name,
+                &final_system_prompt,
+                &user_content,
+            ).await?;
+            (res, model_name)
+        }
+        None => {
+            services::gemini::execute_with_fallback(
+                pool,
+                &final_system_prompt,
+                &user_content,
+                force_retry,
+            ).await?
+        }
+    };
 
     // Cache successful model
     database::user::save_last_model(pool, &final_model_name).await?;

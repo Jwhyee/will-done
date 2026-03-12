@@ -72,6 +72,37 @@ pub async fn execute_with_fallback(
     Err(last_error.unwrap_or(AppError::Internal("All Gemini models failed.".to_string())))
 }
 
+pub async fn execute_single_model(
+    pool: &SqlitePool,
+    model_name: &str,
+    system_prompt: &str,
+    user_content: &str,
+) -> Result<String> {
+    let today = Local::now().format("%Y-%m-%d").to_string();
+    
+    // Check if exhausted today
+    if database::gemini::check_daily_exhausted_log(pool, &today).await.unwrap_or(false) {
+        return Err(AppError::Internal("QUOTA_EXHAUSTED".to_string()));
+    }
+
+    let user = database::user::get_user(pool).await?.ok_or(AppError::NotFound("User not found".to_string()))?;
+    let api_key = user.gemini_api_key.ok_or(AppError::InvalidInput("Gemini API Key is missing.".to_string()))?;
+
+    let client = reqwest::Client::new();
+
+    match try_generate_content(&client, &api_key, model_name, system_prompt, user_content).await {
+        Ok(text) => {
+            // Clear exhausted log if it was previously set and now succeeded
+            let _ = database::gemini::clear_exhausted(pool, &today).await;
+            Ok(text)
+        }
+        Err(e) => {
+            // Return error immediately for single model execution
+            Err(e)
+        }
+    }
+}
+
 async fn try_generate_content(
     client: &reqwest::Client,
     api_key: &str,
