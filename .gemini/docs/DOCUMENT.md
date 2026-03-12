@@ -58,3 +58,11 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - **Backend Cleanup**: Removed AI prompt logic for Weekly and Monthly retrospectives in `src-tauri/src/commands/retrospective.rs`.
 - **Type Safety**: Restricted `retroType` to `"DAILY"` in global TypeScript definitions.
 - **I18n**: Removed translations for `weekly` and `monthly` keys in both Korean and English locales.
+
+## v1.4.0 - 2026-03-12 (AI API Tier Management)
+
+### Architecture Changes
+- **User Profiling**: Added `is_free_user` field to the `User` domain model to distinguish between Gemini API free tier and paid tier users.
+- **Database Schema**: Updated `users` table with `is_free_user` column (Boolean, default 1).
+- **Onboarding/Settings UI**: Introduced a "Free User" checkbox in the API Key configuration section, defaulting to checked.
+- **Future-Proofing**: This field will enable specialized error handling (e.g., immediate failure for 429s on free tier vs. retry logic for paid tier) in subsequent updates.
