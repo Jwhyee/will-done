@@ -65,7 +65,7 @@ pub fn run() {
                     let args: Vec<String> = std::env::args().collect();
                     if args.contains(&"clear".to_string()) || args.contains(&"init".to_string()) {
                         println!("🚀 [Dev Mode] Cleaning database...");
-                        sqlx::query("DELETE FROM retrospectives").execute(&pool).await.ok();
+                        sqlx::query("DELETE FROM achievements").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM time_blocks").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM tasks").execute(&pool).await.ok();
                         sqlx::query("DELETE FROM projects").execute(&pool).await.ok();
@@ -202,8 +202,8 @@ pub fn run() {
                 sqlx::query("ALTER TABLE time_blocks ADD COLUMN is_urgent BOOLEAN NOT NULL DEFAULT 0").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE time_blocks ADD COLUMN planning_memo TEXT").execute(&pool).await.ok();
 
-                sqlx::query("CREATE TABLE IF NOT EXISTS retrospectives (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, retro_type TEXT NOT NULL, content TEXT NOT NULL, date_label TEXT NOT NULL, created_at TEXT NOT NULL, used_model TEXT, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
-                sqlx::query("ALTER TABLE retrospectives ADD COLUMN used_model TEXT").execute(&pool).await.ok();
+                sqlx::query("CREATE TABLE IF NOT EXISTS achievements (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, achievement_type TEXT NOT NULL, content TEXT NOT NULL, date_label TEXT NOT NULL, created_at TEXT NOT NULL, used_model TEXT, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
+                sqlx::query("ALTER TABLE achievements ADD COLUMN used_model TEXT").execute(&pool).await.ok();
 
                 sqlx::query(crate::database::gemini::CREATE_GEMINI_MODELS_TABLE).execute(&pool).await.ok();
                 sqlx::query(crate::database::gemini::CREATE_AI_USAGE_LOGS_TABLE).execute(&pool).await.ok();
@@ -272,10 +272,10 @@ pub fn run() {
             commands::timeline::move_task_to_bottom,
             commands::timeline::get_active_dates,
             commands::timeline::get_today_completed_duration,
-            commands::retrospective::generate_retrospective,
-            commands::retrospective::get_saved_retrospectives,
-            commands::retrospective::get_latest_saved_retrospective,
-            commands::retrospective::fetch_available_models,
+            commands::achievement::generate_achievement,
+            commands::achievement::get_saved_achievements,
+            commands::achievement::get_latest_saved_achievement,
+            commands::achievement::fetch_available_models,
             commands::gemini::check_daily_exhausted_log
         ])
         .run(tauri::generate_context!())

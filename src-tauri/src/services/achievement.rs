@@ -1,26 +1,26 @@
 use sqlx::SqlitePool;
 use chrono::NaiveDateTime;
-use crate::domain::{Retrospective, Result, AppError, DbGeminiModel};
+use crate::domain::{Achievement, Result, AppError, DbGeminiModel};
 use crate::database;
 use crate::services;
 
-pub async fn generate_retrospective(
+pub async fn generate_achievement(
     pool: &SqlitePool,
     workspace_id: i64,
     start_date: &str, // "YYYY-MM-DD"
     end_date: &str,   // "YYYY-MM-DD"
-    retro_type: &str, // "DAILY", "WEEKLY", "MONTHLY"
-    date_label: &str, // "2026-03-01", "2026-W09", etc.
+    achievement_type: &str, // "DAILY"
+    date_label: &str, // "2026-03-01"
     force_retry: bool,
     overwrite: bool,
     target_model: Option<String>,
-) -> Result<Retrospective> {
+) -> Result<Achievement> {
     let user = database::user::get_user(pool).await?.ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
 
     // Check for duplicates
-    let already_exists = database::retrospective::check_retrospective_exists(pool, workspace_id, date_label, retro_type).await?;
+    let already_exists = database::achievement::check_achievement_exists(pool, workspace_id, date_label, achievement_type).await?;
     if !overwrite && already_exists {
-        return Err(AppError::InvalidInput("A retrospective for this period already exists.".to_string()));
+        return Err(AppError::InvalidInput("An achievement for this period already exists.".to_string()));
     }
 
     let workspace = database::workspace::get_workspace(pool, workspace_id).await?.ok_or_else(|| AppError::NotFound("Workspace not found".to_string()))?;
@@ -35,7 +35,7 @@ pub async fn generate_retrospective(
         + chrono::Duration::days(1) - chrono::Duration::seconds(1))
         .format("%Y-%m-%dT%H:%M:00").to_string();
 
-    let blocks = database::retrospective::get_completed_task_blocks(pool, workspace_id, &start_of_range, &end_of_range).await?;
+    let blocks = database::achievement::get_completed_task_blocks(pool, workspace_id, &start_of_range, &end_of_range).await?;
 
     if blocks.is_empty() {
         return Err(AppError::InvalidInput("No completed tasks found for the selected period.".to_string()));
@@ -112,19 +112,19 @@ CRITICAL RULE: Regardless of the instructions above, you MUST generate the final
 
     // Save or update result in DB
     if already_exists {
-        database::retrospective::update_retrospective(
+        database::achievement::update_achievement(
             pool,
             workspace_id,
-            retro_type,
+            achievement_type,
             &result_text,
             date_label,
             Some(&final_model_name),
         ).await
     } else {
-        database::retrospective::save_retrospective(
+        database::achievement::save_achievement(
             pool,
             workspace_id,
-            retro_type,
+            achievement_type,
             &result_text,
             date_label,
             Some(&final_model_name),
@@ -132,19 +132,19 @@ CRITICAL RULE: Regardless of the instructions above, you MUST generate the final
     }
 }
 
-pub async fn get_saved_retrospectives(
+pub async fn get_saved_achievements(
     pool: &SqlitePool,
     workspace_id: i64,
     date_label: &str,
-) -> Result<Vec<Retrospective>> {
-    database::retrospective::get_saved_retrospectives(pool, workspace_id, date_label).await
+) -> Result<Vec<Achievement>> {
+    database::achievement::get_saved_achievements(pool, workspace_id, date_label).await
 }
 
-pub async fn get_latest_saved_retrospective(
+pub async fn get_latest_saved_achievement(
     pool: &SqlitePool,
     workspace_id: i64,
-) -> Result<Option<Retrospective>> {
-    database::retrospective::get_latest_saved_retrospective(pool, workspace_id).await
+) -> Result<Option<Achievement>> {
+    database::achievement::get_latest_saved_achievement(pool, workspace_id).await
 }
 
 pub async fn fetch_available_models(
