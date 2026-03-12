@@ -2,14 +2,14 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface RetroSidebarProps {
+interface AchievementSidebarProps {
   tab: "create" | "browse";
   setTab: (tab: "create" | "browse") => void;
   onClose: () => void;
   t: any;
 }
 
-export const RetroSidebar = ({ tab, setTab, onClose, t }: RetroSidebarProps) => {
+export const AchievementSidebar = ({ tab, setTab, onClose, t }: AchievementSidebarProps) => {
   return (
     <aside className="w-64 border-r border-border bg-surface flex flex-col shrink-0 pt-8 pb-6 px-6 space-y-8 relative z-50">
       <Button
@@ -23,13 +23,13 @@ export const RetroSidebar = ({ tab, setTab, onClose, t }: RetroSidebarProps) => 
       <div className="space-y-4">
         <div className="space-y-1">
           <h2 className="text-lg font-bold tracking-tight text-text-primary leading-tight">
-            {t.retrospective.title}
+            {t.achievement.title}
           </h2>
         </div>
         <nav className="space-y-1.5">
           {[
-            { id: "create", label: t.retrospective.create_tab },
-            { id: "browse", label: t.retrospective.browse_tab }
+            { id: "create", label: t.achievement.create_tab },
+            { id: "browse", label: t.achievement.browse_tab }
           ].map((item) => (
             <Button
               key={item.id}

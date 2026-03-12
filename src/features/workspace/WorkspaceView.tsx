@@ -33,7 +33,7 @@ interface WorkspaceViewProps {
   onMoveTaskStep: (blockId: number, direction: "up" | "down") => Promise<void>;
   onMoveTaskToPriority: (blockId: number) => Promise<void>;
   onMoveTaskToBottom: (blockId: number) => Promise<void>;
-  onOpenRetrospective: () => void;
+  onOpenAchievement: () => void;
   onCreateWorkspace: () => void;
   transitionBlock: TimeBlock | null;
   setTransitionBlock: (block: TimeBlock | null) => void;
@@ -46,7 +46,7 @@ export const WorkspaceView = ({
   timeline, inboxTasks, activeWorkspaceId, onTaskSubmit, onEditTaskSubmit, onTransition, onDismissTransition,
   onMoveToInbox, onDeleteTask, onHandleSplitTaskDeletion, onMoveAllToTimeline, onMoveToTimeline,
   onMoveTaskStep, onMoveTaskToPriority, onMoveTaskToBottom,
-  onOpenRetrospective, onCreateWorkspace, transitionBlock, setTransitionBlock, workspaces, overId,
+  onOpenAchievement, onCreateWorkspace, transitionBlock, setTransitionBlock, workspaces, overId,
 }: WorkspaceViewProps) => {
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
   const {
@@ -66,7 +66,7 @@ export const WorkspaceView = ({
         t={t} user={user} greeting={greeting} currentTime={currentTime} logicalDate={logicalDate} selectedDate={selectedDate}
         onDateChange={onDateChange} activeWorkspaceId={activeWorkspaceId} dailyProgress={dailyProgress} inboxTasksCount={inboxTasks.length}
         taskForm={taskForm} onTaskSubmit={handleTaskSubmit} onTaskError={handleTaskError} onOpenInbox={() => setIsInboxOpen(true)}
-        onOpenRetrospective={onOpenRetrospective} isPastView={isPastView}
+        onOpenAchievement={onOpenAchievement} isPastView={isPastView}
       />
 
       <WorkspaceTimeline

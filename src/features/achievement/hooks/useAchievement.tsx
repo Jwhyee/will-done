@@ -1,27 +1,27 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
-import { Retrospective, User } from "@/types";
+import { Achievement, User } from "@/types";
 import { DbGeminiModel } from "@/types/gemini";
 import { useToast } from "@/providers/ToastProvider";
 import { calculateRange } from "../utils";
-import { retrospectiveApi } from "../api";
+import { achievementApi } from "../api";
 
-interface UseRetrospectiveProps {
+interface UseAchievementProps {
   workspaceId: number;
   user: User;
   t: any;
-  onShowSavedRetro: (retro: Retrospective) => void;
+  onShowSavedAchievement: (retro: Achievement) => void;
 }
 
-export const useRetrospective = ({
+export const useAchievement = ({
   workspaceId,
   user,
   t,
-  onShowSavedRetro
-}: UseRetrospectiveProps) => {
+  onShowSavedAchievement
+}: UseAchievementProps) => {
   const [tab, setTab] = useState<"create" | "browse">("create");
-  const retroType = "DAILY" as const;
+  const achievementType = "DAILY" as const;
   const browseType = "DAILY" as const;
   const { showToast } = useToast();
   
@@ -40,7 +40,7 @@ export const useRetrospective = ({
 
   const [browseInputValue, setBrowseInputValue] = useState("");
   const [browseDateLabel, setBrowseDateLabel] = useState("");
-  const [foundRetro, setFoundRetro] = useState<Retrospective | null>(null);
+  const [foundAchievement, setFoundAchievement] = useState<Achievement | null>(null);
 
   const [genMessage, setGenMessage] = useState("");
   const [activeDates, setActiveDates] = useState<string[]>([]);
@@ -48,7 +48,7 @@ export const useRetrospective = ({
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const models = await retrospectiveApi.fetchAvailableModels();
+        const models = await achievementApi.fetchAvailableModels();
         if (Array.isArray(models)) {
           setAvailableModels(models);
         }
@@ -62,7 +62,7 @@ export const useRetrospective = ({
   useEffect(() => {
     const fetchActiveDates = async () => {
       try {
-        const dates = await retrospectiveApi.getActiveDates(workspaceId);
+        const dates = await achievementApi.getActiveDates(workspaceId);
         if (Array.isArray(dates)) {
           const sorted = dates.sort();
           setActiveDates(sorted);
@@ -80,9 +80,9 @@ export const useRetrospective = ({
 
   useEffect(() => {
     if (!inputValue) return;
-    const { start, end, label } = calculateRange(inputValue, retroType);
+    const { start, end, label } = calculateRange(inputValue, achievementType);
     setStartDate(start); setEndDate(end); setDateLabel(label);
-  }, [inputValue, retroType]);
+  }, [inputValue, achievementType]);
 
   useEffect(() => {
     if (!browseInputValue) return;
@@ -91,19 +91,19 @@ export const useRetrospective = ({
   }, [browseInputValue, browseType]);
 
   useEffect(() => {
-    const fetchSavedRetro = async () => {
+    const fetchSavedAchievement = async () => {
       if (tab !== "browse" || !browseDateLabel) return;
       try {
-        const retros = await retrospectiveApi.getSavedRetrospectives(workspaceId, browseDateLabel);
-        setFoundRetro(retros.length > 0 ? retros[0] : null);
+        const retros = await achievementApi.getSavedAchievements(workspaceId, browseDateLabel);
+        setFoundAchievement(retros.length > 0 ? retros[0] : null);
       } catch (e) { console.error(e); }
     };
-    fetchSavedRetro();
+    fetchSavedAchievement();
   }, [browseDateLabel, workspaceId, tab]);
 
   const checkQuota = async () => {
     try {
-      const isExhausted = await retrospectiveApi.checkDailyExhaustedLog();
+      const isExhausted = await achievementApi.checkDailyExhaustedLog();
       setIsQuotaExhausted(isExhausted);
       return isExhausted;
     } catch (e) {
@@ -113,7 +113,7 @@ export const useRetrospective = ({
   };
 
   const handleGenerate = async (forceRetry: boolean = false, overwrite: boolean = false) => {
-    if (retroType === "DAILY" && !activeDates.includes(startDate)) {
+    if (achievementType === "DAILY" && !activeDates.includes(startDate)) {
       showToast(t.main.toast.no_data_for_date, "error");
       return;
     }
@@ -123,15 +123,15 @@ export const useRetrospective = ({
       if (exhausted) return;
     }
 
-    setGenMessage(t.retrospective.gen_message);
+    setGenMessage(t.achievement.gen_message);
     setIsGenerating(true);
     
     try {
-      const retro = await retrospectiveApi.generateRetrospective({
+      const achievement = await achievementApi.generateAchievement({
         workspaceId,
         startDate,
         endDate,
-        retroType,
+        achievementType,
         dateLabel,
         forceRetry,
         overwrite,
@@ -142,23 +142,23 @@ export const useRetrospective = ({
       setIsDuplicateConfirmOpen(false);
       setGenMessage("");
 
-      if (retro) {
+      if (achievement) {
         if (user.isNotificationEnabled) {
           let permission = await isPermissionGranted();
           if (!permission) permission = await requestPermission() === 'granted';
           if (permission) {
             sendNotification({
-              title: t.retrospective.notification_title,
-              body: t.retrospective.notification_body
+              title: t.achievement.notification_title,
+              body: t.achievement.notification_body
                 .replace("{label}", dateLabel)
-                .replace("{type}", t.retrospective[retroType.toLowerCase()]),
+                .replace("{type}", t.achievement[achievementType.toLowerCase()]),
             });
           }
         }
-        onShowSavedRetro(retro);
+        onShowSavedAchievement(achievement);
       }
     } catch (error: any) {
-      console.error("Retrospective generation failed:", error);
+      console.error("Achievement generation failed:", error);
       setGenMessage("");
       
       let errStr = "Unknown error";
@@ -179,7 +179,7 @@ export const useRetrospective = ({
       } else if (errStr.includes("already exists")) {
         setIsDuplicateConfirmOpen(true);
       } else if (errStr.includes("No completed tasks")) {
-        showToast(t.retrospective.no_tasks_error, "error");
+        showToast(t.achievement.no_tasks_error, "error");
       } else if (selectedModel && (errStr.includes("429") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit"))) {
         // Handle specific model failure with desktop notification
         if (user.isNotificationEnabled) {
@@ -241,7 +241,7 @@ export const useRetrospective = ({
     setInputValue,
     browseInputValue,
     setBrowseInputValue,
-    foundRetro,
+    foundAchievement,
     genMessage,
     activeDates,
     availableModels,

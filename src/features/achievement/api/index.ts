@@ -1,30 +1,30 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Retrospective } from "@/types";
+import { Achievement } from "@/types";
 import { DbGeminiModel } from "@/types/gemini";
 
-export interface GenerateRetrospectiveParams {
+export interface GenerateAchievementParams {
   workspaceId: number;
   startDate: string;
   endDate: string;
-  retroType: "DAILY";
+  achievementType: "DAILY";
   dateLabel: string;
   forceRetry: boolean;
   overwrite: boolean;
   targetModel: string | null;
 }
 
-export const retrospectiveApi = {
+export const achievementApi = {
   getActiveDates: (workspaceId: number) =>
     invoke<string[]>("get_active_dates", { workspaceId }),
 
-  getSavedRetrospectives: (workspaceId: number, dateLabel: string) =>
-    invoke<Retrospective[]>("get_saved_retrospectives", { workspaceId, dateLabel }),
+  getSavedAchievements: (workspaceId: number, dateLabel: string) =>
+    invoke<Achievement[]>("get_saved_achievements", { workspaceId, dateLabel }),
 
   checkDailyExhaustedLog: () =>
     invoke<boolean>("check_daily_exhausted_log"),
 
-  generateRetrospective: (params: GenerateRetrospectiveParams) =>
-    invoke<Retrospective>("generate_retrospective", params as any),
+  generateAchievement: (params: GenerateAchievementParams) =>
+    invoke<Achievement>("generate_achievement", params as any),
 
   fetchAvailableModels: () =>
     invoke<DbGeminiModel[]>("fetch_available_models"),

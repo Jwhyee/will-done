@@ -47,10 +47,10 @@ export interface User {
   dayStartTime: string;
 }
 
-export interface Retrospective {
+export interface Achievement {
   id: number;
   workspaceId: number;
-  retroType: "DAILY";
+  achievementType: "DAILY";
   content: string;
   dateLabel: string;
   createdAt: string;

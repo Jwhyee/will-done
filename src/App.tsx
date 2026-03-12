@@ -41,7 +41,7 @@ import { OnboardingView } from "@/features/onboarding/OnboardingView";
 import { WorkspaceCreateModal } from "@/features/workspace/components/modals/WorkspaceCreateModal";
 import { WorkspaceView } from "@/features/workspace/WorkspaceView";
 import { WorkspaceSettingsView } from "@/features/workspace/WorkspaceSettingsView";
-import { RetrospectiveView } from "@/features/retrospective/RetrospectiveView";
+import { AchievementView } from "@/features/achievement/AchievementView";
 import { GlobalSettingsModal } from "@/features/settings/GlobalSettingsModal";
 import { InboxItem } from "@/features/workspace/components/inbox/InboxItem";
 import { SortableItem } from "@/features/workspace/components/timeline/SortableItem";
@@ -70,10 +70,10 @@ function AppContent() {
     setSelectedDate,
     transitionBlock,
     setTransitionBlock,
-    retrospectiveOpen,
-    setRetrospectiveOpen,
-    activeRetrospective,
-    setActiveRetrospective,
+    achievementOpen,
+    setAchievementOpen,
+    activeAchievement,
+    setActiveAchievement,
     activeId,
     overId,
     isWorkspaceCreateModalOpen,
@@ -115,16 +115,16 @@ function AppContent() {
     switch (view) {
       case "onboarding":
         return <OnboardingView t={t} onComplete={(u) => { setUser(u); setView("main"); }} />;
-      case "retrospective":
+      case "achievement":
         return (activeWorkspaceId && user) ? (
-          <RetrospectiveView
+          <AchievementView
             workspaceId={activeWorkspaceId}
             user={user}
             t={t}
             onClose={() => setView("main")}
-            onShowSavedRetro={(retro) => {
-              setActiveRetrospective(retro);
-              setRetrospectiveOpen(true);
+            onShowSavedAchievement={(retro) => {
+              setActiveAchievement(retro);
+              setAchievementOpen(true);
             }}
           />
         ) : null;
@@ -215,7 +215,7 @@ function AppContent() {
                   fetchMainData();
                 }
               }}
-              onOpenRetrospective={() => setView("retrospective")}
+              onOpenAchievement={() => setView("achievement")}
               onCreateWorkspace={() => setIsWorkspaceCreateModalOpen(true)}
               onMoveTaskStep={onMoveTaskStep}
               onMoveTaskToPriority={onMoveTaskToPriority}
@@ -310,28 +310,28 @@ function AppContent() {
         isFirst={workspaces.length === 0}
       />
 
-      {/* Retrospective Content Modal */}
-      <Dialog open={retrospectiveOpen} onOpenChange={setRetrospectiveOpen}>
+      {/* Achievement Content Modal */}
+      <Dialog open={achievementOpen} onOpenChange={setAchievementOpen}>
         <DialogContent className="sm:max-w-[700px] h-[85vh] bg-surface-elevated border-border text-text-primary shadow-2xl flex flex-col rounded-2xl p-0 border-t-border/50 overflow-hidden antialiased">
           <DialogHeader className="p-8 pb-4 shrink-0 space-y-3">
             <DialogTitle className="text-2xl font-black tracking-tighter text-text-primary leading-none flex items-center gap-2">
-              {activeRetrospective?.dateLabel || "Retrospective"}
+              {activeAchievement?.dateLabel || "Achievement"}
             </DialogTitle>
             <DialogDescription className="text-text-secondary text-sm leading-relaxed">
-              {t.retrospective.brag_desc}
+              {t.achievement.brag_desc}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-8 scrollbar-hide bg-background">
             <div className="py-8 text-sm leading-relaxed prose prose-invert max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {activeRetrospective?.content || "No retrospective generated yet."}
+                {activeAchievement?.content || "No achievement generated yet."}
               </ReactMarkdown>
             </div>
-            {activeRetrospective?.usedModel && (
+            {activeAchievement?.usedModel && (
               <div className="pb-8 flex justify-end">
                 <span className="text-xs font-medium text-text-secondary uppercase tracking-widest bg-surface px-2 py-1 rounded-md border border-border">
-                  {t.retrospective.used_model}: {activeRetrospective.usedModel.replace('models/', '')}
+                  {t.achievement.used_model}: {activeAchievement.usedModel.replace('models/', '')}
                 </span>
               </div>
             )}
@@ -339,11 +339,11 @@ function AppContent() {
 
           <DialogFooter className="p-6 border-t border-border bg-surface-elevated shrink-0">
             <Button
-              onClick={() => activeRetrospective && navigator.clipboard.writeText(activeRetrospective.content)}
-              disabled={!activeRetrospective}
+              onClick={() => activeAchievement && navigator.clipboard.writeText(activeAchievement.content)}
+              disabled={!activeAchievement}
               className="w-full bg-text-primary text-background hover:bg-zinc-200 font-bold h-11 rounded-xl text-sm transition-all shadow-xl shadow-black/20 active:scale-95 disabled:opacity-50"
             >
-              {t.retrospective.copy_btn}
+              {t.achievement.copy_btn}
             </Button>
           </DialogFooter>
         </DialogContent>

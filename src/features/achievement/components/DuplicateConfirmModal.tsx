@@ -25,10 +25,10 @@ export const DuplicateConfirmModal = ({
             <DialogContent className="sm:max-w-[440px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-6 antialiased">
                 <DialogHeader className="space-y-3">
                     <DialogTitle className="text-xl font-black tracking-tighter text-text-primary">
-                        📝 {t.retrospective.duplicate_confirm_title}
+                        📝 {t.achievement.duplicate_confirm_title}
                     </DialogTitle>
                     <DialogDescription className="text-text-secondary text-sm font-medium leading-relaxed">
-                        {t.retrospective.duplicate_confirm_desc}
+                        {t.achievement.duplicate_confirm_desc}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -37,7 +37,7 @@ export const DuplicateConfirmModal = ({
                         onClick={onConfirm}
                         className="w-full bg-accent text-text-primary hover:bg-accent/80 font-bold h-12 rounded-2xl transition-all active:scale-[0.98]"
                     >
-                        {t.retrospective.generate_btn}
+                        {t.achievement.generate_btn}
                     </Button>
                     <Button
                         variant="ghost"

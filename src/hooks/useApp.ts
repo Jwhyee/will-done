@@ -15,13 +15,13 @@ import {
 import { format } from "date-fns";
 import { useToast } from "@/providers/ToastProvider";
 import { translations, getLang, type Lang } from "@/lib/i18n";
-import { TimeBlock, Task, User, Workspace, Retrospective } from "@/types";
+import { TimeBlock, Task, User, Workspace, Achievement } from "@/types";
 import { validateDropPosition } from "@/features/workspace/utils/dndValidation";
 
 import { workspaceApi } from "@/features/workspace/api";
 import { onboardingApi } from "@/features/onboarding/api";
 
-export type ViewState = "loading" | "onboarding" | "workspace_setup" | "main" | "retrospective" | "workspace_settings";
+export type ViewState = "loading" | "onboarding" | "workspace_setup" | "main" | "achievement" | "workspace_settings";
 
 export function useApp() {
   const [view, setView] = useState<ViewState>("loading");
@@ -50,8 +50,8 @@ export function useApp() {
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [transitionBlock, setTransitionBlock] = useState<TimeBlock | null>(null);
-  const [retrospectiveOpen, setRetrospectiveOpen] = useState(false);
-  const [activeRetrospective, setActiveRetrospective] = useState<Retrospective | null>(null);
+  const [achievementOpen, setAchievementOpen] = useState(false);
+  const [activeAchievement, setActiveAchievement] = useState<Achievement | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [isWorkspaceCreateModalOpen, setIsWorkspaceCreateModalOpen] = useState(false);
@@ -112,8 +112,8 @@ export function useApp() {
               if (granted) {
                 sendNotification({
                   id: active.id,
-                  title: t.retrospective.task_notification_title,
-                  body: t.retrospective.task_notification_body.replace("{title}", active.title),
+                  title: t.achievement.task_notification_title,
+                  body: t.achievement.task_notification_body.replace("{title}", active.title),
                 });
                 lastNotifiedBlockId.current = active.id;
               }
@@ -138,7 +138,7 @@ export function useApp() {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [activeWorkspaceId, lang, selectedDate, transitionBlock, logicalDate, user?.isNotificationEnabled, t.retrospective.task_notification_body, t.retrospective.task_notification_title]);
+  }, [activeWorkspaceId, lang, selectedDate, transitionBlock, logicalDate, user?.isNotificationEnabled, t.achievement.task_notification_body, t.achievement.task_notification_title]);
 
   const init = useCallback(async () => {
     try {
@@ -405,10 +405,10 @@ export function useApp() {
     setSelectedDate,
     transitionBlock,
     setTransitionBlock,
-    retrospectiveOpen,
-    setRetrospectiveOpen,
-    activeRetrospective,
-    setActiveRetrospective,
+    achievementOpen,
+    setAchievementOpen,
+    activeAchievement,
+    setActiveAchievement,
     activeId,
     overId,
     isWorkspaceCreateModalOpen,

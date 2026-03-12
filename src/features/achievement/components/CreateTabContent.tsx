@@ -36,10 +36,10 @@ export const CreateTabContent = ({
     <div className="space-y-6">
       <div className="space-y-1.5">
         <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">
-          {t.retrospective.create_title}
+          {t.achievement.create_title}
         </h1>
         <p className="text-sm text-text-secondary leading-relaxed">
-          {t.retrospective.create_desc}
+          {t.achievement.create_desc}
         </p>
       </div>
 
@@ -148,11 +148,11 @@ export const CreateTabContent = ({
         {isGenerating ? (
           <div className="flex items-center gap-2">
             <Loader2 className="w-5 h-5 animate-spin" />
-            {t.retrospective.generating}
+            {t.achievement.generating}
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            {t.retrospective.generate_btn}
+            {t.achievement.generate_btn}
           </div>
         )}
       </Button>

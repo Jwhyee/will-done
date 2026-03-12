@@ -26,7 +26,7 @@ interface WorkspaceHeaderProps {
   onTaskSubmit: (data: any, isInbox?: boolean) => Promise<void>;
   onTaskError: (errors: any) => void;
   onOpenInbox: () => void;
-  onOpenRetrospective: () => void;
+  onOpenAchievement: () => void;
   isPastView: boolean;
 }
 
@@ -45,12 +45,12 @@ export const WorkspaceHeader = ({
   onTaskSubmit,
   onTaskError,
   onOpenInbox,
-  onOpenRetrospective,
+  onOpenAchievement,
   isPastView,
 }: WorkspaceHeaderProps) => {
   const [activeDates, setActiveDates] = useState<string[]>([]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const isRetroEnabled = !!user?.geminiApiKey;
+  const isAchievementEnabled = !!user?.geminiApiKey;
   const activeLocale = user?.lang === "ko" ? locales.ko : locales.enUS;
 
   const viewDate = selectedDate || logicalDate;
@@ -172,18 +172,18 @@ export const WorkspaceHeader = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={onOpenRetrospective}
-                    disabled={!isRetroEnabled}
+                    onClick={onOpenAchievement}
+                    disabled={!isAchievementEnabled}
                     className="h-10 w-10 rounded-xl hover:bg-surface-elevated text-text-muted hover:text-text-primary disabled:opacity-30 disabled:hover:bg-transparent"
                   >
-                    <Sparkles size={20} className={isRetroEnabled ? "text-warning" : "text-text-muted"} />
+                    <Sparkles size={20} className={isAchievementEnabled ? "text-warning" : "text-text-muted"} />
                   </Button>
                 </div>
               </TooltipTrigger>
               <TooltipContent className="bg-surface-elevated border-border text-text-primary font-bold text-xs rounded-xl">
-                {isRetroEnabled
-                  ? t.header.retrospective
-                  : t.header.retro_disabled_tooltip
+                {isAchievementEnabled
+                  ? t.header.achievement
+                  : t.header.achievement_disabled_tooltip
                 }
               </TooltipContent>
             </Tooltip>

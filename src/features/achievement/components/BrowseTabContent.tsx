@@ -3,14 +3,14 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Retrospective } from "@/types";
+import { Achievement } from "@/types";
 import { DateSelector } from "./DateSelector";
 
 interface BrowseTabContentProps {
   browseInputValue: string;
   setBrowseInputValue: (val: string) => void;
   activeDates: string[];
-  foundRetro: Retrospective | null;
+  foundAchievement: Achievement | null;
   isCopied: boolean;
   handleCopy: (content: string) => void;
   t: any;
@@ -20,7 +20,7 @@ export const BrowseTabContent = ({
   browseInputValue,
   setBrowseInputValue,
   activeDates,
-  foundRetro,
+  foundAchievement,
   isCopied,
   handleCopy,
   t
@@ -29,10 +29,10 @@ export const BrowseTabContent = ({
     <div className="space-y-6">
       <div className="space-y-1.5">
         <h1 className="text-2xl font-black tracking-tighter text-text-primary leading-none">
-          {t.retrospective.browse_title}
+          {t.achievement.browse_title}
         </h1>
         <p className="text-sm text-text-secondary leading-relaxed">
-          {t.retrospective.browse_desc}
+          {t.achievement.browse_desc}
         </p>
       </div>
 
@@ -45,9 +45,9 @@ export const BrowseTabContent = ({
       </div>
 
       <AnimatePresence mode="wait">
-        {foundRetro ? (
+        {foundAchievement ? (
           <motion.div
-            key={foundRetro.id}
+            key={foundAchievement.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -56,11 +56,11 @@ export const BrowseTabContent = ({
             <div className="flex justify-between items-start pb-6 border-b border-border/50">
               <div className="space-y-1.5">
                 <h2 className="text-lg font-bold text-text-primary tracking-tight leading-none">
-                  {foundRetro.dateLabel}
+                  {foundAchievement.dateLabel}
                 </h2>
-                {foundRetro.usedModel && (
+                {foundAchievement.usedModel && (
                   <p className="text-xs font-medium text-text-secondary uppercase tracking-widest">
-                    Engine: {foundRetro.usedModel.replace('models/', '').toUpperCase()}
+                    Engine: {foundAchievement.usedModel.replace('models/', '').toUpperCase()}
                   </p>
                 )}
               </div>
@@ -68,14 +68,14 @@ export const BrowseTabContent = ({
                 variant="ghost"
                 size="icon"
                 className="w-10 h-10 rounded-xl hover:bg-primary/10 transition-all active:scale-90"
-                onClick={() => handleCopy(foundRetro.content)}
+                onClick={() => handleCopy(foundAchievement.content)}
               >
                 {isCopied ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
               </Button>
             </div>
 
             <div className="prose prose-invert max-w-none prose-p:text-sm prose-p:leading-relaxed prose-p:text-text-secondary prose-headings:font-black prose-headings:tracking-tighter prose-headings:text-text-primary prose-strong:text-primary prose-code:text-warning prose-code:bg-warning/5 prose-code:px-1 prose-code:rounded prose-ul:space-y-2 prose-li:text-text-secondary prose-li:text-sm">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{foundRetro.content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{foundAchievement.content}</ReactMarkdown>
             </div>
           </motion.div>
         ) : (
@@ -89,10 +89,10 @@ export const BrowseTabContent = ({
             </div>
             <div className="space-y-1">
               <p className="text-lg text-text-primary font-bold tracking-tight">
-                {t.retrospective.no_data_for_label}
+                {t.achievement.no_data_for_label}
               </p>
               <p className="text-sm text-text-secondary leading-relaxed">
-                {t.retrospective.select_another_range}
+                {t.achievement.select_another_range}
               </p>
             </div>
           </motion.div>

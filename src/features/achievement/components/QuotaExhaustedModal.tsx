@@ -28,10 +28,10 @@ export const QuotaExhaustedModal = ({
                         <span className="text-2xl">⏳</span>
                     </div>
                     <DialogTitle className="text-xl font-black tracking-tighter text-text-primary">
-                        {t.retrospective.quota_exhausted.title}
+                        {t.achievement.quota_exhausted.title}
                     </DialogTitle>
                     <DialogDescription className="text-text-secondary text-sm font-medium leading-relaxed">
-                        {t.retrospective.quota_exhausted.description}
+                        {t.achievement.quota_exhausted.description}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -40,14 +40,14 @@ export const QuotaExhaustedModal = ({
                         onClick={onRetry}
                         className="w-full bg-accent text-text-primary hover:bg-accent/80 font-bold h-12 rounded-2xl transition-all active:scale-[0.98]"
                     >
-                        {t.retrospective.quota_exhausted.retry_btn}
+                        {t.achievement.quota_exhausted.retry_btn}
                     </Button>
                     <Button
                         variant="ghost"
                         onClick={onClose}
                         className="w-full text-text-secondary hover:bg-border/50 font-bold h-12 rounded-2xl transition-all"
                     >
-                        {t.retrospective.quota_exhausted.close_btn}
+                        {t.achievement.quota_exhausted.close_btn}
                     </Button>
                 </div>
             </DialogContent>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Retrospective } from "@/types";
+import { Achievement } from "@/types";
 import { useToast } from "@/providers/ToastProvider";
 
 export const useGemini = (t: any) => {
@@ -19,29 +19,29 @@ export const useGemini = (t: any) => {
         }
     };
 
-    const generateRetrospective = async (params: {
+    const generateAchievement = async (params: {
         workspaceId: number;
         startDate: string;
         endDate: string;
-        retroType: string;
+        achievementType: string;
         dateLabel: string;
         forceRetry?: boolean;
-    }): Promise<Retrospective | null> => {
+    }): Promise<Achievement | null> => {
         setIsGenerating(true);
         try {
             // Align with backend snake_case parameters
-            const retro = await invoke<Retrospective>("generate_retrospective", {
+            const achievement = await invoke<Achievement>("generate_achievement", {
                 workspaceId: params.workspaceId,
                 startDate: params.startDate,
                 endDate: params.endDate,
-                retroType: params.retroType,
+                achievementType: params.achievementType,
                 dateLabel: params.dateLabel,
                 forceRetry: !!params.forceRetry,
             });
             setIsQuotaExhausted(false); // Reset if success
-            return retro;
+            return achievement;
         } catch (error: any) {
-            console.error("Retrospective generation failed:", error);
+            console.error("Achievement generation failed:", error);
             
             // Safer error stringification to avoid cyclic errors during logging
             let errStr = "Unknown error";
@@ -60,9 +60,9 @@ export const useGemini = (t: any) => {
             if (errStr.includes("QUOTA_EXHAUSTED")) {
                 setIsQuotaExhausted(true);
             } else if (errStr.includes("already exists")) {
-                showToast(t.retrospective.duplicate_error, "error");
+                showToast(t.achievement.duplicate_error, "error");
             } else if (errStr.includes("No completed tasks")) {
-                showToast(t.retrospective.no_tasks_error, "error");
+                showToast(t.achievement.no_tasks_error, "error");
             } else {
                 showToast(`Error: ${errStr}`, "error");
             }
@@ -77,6 +77,6 @@ export const useGemini = (t: any) => {
         isQuotaExhausted,
         setIsQuotaExhausted,
         checkQuota,
-        generateRetrospective,
+        generateAchievement,
     };
 };

@@ -1,26 +1,26 @@
-import { Retrospective, User } from "@/types";
-import { useRetrospective } from "./hooks/useRetrospective.tsx";
-import { RetroSidebar } from "./components/RetroSidebar";
+import { Achievement, User } from "@/types";
+import { useAchievement } from "./hooks/useAchievement.tsx";
+import { AchievementSidebar } from "./components/AchievementSidebar";
 import { CreateTabContent } from "./components/CreateTabContent";
 import { BrowseTabContent } from "./components/BrowseTabContent";
 import { QuotaExhaustedModal } from "./components/QuotaExhaustedModal";
 import { DuplicateConfirmModal } from "./components/DuplicateConfirmModal";
 
-interface RetrospectiveViewProps {
+interface AchievementViewProps {
   workspaceId: number;
   user: User;
   t: any;
   onClose: () => void;
-  onShowSavedRetro: (retro: Retrospective) => void;
+  onShowSavedAchievement: (retro: Achievement) => void;
 }
 
-export const RetrospectiveView = ({
+export const AchievementView = ({
   workspaceId,
   user,
   t,
   onClose,
-  onShowSavedRetro
-}: RetrospectiveViewProps) => {
+  onShowSavedAchievement
+}: AchievementViewProps) => {
   const {
     tab,
     setTab,
@@ -34,7 +34,7 @@ export const RetrospectiveView = ({
     setInputValue,
     browseInputValue,
     setBrowseInputValue,
-    foundRetro,
+    foundAchievement,
     genMessage,
     activeDates,
     availableModels,
@@ -43,11 +43,11 @@ export const RetrospectiveView = ({
     handleGenerate,
     handleConfirmOverwrite,
     handleCopy,
-  } = useRetrospective({ workspaceId, user, t, onShowSavedRetro });
+  } = useAchievement({ workspaceId, user, t, onShowSavedAchievement });
 
   return (
     <div className="flex-1 flex h-screen overflow-hidden bg-background antialiased selection:bg-primary/30 relative">
-      <RetroSidebar 
+      <AchievementSidebar 
         tab={tab} 
         setTab={setTab} 
         onClose={onClose} 
@@ -75,7 +75,7 @@ export const RetrospectiveView = ({
               browseInputValue={browseInputValue}
               setBrowseInputValue={setBrowseInputValue}
               activeDates={activeDates}
-              foundRetro={foundRetro}
+              foundAchievement={foundAchievement}
               isCopied={isCopied}
               handleCopy={handleCopy}
               t={t}
