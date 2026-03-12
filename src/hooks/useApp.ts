@@ -240,6 +240,29 @@ export function useApp() {
       return;
     }
 
+    // Inbox Reordering
+    if (activeId.startsWith("inbox-") && overId.startsWith("inbox-")) {
+      const oldIndex = inboxTasks.findIndex((item) => `inbox-${item.id}` === activeId);
+      const newIndex = inboxTasks.findIndex((item) => `inbox-${item.id}` === overId);
+
+      if (oldIndex !== newIndex) {
+        const newInbox = arrayMove(inboxTasks, oldIndex, newIndex);
+        setInboxTasks(newInbox); // Optimistic UI update
+
+        const ids = newInbox.map(t => t.id);
+        if (activeWorkspaceId) {
+          try {
+            await invoke("reorder_inbox", { workspaceId: activeWorkspaceId, taskIds: ids });
+            fetchMainData();
+          } catch (error) {
+            console.error("Inbox reorder failed:", error);
+            fetchMainData();
+          }
+        }
+      }
+      return;
+    }
+
     // Only Timeline Reordering
     if (!activeId.includes("inbox") && !overId.includes("inbox")) {
       const validation = validateDropPosition(activeId, overId, timeline, currentTime, t);

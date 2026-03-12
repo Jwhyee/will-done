@@ -233,18 +233,6 @@ export const SortableItem = ({
                 {block.isUrgent && <AlertTriangle size={14} className="text-danger fill-danger/20" />}
                 <h4 className={`text-[15px] font-semibold tracking-tight transition-colors duration-300 ${block.status === "UNPLUGGED" ? "text-text-muted" : (isHovered ? "text-text-primary" : "text-text-secondary")}`}>
                   {block.projectName && <span className="text-text-muted mr-2 font-bold">[{block.projectName}]</span>}
-                  {block.labelName && (
-                    <span 
-                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold mr-2 border"
-                      style={{
-                        color: block.labelColor || "#808080",
-                        borderColor: block.labelColor || "#808080",
-                        backgroundColor: `${block.labelColor || "#808080"}33`,
-                      }}
-                    >
-                      {block.labelName}
-                    </span>
-                  )}
                   {block.title}
                 </h4>
               </div>
@@ -253,6 +241,21 @@ export const SortableItem = ({
                 <span className="text-[12px] font-mono font-bold text-text-secondary bg-surface px-2 py-0.5 rounded-md border border-border/50">
                   {formatDisplayTime(block.startTime)} - {formatDisplayTime(block.endTime)}
                 </span>
+                {block.labelName && (
+                  <>
+                    <span className="text-text-muted text-[10px] opacity-40">|</span>
+                    <span 
+                      className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border"
+                      style={{
+                        color: block.labelColor || "#808080",
+                        borderColor: block.labelColor || "#808080",
+                        backgroundColor: `${block.labelColor || "#808080"}33`,
+                      }}
+                    >
+                      {block.labelName}
+                    </span>
+                  </>
+                )}
                 {block.status === "NOW" && new Date(block.endTime) < currentTime && (
                   <span className="bg-danger text-text-primary text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
                     {t.main.status.overdue}
