@@ -24,7 +24,4 @@ dist-ssr
 *.sw?
 
 # AI
-/docs/ai/*
-# GEMINI.md
-# .gemini/*
 will-done.db
