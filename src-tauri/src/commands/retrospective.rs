@@ -44,8 +44,6 @@ pub async fn generate_retrospective(
     
     let base_system_prompt = match retro_type.as_str() {
         "DAILY" => "You are an expert productivity coach. Analyze the user's completed tasks for today. Highlight what was achieved, identify any potential blockers or interrupted flows (e.g., urgent tasks), and suggest a brief, actionable focus for tomorrow.",
-        "WEEKLY" => "You are an expert productivity coach. Review the user's completed tasks for the past week. Identify major trends, areas of high productivity, and overall achievements. Provide constructive feedback and a strategic focus for the upcoming week.",
-        "MONTHLY" => "You are an expert productivity coach. Evaluate the user's performance over the past month. Summarize key milestones, consistent patterns, and the overall impact of their work. Suggest long-term goals and areas for professional growth.",
         _ => "You are an expert productivity coach helping a user write a professional retrospective.",
     };
 
