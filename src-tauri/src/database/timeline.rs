@@ -18,7 +18,7 @@ pub async fn get_today_completed_duration(pool: &SqlitePool, workspace_id: i64, 
     let row: (Option<i64>,) = sqlx::query_as(
         "SELECT SUM((strftime('%s', end_time) - strftime('%s', start_time)) / 60) 
          FROM time_blocks 
-         WHERE workspace_id = ?1 AND status IN ('DONE', 'PENDING') AND start_time >= ?2 AND start_time <= ?3"
+         WHERE workspace_id = ?1 AND status IN ('DONE', 'PENDING', 'CONTINUED') AND start_time >= ?2 AND start_time <= ?3"
     )
     .bind(workspace_id)
     .bind(start_of_day.format("%Y-%m-%dT%H:%M:00").to_string())
@@ -539,6 +539,14 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
                     .bind(nb.id)
                     .execute(&mut *tx)
                     .await?;
+
+                if let Some(tid) = nb.task_id {
+                    sqlx::query("UPDATE time_blocks SET status = 'CONTINUED' WHERE task_id = ?1 AND status = 'PENDING' AND id < ?2")
+                        .bind(tid)
+                        .bind(nb.id)
+                        .execute(&mut *tx)
+                        .await?;
+                }
             }
         },
         "DELAY" => {
@@ -670,22 +678,23 @@ pub async fn update_block_status(pool: &SqlitePool, block_id: i64, status: &str)
         .await?;
 
     if let Some(task_id) = block.task_id {
-        let first_incomplete: (Option<i64>,) = sqlx::query_as("SELECT MIN(id) FROM time_blocks WHERE task_id = ?1 AND status != 'DONE'")
+        let first_active: (Option<i64>,) = sqlx::query_as("SELECT MIN(id) FROM time_blocks WHERE task_id = ?1 AND status NOT IN ('DONE', 'PENDING', 'CONTINUED')")
             .bind(task_id)
             .fetch_one(&mut *tx)
             .await?;
 
-        if let Some(fid) = first_incomplete.0 {
+        if let Some(fid) = first_active.0 {
             if fid != block_id {
-                return Err(crate::domain::AppError::InvalidInput("Only the first active block of a split task can be modified.".to_string()));
+                return Err(crate::domain::AppError::InvalidInput("Only the first active block (WILL) of a split task can be modified.".to_string()));
             }
         } else {
+            // No WILL blocks left, check if we're modifying a past/finished block
             let last_id: (i64,) = sqlx::query_as("SELECT MAX(id) FROM time_blocks WHERE task_id = ?1")
                 .bind(task_id)
                 .fetch_one(&mut *tx)
                 .await?;
             if last_id.0 != block_id {
-                return Err(crate::domain::AppError::InvalidInput("Only the last block of a completed split task can be modified.".to_string()));
+                return Err(crate::domain::AppError::InvalidInput("Only the last block of a split task can be modified when no future blocks exist.".to_string()));
             }
         }
     }
@@ -695,6 +704,17 @@ pub async fn update_block_status(pool: &SqlitePool, block_id: i64, status: &str)
         .bind(block_id)
         .execute(&mut *tx)
         .await?;
+
+    // If a block becomes NOW, transition previous PENDING blocks of the same task to CONTINUED
+    if status == "NOW" {
+        if let Some(task_id) = block.task_id {
+            sqlx::query("UPDATE time_blocks SET status = 'CONTINUED' WHERE task_id = ?1 AND status = 'PENDING' AND id < ?2")
+                .bind(task_id)
+                .bind(block_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+    }
     
     tx.commit().await?;
     Ok(())
@@ -1827,5 +1847,31 @@ mod tests {
         // Should be 10:15:00
         assert_eq!(blocks[0].start_time, "2026-03-01T10:15:00");
         assert_eq!(blocks[0].end_time, "2026-03-01T10:45:00");
+    }
+
+    #[tokio::test]
+    async fn test_continued_status_transition() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // 1. Task with 3 blocks
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'Split Task')").execute(&pool).await.unwrap();
+        
+        // B1: PENDING, B2: WILL, B3: WILL
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (10, 1, 1, 'Split Task', '2026-03-01T09:00:00', '2026-03-01T09:15:00', 'PENDING')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (11, 1, 1, 'Split Task', '2026-03-01T09:15:00', '2026-03-01T09:30:00', 'WILL')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (12, 1, 1, 'Split Task', '2026-03-01T09:30:00', '2026-03-01T09:45:00', 'WILL')").execute(&pool).await.unwrap();
+
+        // 2. Start B2 (WILL -> NOW)
+        update_block_status(&pool, 11, "NOW").await.unwrap();
+
+        // 3. Verify B1 became CONTINUED
+        let b1: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 10").fetch_one(&pool).await.unwrap();
+        let b2: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 11").fetch_one(&pool).await.unwrap();
+        let b3: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 12").fetch_one(&pool).await.unwrap();
+
+        assert_eq!(b1.status, "CONTINUED");
+        assert_eq!(b2.status, "NOW");
+        assert_eq!(b3.status, "WILL");
     }
 }
