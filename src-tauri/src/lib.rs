@@ -193,6 +193,7 @@ pub fn run() {
                 sqlx::query("ALTER TABLE tasks ADD COLUMN estimated_minutes INTEGER NOT NULL DEFAULT 0").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects (id) ON DELETE SET NULL").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE tasks ADD COLUMN label_id INTEGER REFERENCES labels (id) ON DELETE SET NULL").execute(&pool).await.ok();
+                sqlx::query("ALTER TABLE tasks ADD COLUMN position INTEGER NOT NULL DEFAULT 0").execute(&pool).await.ok();
                 sqlx::query("CREATE TABLE IF NOT EXISTS time_blocks (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, workspace_id INTEGER NOT NULL, title TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, status TEXT NOT NULL, review_memo TEXT, is_urgent BOOLEAN NOT NULL DEFAULT 0, FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE, FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE)").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE time_blocks ADD COLUMN is_urgent BOOLEAN NOT NULL DEFAULT 0").execute(&pool).await.ok();
                 sqlx::query("ALTER TABLE time_blocks ADD COLUMN planning_memo TEXT").execute(&pool).await.ok();
@@ -242,6 +243,7 @@ pub fn run() {
             commands::timeline::process_task_transition,
             commands::timeline::update_block_status,
             commands::timeline::reorder_blocks,
+            commands::timeline::reorder_inbox,
             commands::timeline::move_task_step,
             commands::timeline::move_task_to_priority,
             commands::timeline::move_task_to_bottom,

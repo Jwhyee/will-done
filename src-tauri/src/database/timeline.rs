@@ -90,7 +90,7 @@ pub async fn get_timeline(pool: &SqlitePool, workspace_id: i64, target_date: Nai
 
 pub async fn get_inbox(pool: &SqlitePool, workspace_id: i64) -> Result<Vec<Task>> {
     let list = sqlx::query_as::<_, Task>(
-        "SELECT * FROM tasks WHERE workspace_id = ?1 AND id NOT IN (SELECT task_id FROM time_blocks WHERE task_id IS NOT NULL)"
+        "SELECT * FROM tasks WHERE workspace_id = ?1 AND id NOT IN (SELECT task_id FROM time_blocks WHERE task_id IS NOT NULL) ORDER BY position ASC, id ASC"
     )
     .bind(workspace_id)
     .fetch_all(pool)
@@ -134,9 +134,20 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
         }
     }
 
-    // 1. 태스크 생성
+    // 1. 인박스인 경우 마지막 위치 계산
+    let position = if input.is_inbox.unwrap_or(false) {
+        let max_pos: (Option<i64>,) = sqlx::query_as("SELECT MAX(position) FROM tasks WHERE workspace_id = ?1 AND id NOT IN (SELECT task_id FROM time_blocks WHERE task_id IS NOT NULL)")
+            .bind(input.workspace_id)
+            .fetch_one(&mut *tx)
+            .await?;
+        max_pos.0.unwrap_or(0) + 1
+    } else {
+        0
+    };
+
+    // 2. 태스크 생성
     let task_result = sqlx::query(
-        "INSERT INTO tasks (workspace_id, title, planning_memo, estimated_minutes, project_id, label_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT INTO tasks (workspace_id, title, planning_memo, estimated_minutes, project_id, label_id, position) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
     )
     .bind(input.workspace_id)
     .bind(&input.title)
@@ -144,6 +155,7 @@ pub async fn add_task_at(pool: &SqlitePool, input: AddTaskInput, now_dt: NaiveDa
     .bind((input.hours * 60 + input.minutes) as i64)
     .bind(project_id)
     .bind(label_id)
+    .bind(position)
     .execute(&mut *tx)
     .await?;
 
@@ -306,7 +318,7 @@ pub async fn move_all_to_timeline(pool: &SqlitePool, workspace_id: i64) -> Resul
     let mut tx = pool.begin().await?;
 
     let tasks = sqlx::query_as::<_, Task>(
-        "SELECT * FROM tasks WHERE workspace_id = ?1 AND id NOT IN (SELECT task_id FROM time_blocks WHERE task_id IS NOT NULL)"
+        "SELECT * FROM tasks WHERE workspace_id = ?1 AND id NOT IN (SELECT task_id FROM time_blocks WHERE task_id IS NOT NULL) ORDER BY position ASC, id ASC"
     )
     .bind(workspace_id)
     .fetch_all(&mut *tx)
@@ -723,6 +735,20 @@ pub async fn update_block_status(pool: &SqlitePool, block_id: i64, status: &str)
 pub async fn reorder_blocks(pool: &SqlitePool, workspace_id: i64, block_ids: Vec<i64>) -> Result<()> {
     let mut tx = pool.begin().await?;
     reorder_internal(&mut tx, workspace_id, block_ids).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn reorder_inbox(pool: &SqlitePool, workspace_id: i64, task_ids: Vec<i64>) -> Result<()> {
+    let mut tx = pool.begin().await?;
+    for (i, &task_id) in task_ids.iter().enumerate() {
+        sqlx::query("UPDATE tasks SET position = ?1 WHERE id = ?2 AND workspace_id = ?3")
+            .bind(i as i64)
+            .bind(task_id)
+            .bind(workspace_id)
+            .execute(&mut *tx)
+            .await?;
+    }
     tx.commit().await?;
     Ok(())
 }

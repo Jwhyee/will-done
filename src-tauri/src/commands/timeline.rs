@@ -85,6 +85,11 @@ pub async fn reorder_blocks(state: State<'_, DbState>, workspace_id: i64, block_
 }
 
 #[tauri::command]
+pub async fn reorder_inbox(state: State<'_, DbState>, workspace_id: i64, task_ids: Vec<i64>) -> Result<()> {
+    database::timeline::reorder_inbox(&state.pool, workspace_id, task_ids).await
+}
+
+#[tauri::command]
 pub async fn move_task_step(state: State<'_, DbState>, workspace_id: i64, block_id: i64, direction: String) -> Result<()> {
     database::timeline::move_task_step(&state.pool, workspace_id, block_id, &direction).await
 }
