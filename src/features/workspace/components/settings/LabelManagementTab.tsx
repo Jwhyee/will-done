@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { workspaceApi } from "@/features/workspace/api";
 import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +49,7 @@ export const LabelManagementTab = ({ t }: { t: any }) => {
 
   const fetchLabels = async () => {
     try {
-      const data = await invoke<Label[]>("get_labels");
+      const data = await workspaceApi.getLabels();
       setLabels(data);
     } catch (error: any) {
       showToast(error.toString(), "error");
@@ -63,7 +63,7 @@ export const LabelManagementTab = ({ t }: { t: any }) => {
   const handleCreate = async () => {
     if (!newLabelName.trim()) return;
     try {
-      await invoke("create_label", { input: { name: newLabelName.trim(), color: newLabelColor } });
+      await workspaceApi.createLabel({ name: newLabelName.trim(), color: newLabelColor });
       setNewLabelName("");
       fetchLabels();
       showToast(t.project_label.label_created, "success");
@@ -75,7 +75,7 @@ export const LabelManagementTab = ({ t }: { t: any }) => {
   const handleUpdate = async (id: number) => {
     if (!editName.trim()) return;
     try {
-      await invoke("update_label", { id, input: { name: editName.trim(), color: editColor } });
+      await workspaceApi.updateLabel(id, { name: editName.trim(), color: editColor });
       setEditingId(null);
       fetchLabels();
       showToast(t.project_label.label_updated, "success");
@@ -86,7 +86,7 @@ export const LabelManagementTab = ({ t }: { t: any }) => {
 
   const handleDelete = async (id: number) => {
     try {
-      await invoke("delete_label", { id });
+      await workspaceApi.deleteLabel(id);
       fetchLabels();
       showToast(t.project_label.label_deleted, "success");
     } catch (error: any) {

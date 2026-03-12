@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { workspaceApi } from "@/features/workspace/api";
 import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ export const ProjectManagementTab = ({ t }: { t: any }) => {
 
   const fetchProjects = async () => {
     try {
-      const data = await invoke<Project[]>("get_projects");
+      const data = await workspaceApi.getProjects();
       setProjects(data);
     } catch (error: any) {
       showToast(error.toString(), "error");
@@ -29,7 +29,7 @@ export const ProjectManagementTab = ({ t }: { t: any }) => {
   const handleCreate = async () => {
     if (!newProjectName.trim()) return;
     try {
-      await invoke("create_project", { input: { name: newProjectName.trim() } });
+      await workspaceApi.createProject({ name: newProjectName.trim() });
       setNewProjectName("");
       fetchProjects();
       showToast(t.project_label.project_created, "success");
@@ -41,7 +41,7 @@ export const ProjectManagementTab = ({ t }: { t: any }) => {
   const handleUpdate = async (id: number) => {
     if (!editName.trim()) return;
     try {
-      await invoke("update_project", { id, input: { name: editName.trim() } });
+      await workspaceApi.updateProject(id, { name: editName.trim() });
       setEditingId(null);
       fetchProjects();
       showToast(t.project_label.project_updated, "success");
@@ -52,7 +52,7 @@ export const ProjectManagementTab = ({ t }: { t: any }) => {
 
   const handleDelete = async (id: number) => {
     try {
-      await invoke("delete_project", { id });
+      await workspaceApi.deleteProject(id);
       fetchProjects();
       showToast(t.project_label.project_deleted, "success");
     } catch (error: any) {

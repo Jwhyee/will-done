@@ -3,7 +3,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Plus, X, AlertCircle, ChevronRight, Layout, Clock, Info } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
+import { workspaceApi } from "@/features/workspace/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -104,7 +104,7 @@ export const WorkspaceCreateModal = ({ t, isOpen, onClose, onSuccess, isFirst = 
         coreTimeEnd: data.coreTimeEnd || null,
         roleIntro: data.roleIntro || null,
       };
-      const id = await invoke<number>("create_workspace", { input: sanitizedData });
+      const id = await workspaceApi.createWorkspace(sanitizedData);
       onSuccess(id);
     } catch (error) {
       console.error("Workspace creation failed:", error);

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -31,7 +30,9 @@ import {
 
 // Internal
 import { AppProvider } from "@/providers/AppProvider";
-import { Workspace, User } from "@/types";
+import { User } from "@/types";
+import { workspaceApi } from "@/features/workspace/api";
+import { onboardingApi } from "@/features/onboarding/api";
 
 // Layout & Features
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -134,11 +135,11 @@ function AppContent() {
             onBack={() => setView("main")}
             onWorkspaceUpdate={async () => {
               fetchMainData();
-              const wsList = await invoke<Workspace[]>("get_workspaces");
+              const wsList = await workspaceApi.getWorkspaces();
               setWorkspaces(wsList);
             }}
             onWorkspaceDelete={async (id) => {
-              const wsList = await invoke<Workspace[]>("get_workspaces");
+              const wsList = await workspaceApi.getWorkspaces();
               setWorkspaces(wsList);
               if (wsList.length === 0) {
                 setActiveWorkspaceId(null);
@@ -191,26 +192,26 @@ function AppContent() {
               onTransition={onTransition}
               onDismissTransition={onDismissTransition}
               onMoveToInbox={async (blockId) => {
-                await invoke("move_to_inbox", { blockId });
+                await workspaceApi.moveToInbox(blockId);
                 fetchMainData();
               }}
               onDeleteTask={async (taskId) => {
-                await invoke("delete_task", { id: taskId });
+                await workspaceApi.deleteTask(taskId);
                 fetchMainData();
               }}
               onHandleSplitTaskDeletion={async (taskId, keepPast) => {
-                await invoke("handle_split_task_deletion", { taskId, keepPast });
+                await workspaceApi.handleSplitTaskDeletion(taskId, keepPast);
                 fetchMainData();
               }}
               onMoveAllToTimeline={async () => {
                 if (activeWorkspaceId) {
-                  await invoke("move_all_to_timeline", { workspaceId: activeWorkspaceId });
+                  await workspaceApi.moveAllToTimeline(activeWorkspaceId);
                   fetchMainData();
                 }
               }}
               onMoveToTimeline={async (taskId) => {
                 if (activeWorkspaceId) {
-                  await invoke("move_to_timeline", { taskId, workspaceId: activeWorkspaceId });
+                  await workspaceApi.moveToTimeline(taskId, activeWorkspaceId);
                   fetchMainData();
                 }
               }}
@@ -288,8 +289,8 @@ function AppContent() {
           isOpen={isGlobalSettingsOpen}
           onClose={() => setIsGlobalSettingsOpen(false)}
           onUserUpdate={async (updatedUser?: User) => {
-            const u = updatedUser || await invoke<User>("get_user");
-            setUser(u);
+            const u = updatedUser || await onboardingApi.getUser();
+            if (u) setUser(u);
           }}
           t={t}
         />
@@ -301,7 +302,7 @@ function AppContent() {
         isOpen={isWorkspaceCreateModalOpen}
         onClose={() => setIsWorkspaceCreateModalOpen(false)}
         onSuccess={async (id) => {
-          const wsList = await invoke<Workspace[]>("get_workspaces");
+          const wsList = await workspaceApi.getWorkspaces();
           setWorkspaces(wsList);
           setActiveWorkspaceId(id);
           setIsWorkspaceCreateModalOpen(false);

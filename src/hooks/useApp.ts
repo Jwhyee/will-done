@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   isPermissionGranted,
@@ -18,6 +17,9 @@ import { useToast } from "@/providers/ToastProvider";
 import { translations, getLang, type Lang } from "@/lib/i18n";
 import { TimeBlock, Task, User, Workspace, Retrospective } from "@/types";
 import { validateDropPosition } from "@/features/workspace/utils/dndValidation";
+
+import { workspaceApi } from "@/features/workspace/api";
+import { onboardingApi } from "@/features/onboarding/api";
 
 export type ViewState = "loading" | "onboarding" | "workspace_setup" | "main" | "retrospective" | "workspace_settings";
 
@@ -67,19 +69,19 @@ export function useApp() {
     if (!activeWorkspaceId || isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
-      const g = await invoke<string>("get_greeting", { workspaceId: activeWorkspaceId, lang });
+      const g = await workspaceApi.getGreeting(activeWorkspaceId, lang);
       setGreeting(g);
 
       const targetDate = selectedDate || logicalDate;
       const dateStr = format(targetDate, "yyyy-MM-dd");
 
-      let list = await invoke<TimeBlock[]>("get_timeline", {
-        workspaceId: activeWorkspaceId,
-        date: selectedDate ? dateStr : undefined
-      });
-      const inbox = await invoke<Task[]>("get_inbox", { workspaceId: activeWorkspaceId });
+      let list = await workspaceApi.getTimeline(
+        activeWorkspaceId, 
+        selectedDate ? dateStr : undefined
+      );
+      const inbox = await workspaceApi.getInbox(activeWorkspaceId);
 
-      const completedDuration = await invoke<number>("get_today_completed_duration", { workspaceId: activeWorkspaceId });
+      const completedDuration = await workspaceApi.getTodayCompletedDuration(activeWorkspaceId);
       setTodayCompletedDuration(completedDuration);
 
       const now = new Date();
@@ -93,19 +95,14 @@ export function useApp() {
 
           if (hasFuturePart) {
             // Silent transition: auto-complete the current block
-            await invoke("process_task_transition", {
-              input: {
-                blockId: active.id,
-                action: "DONE",
-                extraMinutes: null,
-                reviewMemo: null
-              }
+            await workspaceApi.processTaskTransition({
+              blockId: active.id,
+              action: "DONE",
+              extraMinutes: null,
+              reviewMemo: null
             });
             // Re-fetch list after silent transition
-            list = await invoke<TimeBlock[]>("get_timeline", {
-              workspaceId: activeWorkspaceId,
-              date: undefined
-            });
+            list = await workspaceApi.getTimeline(activeWorkspaceId);
           } else {
             setTransitionBlock(active);
 
@@ -127,12 +124,9 @@ export function useApp() {
         if (!active) {
           const next = list.find(b => b.status === "WILL" && new Date(b.startTime) <= now);
           if (next) {
-            await invoke("update_block_status", { blockId: next.id, status: "NOW" });
+            await workspaceApi.updateBlockStatus(next.id, "NOW");
             // Re-fetch timeline after status update
-            list = await invoke<TimeBlock[]>("get_timeline", {
-              workspaceId: activeWorkspaceId,
-              date: undefined
-            });
+            list = await workspaceApi.getTimeline(activeWorkspaceId);
           }
         }
       }
@@ -148,14 +142,14 @@ export function useApp() {
 
   const init = useCallback(async () => {
     try {
-      const u = await invoke<User | null>("get_user");
+      const u = await onboardingApi.getUser();
       if (!u) {
         setView("onboarding");
         return;
       }
       setUser(u);
 
-      const wsList = await invoke<Workspace[]>("get_workspaces");
+      const wsList = await workspaceApi.getWorkspaces();
       setWorkspaces(wsList);
 
       if (wsList.length > 0) {
@@ -186,16 +180,15 @@ export function useApp() {
     const unlistenPromise = listen<number>("open-transition-modal", (event) => {
       const blockId = event.payload;
       // Fetch latest timeline and open transition modal
-      invoke<TimeBlock[]>("get_timeline", {
-        workspaceId: activeWorkspaceId,
-        date: undefined // Let backend handle logical date for "today"
-      }).then(list => {
-        const block = list.find(b => b.id === blockId);
-        if (block) {
-          setTransitionBlock(block);
-          setView("main");
-        }
-      });
+      if (activeWorkspaceId) {
+        workspaceApi.getTimeline(activeWorkspaceId).then(list => {
+          const block = list.find(b => b.id === blockId);
+          if (block) {
+            setTransitionBlock(block);
+            setView("main");
+          }
+        });
+      }
     });
 
     return () => {
@@ -226,7 +219,7 @@ export function useApp() {
     if (activeId.includes("inbox") && !overId.includes("inbox")) {
       const taskId = parseInt(activeId.replace("inbox-", ""));
       if (activeWorkspaceId) {
-        await invoke("move_to_timeline", { taskId, workspaceId: activeWorkspaceId });
+        await workspaceApi.moveToTimeline(taskId, activeWorkspaceId);
         fetchMainData();
       }
       return;
@@ -235,7 +228,7 @@ export function useApp() {
     // Timeline -> Inbox
     if (!activeId.includes("inbox") && (overId === "inbox" || overId.includes("inbox"))) {
       const blockId = parseInt(activeId);
-      await invoke("move_to_inbox", { blockId });
+      await workspaceApi.moveToInbox(blockId);
       fetchMainData();
       return;
     }
@@ -252,7 +245,7 @@ export function useApp() {
         const ids = newInbox.map(t => t.id);
         if (activeWorkspaceId) {
           try {
-            await invoke("reorder_inbox", { workspaceId: activeWorkspaceId, taskIds: ids });
+            await workspaceApi.reorderInbox(activeWorkspaceId, ids);
             fetchMainData();
           } catch (error) {
             console.error("Inbox reorder failed:", error);
@@ -282,7 +275,7 @@ export function useApp() {
         const ids = newTimeline.filter(b => b.status !== "UNPLUGGED").map(b => b.id);
         if (activeWorkspaceId) {
           try {
-            await invoke("reorder_blocks", { workspaceId: activeWorkspaceId, blockIds: ids });
+            await workspaceApi.reorderBlocks(activeWorkspaceId, ids);
             fetchMainData();
           } catch (error) {
             console.error("Reorder failed:", error);
@@ -297,13 +290,11 @@ export function useApp() {
   const onTaskSubmit = async (data: any, isInbox: boolean = false) => {
     if (!activeWorkspaceId) return;
     try {
-      await invoke("add_task", {
-        input: {
-          workspaceId: activeWorkspaceId,
-          ...data,
-          planningMemo: data.planningMemo || null,
-          isInbox
-        }
+      await workspaceApi.addTask({
+        workspaceId: activeWorkspaceId,
+        ...data,
+        planningMemo: data.planningMemo || null,
+        isInbox
       });
       await fetchMainData();
     } catch (error) {
@@ -314,17 +305,15 @@ export function useApp() {
   const onEditTaskSubmit = async (blockId: number, data: any) => {
     if (!activeWorkspaceId) return;
     try {
-      await invoke("update_task", {
-        input: {
-          blockId,
-          title: data.title,
-          description: data.planningMemo,
-          hours: data.hours,
-          minutes: data.minutes,
-          reviewMemo: data.reviewMemo,
-          projectName: data.projectName,
-          labelName: data.labelName,
-        }
+      await workspaceApi.updateTask({
+        blockId,
+        title: data.title,
+        description: data.planningMemo,
+        hours: data.hours,
+        minutes: data.minutes,
+        reviewMemo: data.reviewMemo,
+        projectName: data.projectName,
+        labelName: data.labelName,
       });
       fetchMainData();
     } catch (error) {
@@ -336,19 +325,17 @@ export function useApp() {
     if (!activeWorkspaceId) return;
     try {
       const prevDuration = todayCompletedDuration;
-      await invoke("process_task_transition", {
-        input: {
-          blockId: block.id,
-          action,
-          extraMinutes: extraMinutes || null,
-          reviewMemo: reviewMemo || null
-        }
+      await workspaceApi.processTaskTransition({
+        blockId: block.id,
+        action,
+        extraMinutes: extraMinutes || null,
+        reviewMemo: reviewMemo || null
       });
       setTransitionBlock(null);
       setDismissedBlockId(null); // Clear dismissal on successful transition
 
       // Update duration and check threshold
-      const newDuration = await invoke<number>("get_today_completed_duration", { workspaceId: activeWorkspaceId });
+      const newDuration = await workspaceApi.getTodayCompletedDuration(activeWorkspaceId);
       setTodayCompletedDuration(newDuration);
 
       if (Math.floor(prevDuration / 120) < Math.floor(newDuration / 120)) {
@@ -371,7 +358,7 @@ export function useApp() {
   const onMoveTaskStep = async (blockId: number, direction: "up" | "down") => {
     if (!activeWorkspaceId) return;
     try {
-      await invoke("move_task_step", { workspaceId: activeWorkspaceId, blockId, direction });
+      await workspaceApi.moveTaskStep(activeWorkspaceId, blockId, direction.toUpperCase());
       await fetchMainData();
     } catch (error) {
       console.error("Move task step failed:", error);
@@ -381,7 +368,7 @@ export function useApp() {
   const onMoveTaskToPriority = async (blockId: number) => {
     if (!activeWorkspaceId) return;
     try {
-      await invoke("move_task_to_priority", { workspaceId: activeWorkspaceId, blockId });
+      await workspaceApi.moveTaskToPriority(activeWorkspaceId, blockId);
       await fetchMainData();
     } catch (error) {
       console.error("Move task to priority failed:", error);
@@ -391,7 +378,7 @@ export function useApp() {
   const onMoveTaskToBottom = async (blockId: number) => {
     if (!activeWorkspaceId) return;
     try {
-      await invoke("move_task_to_bottom", { workspaceId: activeWorkspaceId, blockId });
+      await workspaceApi.moveTaskToBottom(activeWorkspaceId, blockId);
       await fetchMainData();
     } catch (error) {
       console.error("Move task to bottom failed:", error);

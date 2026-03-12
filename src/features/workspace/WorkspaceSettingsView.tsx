@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { workspaceApi } from "@/features/workspace/api";
 import { useForm, useFieldArray } from "react-hook-form";
 import { 
   AlertTriangle, 
@@ -70,8 +70,8 @@ export const WorkspaceSettingsView = ({
     const fetchWorkspaceData = async () => {
       if (workspaceId) {
         try {
-          const ws = await invoke<any>("get_workspace", { id: workspaceId });
-          const ut = await invoke<any[]>("get_unplugged_times", { workspaceId });
+          const ws = await workspaceApi.getWorkspace(workspaceId);
+          const ut = await workspaceApi.getUnpluggedTimes(workspaceId);
           setTargetWorkspaceName(ws.name);
           reset({
             name: ws.name,
@@ -95,15 +95,12 @@ export const WorkspaceSettingsView = ({
   const onSubmit = async (data: any) => {
     if (!workspaceId) return;
     try {
-      await invoke("update_workspace", {
-        id: workspaceId,
-        input: {
-          ...data,
-          coreTimeStart: data.coreTimeStart || null,
-          coreTimeEnd: data.coreTimeEnd || null,
-          roleIntro: data.roleIntro || null,
-          unpluggedTimes: data.unpluggedTimes || []
-        }
+      await workspaceApi.updateWorkspace(workspaceId, {
+        ...data,
+        coreTimeStart: data.coreTimeStart || null,
+        coreTimeEnd: data.coreTimeEnd || null,
+        roleIntro: data.roleIntro || null,
+        unpluggedTimes: data.unpluggedTimes || []
       });
       await onWorkspaceUpdate();
       showToast(t.main.toast.workspace_updated, "success");
@@ -124,7 +121,7 @@ export const WorkspaceSettingsView = ({
     }
 
     try {
-      await invoke("delete_workspace", { id: workspaceId });
+      await workspaceApi.deleteWorkspace(workspaceId);
       showToast(t.sidebar.workspace_deleted, "success");
       setIsDeleteConfirmOpen(false);
       onWorkspaceDelete(workspaceId);
