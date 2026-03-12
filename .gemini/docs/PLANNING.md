@@ -1,69 +1,70 @@
-# Execution Plan: Retrospective Overwrite Support
+# Execution Plan: AI Model Selection for Retrospectives
 
 ## 1. Goal
-When generating a retrospective for a date that already has one, show a confirmation dialog instead of a simple error. If confirmed, generate a new retrospective and update the existing record.
+Implement a feature allowing users to manually select an AI model for generating retrospectives, with specialized fallback logic in the backend and enhanced error handling in the frontend.
 
 ## 2. Scope
 ### In-Scope
-- Modify `generate_retrospective` backend command to support an `overwrite` flag.
-- Update `retrospective` service to handle existing records when `overwrite` is true.
-- Add database logic to update existing retrospectives.
-- Update `useRetrospective` hook to manage confirmation state and handle the "already exists" error case.
-- Create a `DuplicateConfirmModal` component for the user confirmation.
-- Add necessary i18n strings for the new modal.
+- Backend: Update `generate_retrospective` command to accept an optional `target_model`.
+- Backend: Implement logic to bypass fallback if a specific model is selected.
+- Frontend: Add a model selection UI (Select Box) to the Retrospective view.
+- Frontend: Fetch and display active AI models from the database.
+- Frontend: Display a hint for Free Tier users regarding model selection.
+- Frontend: Handle model-specific errors with desktop notifications and helpful links.
 
 ### Out-of-Scope
-- Support for multiple retrospectives for the same date/type.
-- Changing the AI prompt for overwrites (will use the same generation logic).
+- Modifying the AI prompt logic.
+- Adding new AI providers (only Gemini is supported).
+- Changing the retrospective storage schema.
 
 ## 3. Architecture Impact
 ```text
+src-tauri/src/
+├── commands/
+│   └── retrospective.rs    # Update command signature, add fetch_available_models
+├── services/
+│   ├── gemini.rs           # Add execute_single_model logic
+│   └── retrospective.rs    # Update orchestration logic for target_model
 src/
 ├── features/
 │   └── retrospective/
+│       ├── api/
+│       │   └── index.ts    # Add fetchAvailableModels API
 │       ├── components/
-│       │   └── DuplicateConfirmModal.tsx (New)
+│       │   └── CreateTabContent.tsx # Add Select Box & Hint UI
 │       └── hooks/
-│           └── useRetrospective.ts (Modified)
-├── lib/
-│   └── i18n.ts (Modified)
-src-tauri/
-├── src/
-│   ├── commands/
-│   │   └── retrospective.rs (Modified)
-│   ├── database/
-│   │   └── retrospective.rs (Modified)
-│   └── services/
-│       └── retrospective.rs (Modified)
+│           └── useRetrospective.ts  # Add model selection & error logic
 ```
 
 ## 4. Execution Plan
-### Phase 1: Preparation & Infrastructure
-- [x] Add i18n strings for `duplicate_confirm_title` and `duplicate_confirm_desc` in `src/lib/i18n.ts`.
-- [x] Update `GenerateRetrospectiveParams` in `src/features/retrospective/api/index.ts` to include `overwrite: boolean`.
 
-### Phase 2: Core Domain / Backend Logic
-- [x] Add `update_retrospective` function to `src-tauri/src/database/retrospective.rs`.
-- [x] Update `generate_retrospective` service in `src-tauri/src/services/retrospective.rs` to accept `overwrite` and bypass the existence check or perform an update if true.
-- [x] Update `generate_retrospective` command in `src-tauri/src/commands/retrospective.rs`.
+### Phase 1: Backend Infrastructure (Rust)
+- [x] Update `src-tauri/src/services/gemini.rs`: Add `execute_single_model` that tries only one model and returns error immediately on failure (429, etc.).
+- [x] Update `src-tauri/src/services/retrospective.rs`: Modify `generate_retrospective` to accept `target_model: Option<String>` and branch logic between `execute_with_fallback` and `execute_single_model`.
+- [x] Update `src-tauri/src/commands/retrospective.rs`: Update `generate_retrospective` command signature to include `target_model`.
+- [x] Verify: Add/run `#[test]` in `services/retrospective.rs` to ensure branching logic works as expected.
 
-### Phase 3: Interfaces / Frontend UI
-- [x] Create `src/features/retrospective/components/DuplicateConfirmModal.tsx`.
-- [x] Update `useRetrospective` hook in `src/features/retrospective/hooks/useRetrospective.ts`:
-    - Add `isDuplicateConfirmOpen` state.
-    - Modify `handleGenerate` to catch "already exists" error and open the modal.
-    - Add `handleConfirmOverwrite` function.
-- [x] Integrate `DuplicateConfirmModal` in `src/features/retrospective/RetrospectiveView.tsx`.
+### Phase 2: Frontend API & State (TypeScript/React)
+- [x] Update `src/features/retrospective/api/index.ts`: Add `fetchAvailableModels` call and update `GenerateRetrospectiveParams` type.
+- [x] Update `src/features/retrospective/hooks/useRetrospective.ts`:
+    - Add state for `availableModels` and `selectedModel`.
+    - Fetch active models on mount using `retrospectiveApi.fetchAvailableModels`.
+    - Update `handleGenerate` to include `selectedModel` in the payload.
+    - Implement error handling: trigger `sendNotification` and show toast with clickable link to Google AI Studio rate limit page if a specific model fails.
+
+### Phase 3: UI Implementation (React)
+- [x] Update `src/features/retrospective/components/CreateTabContent.tsx`:
+    - Add a `Select` component for model selection.
+    - Default option: "Latest Model" (sends `null`).
+    - Map `availableModels` to select options.
+    - Add the conditional hint message for free users: "Free Tier는 사용 가능한 모델 폭이 좁으므로, '최신 모델'을 선택하는 것을 권장합니다."
 
 ## 5. Risk Mitigation
-- **Potential Breaking Changes**: Changes to the `generate_retrospective` command signature might cause issues if not updated in all places (though only one place exists).
-- **Rollback Strategy**: Revert changes to `useRetrospective.ts` and backend services. The database `update_retrospective` is additive.
+- **Potential Breaking Changes**: Updating the Tauri command signature requires matching changes in the frontend API call to avoid IPC serialization errors.
+- **Rollback Strategy**: Revert to the previous `generate_retrospective` signature and restore `execute_with_fallback` as the only execution path.
 
 ## 6. Final Verification Wave
-- [x] Run `cargo check` and `cargo test` to ensure backend integrity.
-- [ ] Manual Spot Check:
-    1. Create a retrospective for a date.
-    2. Try to create another one for the same date.
-    3. Verify confirmation modal appears.
-    4. Confirm and verify the retrospective is updated with new content.
-    5. Verify the date in the browser view reflects the update.
+- [x] Run `cargo check` and `cargo test` to verify backend integrity.
+- [x] Run `pnpm build` (or equivalent) to ensure no TypeScript regressions.
+- [x] Manual Check: Verify that selecting "Latest Model" still uses fallback logic.
+- [x] Manual Check: Verify that selecting a specific model skips fallback and shows the correct error/notification on failure.
