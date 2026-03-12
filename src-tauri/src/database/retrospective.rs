@@ -82,6 +82,39 @@ pub async fn save_retrospective(
     })
 }
 
+pub async fn update_retrospective(
+    pool: &SqlitePool,
+    workspace_id: i64,
+    retro_type: &str,
+    content: &str,
+    date_label: &str,
+    used_model: Option<&str>,
+) -> Result<Retrospective> {
+    let now = Local::now().format("%Y-%m-%dT%H:%M:00").to_string();
+    sqlx::query(
+        "UPDATE retrospectives SET content = ?1, created_at = ?2, used_model = ?3 WHERE workspace_id = ?4 AND date_label = ?5 AND retro_type = ?6"
+    )
+    .bind(content)
+    .bind(&now)
+    .bind(used_model)
+    .bind(workspace_id)
+    .bind(date_label)
+    .bind(retro_type)
+    .execute(pool)
+    .await?;
+
+    let retro = sqlx::query_as::<_, Retrospective>(
+        "SELECT * FROM retrospectives WHERE workspace_id = ?1 AND date_label = ?2 AND retro_type = ?3 ORDER BY created_at DESC LIMIT 1"
+    )
+    .bind(workspace_id)
+    .bind(date_label)
+    .bind(retro_type)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(retro)
+}
+
 pub async fn get_completed_task_blocks(
     pool: &SqlitePool,
     workspace_id: i64,

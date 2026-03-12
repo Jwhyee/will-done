@@ -12,11 +12,13 @@ pub async fn generate_retrospective(
     retro_type: &str, // "DAILY", "WEEKLY", "MONTHLY"
     date_label: &str, // "2026-03-01", "2026-W09", etc.
     force_retry: bool,
+    overwrite: bool,
 ) -> Result<Retrospective> {
     let user = database::user::get_user(pool).await?.ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
 
     // Check for duplicates
-    if database::retrospective::check_retrospective_exists(pool, workspace_id, date_label, retro_type).await? {
+    let already_exists = database::retrospective::check_retrospective_exists(pool, workspace_id, date_label, retro_type).await?;
+    if !overwrite && already_exists {
         return Err(AppError::InvalidInput("A retrospective for this period already exists.".to_string()));
     }
 
@@ -40,29 +42,44 @@ pub async fn generate_retrospective(
 
     let task_summary = build_task_summary(blocks);
     
-    let base_system_prompt = match retro_type {
-        "DAILY" => "You are an expert productivity coach. Analyze the user's completed tasks for today. Highlight what was achieved, identify any potential blockers or interrupted flows (e.g., urgent tasks), and suggest a brief, actionable focus for tomorrow.",
-        _ => "You are an expert productivity coach helping a user write a professional retrospective.",
-    };
+    let base_system_prompt = "You are an expert technical writer helping a professional document their daily achievements.
+Your goal is to transform the user's raw task logs into a highly objective, professional 'Brag Document' (Performance Report) suitable for a resume or performance review.
+
+CRITICAL RULES:
+1. Tone: Strictly professional, objective, and action-oriented. NEVER use emotional or coaching language.
+2. Action Verbs: Start every bullet point with a strong action verb (e.g., Implemented, Optimized, Redesigned, Resolved).
+3. Value-Driven Translation: Translate mundane tasks (like \"deleted a feature\" or \"fixed a bug\") into value-driven achievements (e.g., \"Streamlined user experience by deprecating redundant features\", \"Enhanced system stability by resolving edge cases\").
+4. Structure: 
+   - Focus strictly on WHAT was done and the IMPACT.
+   - DO NOT include a \"Pending Issues\", \"Suggestions for tomorrow\", or \"Action Plan\" section. Only document completed work.
+   - DO NOT include the user's role in the output.
+
+OUTPUT LAYOUT:
+### 1. 주요 성과 (Key Achievements)
+- [Action Verb] + [Context/Task] + [Impact/Result]
+- ...
+
+### 2. 기술 및 시스템 최적화 (Technical & System Optimizations)
+- (Focus on refactoring, tech debt removal, performance, or structural improvements)";
 
     let user_lang = if user.lang == "ko" { "Korean" } else { "English" };
     let final_system_prompt = format!(
         "{}
 
-CRITICAL RULE: Regardless of the instructions above, you MUST generate the final retrospective output entirely in the user's requested language: [{}].",
+CRITICAL RULE: Regardless of the instructions above, you MUST generate the final output entirely in the user's requested language: [{}].",
         base_system_prompt, user_lang
     );
 
     let period_desc = if start_date == end_date {
-        format!("Daily summary for {}", start_date)
+        format!("Daily Performance Summary for {}", start_date)
     } else {
-        format!("Summary for the period from {} to {}", start_date, end_date)
+        format!("Performance Summary from {} to {}", start_date, end_date)
     };
 
     let user_content = format!(
         "**Period**: {}
 
-**User Role/Intro**: {}
+**User Role/Context**: {} (NOTE: Use this ONLY to understand the technical context. DO NOT mention this role in your generated output.)
 
 **Completed Tasks**:
 {}",
@@ -79,15 +96,26 @@ CRITICAL RULE: Regardless of the instructions above, you MUST generate the final
     // Cache successful model
     database::user::save_last_model(pool, &final_model_name).await?;
 
-    // Save result to DB
-    database::retrospective::save_retrospective(
-        pool,
-        workspace_id,
-        retro_type,
-        &result_text,
-        date_label,
-        Some(&final_model_name),
-    ).await
+    // Save or update result in DB
+    if already_exists {
+        database::retrospective::update_retrospective(
+            pool,
+            workspace_id,
+            retro_type,
+            &result_text,
+            date_label,
+            Some(&final_model_name),
+        ).await
+    } else {
+        database::retrospective::save_retrospective(
+            pool,
+            workspace_id,
+            retro_type,
+            &result_text,
+            date_label,
+            Some(&final_model_name),
+        ).await
+    }
 }
 
 pub async fn get_saved_retrospectives(

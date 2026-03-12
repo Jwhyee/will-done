@@ -12,6 +12,7 @@ pub async fn generate_retrospective(
     retro_type: String, // "DAILY", "WEEKLY", "MONTHLY"
     date_label: String, // "2026-03-01", "2026-W09", etc.
     force_retry: bool,
+    overwrite: bool,
 ) -> Result<Retrospective> {
     services::retrospective::generate_retrospective(
         &state.pool,
@@ -21,6 +22,7 @@ pub async fn generate_retrospective(
         &retro_type,
         &date_label,
         force_retry,
+        overwrite,
     ).await
 }
 
