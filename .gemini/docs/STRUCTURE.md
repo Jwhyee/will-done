@@ -7,7 +7,7 @@
 - **Frontend**: React 19 (TypeScript), Vite, Tailwind CSS, shadcn/ui, Framer Motion.
 - **Backend**: Tauri 2, Rust, SQLite (via `sqlx`), Tokio (async runtime).
 - **State Management**: React Hooks (Custom hooks for features) + Context Providers.
-- **AI Integration**: Gemini API for automated daily retrospectives.
+- **AI Integration**: Gemini API for automated daily achievements.
 - **Interactions**: `@dnd-kit` for complex timeline drag-and-drop operations.
 
 ---
@@ -27,7 +27,7 @@
 │   │   └── ui/             # shadcn/ui primitive components
 │   ├── features/           # Feature-based modular logic
 │   │   ├── onboarding/     # First-run experience (API, Hooks, Components)
-│   │   ├── retrospective/  # AI-powered review system (API, Hooks, Components)
+│   │   ├── achievement/  # AI-powered review system (API, Hooks, Components)
 │   │   ├── settings/       # Global application settings
 │   │   └── workspace/      # Core timeline & task management (API, Hooks, Components)
 │   ├── hooks/              # Global custom hooks (useApp, useDebounce)
@@ -62,7 +62,7 @@
 | **Global UI State** | `src/hooks/useApp.ts` |
 | **Timeline Business Logic** | `src/features/workspace/hooks/useWorkspace.ts` |
 | **Task Reordering Logic** | `src-tauri/src/database/timeline.rs` |
-| **AI Retrospective Logic** | `src-tauri/src/commands/retrospective.rs` |
+| **AI Achievement Logic** | `src-tauri/src/commands/achievement.rs` |
 | **I18n / Translations** | `src/lib/i18n.ts` |
 
 ---

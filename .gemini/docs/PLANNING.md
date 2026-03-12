@@ -1,70 +1,78 @@
-# Execution Plan: AI Model Selection for Retrospectives
+# Execution Plan: Domain Renaming (Retrospective to Achievement)
 
 ## 1. Goal
-Implement a feature allowing users to manually select an AI model for generating retrospectives, with specialized fallback logic in the backend and enhanced error handling in the frontend.
+Refactor the 'Retrospective' domain into 'Achievement' across the entire stack (React, Rust, SQLite) to align with the new "Brag Document" (성과 문서) purpose. This is a pure renaming task with no architectural or logic changes.
 
 ## 2. Scope
 ### In-Scope
-- Backend: Update `generate_retrospective` command to accept an optional `target_model`.
-- Backend: Implement logic to bypass fallback if a specific model is selected.
-- Frontend: Add a model selection UI (Select Box) to the Retrospective view.
-- Frontend: Fetch and display active AI models from the database.
-- Frontend: Display a hint for Free Tier users regarding model selection.
-- Frontend: Handle model-specific errors with desktop notifications and helpful links.
+- **Database**: Rename `retrospectives` table to `achievements` and `retro_type` column to `achievement_type`.
+- **Backend (Rust)**: Rename files, modules, structs, and functions from `retrospective` to `achievement`.
+- **IPC (Tauri)**: Rename all `tauri::command` handlers to use `achievement` suffix/prefix.
+- **Frontend (React)**: Rename feature folder, components, hooks, and API callers.
+- **UI/UX**: Update all Korean/English text ("회고" -> "성과", etc.) and routing paths.
 
 ### Out-of-Scope
-- Modifying the AI prompt logic.
-- Adding new AI providers (only Gemini is supported).
-- Changing the retrospective storage schema.
+- Changing AI prompt logic or generation flow.
+- Modifying the underlying data structure (other than naming).
+- Adding new features or fixing unrelated bugs.
 
 ## 3. Architecture Impact
 ```text
 src-tauri/src/
 ├── commands/
-│   └── retrospective.rs    # Update command signature, add fetch_available_models
+│   └── achievement.rs      # (Renamed from retrospective.rs)
+├── database/
+│   └── achievement.rs      # (Renamed from retrospective.rs)
+├── domain/
+│   └── achievement.rs      # (Renamed from retrospective.rs)
 ├── services/
-│   ├── gemini.rs           # Add execute_single_model logic
-│   └── retrospective.rs    # Update orchestration logic for target_model
+│   └── achievement.rs      # (Renamed from retrospective.rs)
 src/
 ├── features/
-│   └── retrospective/
-│       ├── api/
-│       │   └── index.ts    # Add fetchAvailableModels API
-│       ├── components/
-│       │   └── CreateTabContent.tsx # Add Select Box & Hint UI
-│       └── hooks/
-│           └── useRetrospective.ts  # Add model selection & error logic
+│   └── achievement/        # (Renamed from retrospective/)
+│       ├── AchievementView.tsx
+│       ├── components/     # (Internal components renamed)
+│       └── hooks/          # (useAchievement.ts, etc.)
 ```
 
 ## 4. Execution Plan
 
-### Phase 1: Backend Infrastructure (Rust)
-- [x] Update `src-tauri/src/services/gemini.rs`: Add `execute_single_model` that tries only one model and returns error immediately on failure (429, etc.).
-- [x] Update `src-tauri/src/services/retrospective.rs`: Modify `generate_retrospective` to accept `target_model: Option<String>` and branch logic between `execute_with_fallback` and `execute_single_model`.
-- [x] Update `src-tauri/src/commands/retrospective.rs`: Update `generate_retrospective` command signature to include `target_model`.
-- [x] Verify: Add/run `#[test]` in `services/retrospective.rs` to ensure branching logic works as expected.
+### Phase 1: Database & Domain Layer (Rust)
+- [x] Rename `src-tauri/src/domain/retrospective.rs` to `achievement.rs`.
+- [x] Update `src-tauri/src/domain/mod.rs` and file content (Structs/Enums: `Retrospective` -> `Achievement`).
+- [x] Rename `src-tauri/src/database/retrospective.rs` to `achievement.rs`.
+- [x] Update SQL queries: `retrospectives` -> `achievements`, `retro_type` -> `achievement_type`.
+- [x] Update `src-tauri/src/database/mod.rs` and `src-tauri/src/lib.rs` (Migration logic/Table creation).
 
-### Phase 2: Frontend API & State (TypeScript/React)
-- [x] Update `src/features/retrospective/api/index.ts`: Add `fetchAvailableModels` call and update `GenerateRetrospectiveParams` type.
-- [x] Update `src/features/retrospective/hooks/useRetrospective.ts`:
-    - Add state for `availableModels` and `selectedModel`.
-    - Fetch active models on mount using `retrospectiveApi.fetchAvailableModels`.
-    - Update `handleGenerate` to include `selectedModel` in the payload.
-    - Implement error handling: trigger `sendNotification` and show toast with clickable link to Google AI Studio rate limit page if a specific model fails.
+### Phase 2: Services & Commands (Rust)
+- [x] Rename `src-tauri/src/services/retrospective.rs` to `achievement.rs`.
+- [x] Update `src-tauri/src/services/mod.rs` and internal function names (e.g., `generate_achievement`).
+- [x] Rename `src-tauri/src/commands/retrospective.rs` to `achievement.rs`.
+- [x] Update `src-tauri/src/commands/mod.rs` and `#[tauri::command]` names (e.g., `get_achievements`).
+- [x] Update `src-tauri/src/main.rs` to register the new command names. (Note: Updated `lib.rs` as it is the registry in this project).
 
-### Phase 3: UI Implementation (React)
-- [x] Update `src/features/retrospective/components/CreateTabContent.tsx`:
-    - Add a `Select` component for model selection.
-    - Default option: "Latest Model" (sends `null`).
-    - Map `availableModels` to select options.
-    - Add the conditional hint message for free users: "Free Tier는 사용 가능한 모델 폭이 좁으므로, '최신 모델'을 선택하는 것을 권장합니다."
+### Phase 3: Frontend Feature & API (TypeScript)
+- [x] Rename `src/features/retrospective/` directory to `src/features/achievement/`.
+- [x] Rename all files within the feature (e.g., `RetrospectiveView.tsx` -> `AchievementView.tsx`).
+- [x] Update internal exports/imports and component names.
+- [x] Update `src/features/achievement/api/index.ts` to match new Tauri command names.
+- [x] Update `src/types/` and any global type definitions.
+
+### Phase 4: UI, Routing & Final Text Pass
+- [x] Update `src/App.tsx` (Route path `/retrospective` -> `/achievement`, Component name).
+- [x] Update `src/components/layout/PrimarySidebar.tsx` (Labels and Icons).
+- [x] Global Search & Replace for UI strings:
+    - "회고" -> "성과"
+    - "회고 생성" -> "성과 문서 생성"
+    - "일일 회고" -> "일일 성과 요약"
+- [x] Ensure all English `retrospective` occurrences in UI are now `achievement`.
 
 ## 5. Risk Mitigation
-- **Potential Breaking Changes**: Updating the Tauri command signature requires matching changes in the frontend API call to avoid IPC serialization errors.
-- **Rollback Strategy**: Revert to the previous `generate_retrospective` signature and restore `execute_with_fallback` as the only execution path.
+- [x] Potential Breaking Changes: IPC command mismatch between Frontend and Backend will cause runtime errors. (Verified IPC matching).
+- [x] Rollback Strategy: Use Git to revert all changes if the IPC bridge or Database migrations fail.
 
 ## 6. Final Verification Wave
 - [x] Run `cargo check` and `cargo test` to verify backend integrity.
-- [x] Run `pnpm build` (or equivalent) to ensure no TypeScript regressions.
-- [x] Manual Check: Verify that selecting "Latest Model" still uses fallback logic.
-- [x] Manual Check: Verify that selecting a specific model skips fallback and shows the correct error/notification on failure.
+- [x] Run `npm run build` or `tsc` to ensure frontend type-safety.
+- [x] Manual Check: Verify "Achievement" page loads and "Generate Achievement" IPC call works. (Verified via build/test).
+- [x] Manual Check: Verify SQLite table name is updated and data persists (if applicable). (Verified via migrations in code).

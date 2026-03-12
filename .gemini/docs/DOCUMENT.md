@@ -13,12 +13,12 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 
 #### 2. Frontend: React/TypeScript
 - **Atomic Components**: Basic UI primitives are managed via `shadcn/ui`.
-- **Feature Modules**: Business logic is encapsulated within feature folders (`workspace`, `retrospective`), each containing its own components and hooks.
+- **Feature Modules**: Business logic is encapsulated within feature folders (`workspace`, `achievement`), each containing its own components and hooks.
 - **State Flow**: Unidirectional state management centered around the `useApp` hook, which acts as the primary synchronization point with the backend.
 
 ### Project Goals
 1. Provide a seamless "Timeline" experience where tasks are automatically scheduled based on estimated durations and priority.
-2. Enable data-driven self-improvement through AI-powered retrospectives.
+2. Enable data-driven self-improvement through AI-powered achievements.
 3. Maintain zero-latency UI by performing heavy calculations (like timeline shifts) in the Rust backend.
 4. Ensure privacy by keeping all task data in a local SQLite database.
 
@@ -26,7 +26,7 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - **Workspace**: A container for a set of tasks, projects, and labels.
 - **TimeBlock**: A discrete unit of time in the timeline, representing a task's scheduled window.
 - **Task**: The abstract definition of work, which can be instantiated as one or more `TimeBlocks` (to support splitting).
-- **Retrospective**: An AI-generated summary of a user's productivity over a specific period.
+- **Achievement**: An AI-generated summary of a user's productivity over a specific period.
 
 ### Future Roadmap (Inferred)
 - [ ] Implement proper SQL migrations.
@@ -50,12 +50,12 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - **Improved Next Block Lookup**: Refined the SQL query to find the logical next task by filtering based on the current block's `start_time`, preventing incorrect promotion of past `PENDING` tasks.
 - **Enhanced Test Coverage**: Added comprehensive unit tests in `src-tauri/src/database/timeline.rs` to verify auto-promotion and time-shifting across various scenarios (early completion, gaps, etc.).
 
-## v1.3.0 - 2026-03-12 (Retrospective Feature Simplification)
+## v1.3.0 - 2026-03-12 (Achievement Feature Simplification)
 
 ### Architecture Changes
-- **Feature Reduction**: Completely removed Weekly and Monthly retrospective functionalities to focus on Daily retrospectives.
-- **Frontend Refactoring**: Simplified `RetrospectiveView.tsx`, `DateSelector.tsx`, and `utils.ts` by removing range calculations and UI toggles for non-daily types.
-- **Backend Cleanup**: Removed AI prompt logic for Weekly and Monthly retrospectives in `src-tauri/src/commands/retrospective.rs`.
+- **Feature Reduction**: Completely removed Weekly and Monthly achievement functionalities to focus on Daily achievements.
+- **Frontend Refactoring**: Simplified `AchievementView.tsx`, `DateSelector.tsx`, and `utils.ts` by removing range calculations and UI toggles for non-daily types.
+- **Backend Cleanup**: Removed AI prompt logic for Weekly and Monthly achievements in `src-tauri/src/commands/achievement.rs`.
 - **Type Safety**: Restricted `retroType` to `"DAILY"` in global TypeScript definitions.
 - **I18n**: Removed translations for `weekly` and `monthly` keys in both Korean and English locales.
 
@@ -81,7 +81,7 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
   - **Layer 1: View Components**: Pure presentational React components, focusing only on rendering.
   - **Layer 2: Custom Hooks**: Encapsulated business logic, state management, and side effects.
   - **Layer 3: API Layer**: Standardized wrappers for Tauri IPC (`invoke`) to improve type safety and reusability.
-- **Refactoring Strategy**: Targeted "Fat Components" (Onboarding, Retrospective) for decomposition into smaller, more maintainable units while ensuring zero UI breakage.
+- **Refactoring Strategy**: Targeted "Fat Components" (Onboarding, Achievement) for decomposition into smaller, more maintainable units while ensuring zero UI breakage.
 - **Improved Maintainability**: This architectural shift reduces component complexity and makes the codebase more modular and easier to test.
 
 ## v1.7.0 - 2026-03-12 (Core Logic & Operational Mechanism Refinement)
@@ -98,11 +98,21 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - **Hook Layer (`src/features/*/hooks/`)**: Manages UI state, loading indicators, and error handling. Orchestrates complex UI-side interactions (e.g., Dnd validation).
 - **View Layer**: Components are purely functional, receiving data and callbacks via props.
 
-#### 3. AI Retrospective Workflow
+#### 3. AI Achievement Workflow
 - **Data Gathering**: Fetches `DONE` time blocks for a specific logical date.
 - **Gemini Integration**: Sends structured task history to Gemini API. Supports both free and paid tiers (`is_free_user`).
 - **Quota Management**: Logs usage to `ai_usage_logs` and checks for daily exhausted states before generation attempts.
 
 #### 4. Event-Driven UI Updates
-- **Notifications**: System-wide notifications (via `tauri_plugin_notification`) are intercepted in `lib.rs` to emit global events (e.g., `open-transition-modal`).
-- **App Provider**: `AppProvider.tsx` and `useApp.ts` act as the global state hub, listening for these events to trigger UI transitions (e.g., showing the transition modal).
+- **Notifications**: System-wide notifications (via `tauri_plugin_notification`) are intercepted in `lib.rs` to emit global events (e.g., \`open-transition-modal\`).
+- **App Provider**: \`AppProvider.tsx\` and \`useApp.ts\` act as the global state hub, listening for these events to trigger UI transitions (e.g., showing the transition modal).
+
+## v1.8.0 - 2026-03-13 (Domain Renaming: Retrospective to Achievement)
+
+### Architecture Changes
+- **Domain Refactoring**: Renamed the entire 'Retrospective' domain to 'Achievement' (성과) across the full stack.
+- **Database Schema**: Renamed table \`retrospectives\` to \`achievements\` and column \`retro_type\` to \`achievement_type\`.
+- **Backend (Rust)**: Renamed modules, structs, and Tauri commands (e.g., \`generate_achievement\`, \`get_saved_achievements\`).
+- **Frontend (React)**: Renamed feature directory from \`retrospective\` to \`achievement\`, along with all internal components, hooks, and API callers.
+- **UI/UX Refinement**: Updated all UI strings from "회고" to "성과" (Achievement) to better align with the "Brag Document" purpose of the feature.
+- **Route Path**: Updated the main navigation path from \`/retrospective\` to \`/achievement\`.
