@@ -1,5 +1,5 @@
 import { Retrospective, User } from "@/types";
-import { useRetrospective } from "./hooks/useRetrospective";
+import { useRetrospective } from "./hooks/useRetrospective.tsx";
 import { RetroSidebar } from "./components/RetroSidebar";
 import { CreateTabContent } from "./components/CreateTabContent";
 import { BrowseTabContent } from "./components/BrowseTabContent";
@@ -37,6 +37,9 @@ export const RetrospectiveView = ({
     foundRetro,
     genMessage,
     activeDates,
+    availableModels,
+    selectedModel,
+    setSelectedModel,
     handleGenerate,
     handleConfirmOverwrite,
     handleCopy,
@@ -58,6 +61,10 @@ export const RetrospectiveView = ({
               inputValue={inputValue}
               setInputValue={setInputValue}
               activeDates={activeDates}
+              availableModels={availableModels}
+              selectedModel={selectedModel}
+              setSelectedModel={setSelectedModel}
+              isFreeUser={user.isFreeUser}
               genMessage={genMessage}
               handleGenerate={handleGenerate}
               isGenerating={isGenerating}

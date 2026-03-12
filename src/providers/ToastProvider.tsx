@@ -5,12 +5,12 @@ import { Sparkles, AlertCircle } from 'lucide-react';
 type ToastType = 'success' | 'error';
 
 interface Toast {
-  message: string;
+  message: React.ReactNode;
   type: ToastType;
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType) => void;
+  showToast: (message: React.ReactNode, type?: ToastType) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -26,7 +26,7 @@ export const useToast = () => {
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toast, setToast] = useState<Toast | null>(null);
 
-  const showToast = useCallback((message: string, type: ToastType = 'error') => {
+  const showToast = useCallback((message: React.ReactNode, type: ToastType = 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   }, []);

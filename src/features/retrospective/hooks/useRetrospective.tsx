@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import { Retrospective, User } from "@/types";
+import { DbGeminiModel } from "@/types/gemini";
 import { useToast } from "@/providers/ToastProvider";
 import { calculateRange } from "../utils";
 import { retrospectiveApi } from "../api";
@@ -29,6 +30,9 @@ export const useRetrospective = ({
   const [isDuplicateConfirmOpen, setIsDuplicateConfirmOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
+  const [availableModels, setAvailableModels] = useState<DbGeminiModel[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+
   const [inputValue, setInputValue] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -40,6 +44,20 @@ export const useRetrospective = ({
 
   const [genMessage, setGenMessage] = useState("");
   const [activeDates, setActiveDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const models = await retrospectiveApi.fetchAvailableModels();
+        if (Array.isArray(models)) {
+          setAvailableModels(models);
+        }
+      } catch (e) {
+        console.error("Failed to fetch models:", e);
+      }
+    };
+    fetchModels();
+  }, []);
 
   useEffect(() => {
     const fetchActiveDates = async () => {
@@ -116,7 +134,8 @@ export const useRetrospective = ({
         retroType,
         dateLabel,
         forceRetry,
-        overwrite
+        overwrite,
+        targetModel: selectedModel,
       });
       
       setIsQuotaExhausted(false);
@@ -161,6 +180,35 @@ export const useRetrospective = ({
         setIsDuplicateConfirmOpen(true);
       } else if (errStr.includes("No completed tasks")) {
         showToast(t.retrospective.no_tasks_error, "error");
+      } else if (selectedModel && (errStr.includes("429") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit"))) {
+        // Handle specific model failure with desktop notification
+        if (user.isNotificationEnabled) {
+          const permission = await isPermissionGranted() || await requestPermission() === 'granted';
+          if (permission) {
+            sendNotification({
+              title: "Model Rate Limit Exceeded",
+              body: `Selected model ${selectedModel} is currently unavailable due to rate limits.`,
+            });
+          }
+        }
+        
+        // Show toast with help link
+        showToast(
+          <div>
+            <p>{selectedModel} 모델을 사용한 회고 생성에 실패했습니다.&nbsp;
+              <a 
+              href="https://aistudio.google.com/u/0/rate-limit?timeRange=last-hour" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline font-bold hover:text-white"
+              >
+              사용량 상세 페이지
+              </a>
+              를 확인해주세요.
+            </p>
+          </div>, 
+          "error"
+        );
       } else {
         showToast(`Error: ${errStr}`, "error");
       }
@@ -196,6 +244,9 @@ export const useRetrospective = ({
     foundRetro,
     genMessage,
     activeDates,
+    availableModels,
+    selectedModel,
+    setSelectedModel,
     handleGenerate,
     handleConfirmOverwrite,
     handleCopy,
