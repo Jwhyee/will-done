@@ -42,6 +42,7 @@ export const GlobalSettingsModal = ({
       geminiApiKey: user.geminiApiKey || "",
       lang: user.lang,
       isNotificationEnabled: user.isNotificationEnabled,
+      isFreeUser: user.isFreeUser,
       dayStartTime: user.dayStartTime,
     }
   });
@@ -53,6 +54,7 @@ export const GlobalSettingsModal = ({
         geminiApiKey: user.geminiApiKey || "",
         lang: user.lang,
         isNotificationEnabled: user.isNotificationEnabled,
+        isFreeUser: user.isFreeUser,
         dayStartTime: user.dayStartTime,
       });
     }
@@ -65,6 +67,7 @@ export const GlobalSettingsModal = ({
         geminiApiKey: data.geminiApiKey || null,
         lang: data.lang,
         isNotificationEnabled: data.isNotificationEnabled,
+        isFreeUser: data.isFreeUser,
         dayStartTime: data.dayStartTime,
       });
       await onUserUpdate(updatedUser);
@@ -109,6 +112,20 @@ export const GlobalSettingsModal = ({
             <div className="space-y-3">
               <Label className="text-xs font-medium text-text-secondary uppercase tracking-widest">{t.onboarding.api_key_label}</Label>
               <Input type="password" {...register("geminiApiKey")} className="bg-surface border-border text-text-primary h-12 rounded-xl px-4 font-medium focus:ring-1 focus:ring-white/10" />
+              
+              <div className="flex items-start gap-3 p-4 bg-surface border border-border rounded-xl mt-2">
+                <input
+                  type="checkbox"
+                  {...register("isFreeUser")}
+                  className="w-5 h-5 mt-0.5 rounded-md accent-text-primary cursor-pointer shrink-0"
+                />
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-text-primary uppercase tracking-widest cursor-pointer">
+                    {t.onboarding.free_user_label}
+                  </Label>
+                  <p className="text-[10px] text-text-secondary leading-tight">{t.onboarding.free_user_guide}</p>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-3">

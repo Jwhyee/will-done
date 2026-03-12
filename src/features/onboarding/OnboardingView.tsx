@@ -41,6 +41,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
     nickname: z.string().min(1, t.onboarding.nickname_required).max(20),
     geminiApiKey: z.string(),
     isNotificationEnabled: z.boolean(),
+    isFreeUser: z.boolean(),
     dayStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "HH:mm format required"),
   });
 
@@ -52,6 +53,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
       nickname: "", 
       geminiApiKey: "", 
       isNotificationEnabled: false, 
+      isFreeUser: true,
       dayStartTime: "04:00" 
     }
   });
@@ -59,6 +61,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
   const { watch, setValue, handleSubmit, formState: { errors } } = userForm;
   const nickname = watch("nickname");
   const apiKey = watch("geminiApiKey");
+  const isFreeUser = watch("isFreeUser");
 
   const onUserSubmit = async (data: UserFormValues) => {
     await invoke("save_user", { 
@@ -66,6 +69,7 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
       geminiApiKey: data.geminiApiKey || null,
       lang: getLang(),
       isNotificationEnabled: data.isNotificationEnabled,
+      isFreeUser: data.isFreeUser,
       dayStartTime: data.dayStartTime,
     });
     const u = await invoke<User>("get_user");
@@ -283,6 +287,29 @@ export const OnboardingView = ({ t, onComplete }: OnboardingViewProps) => {
                         <AlertCircle size={16}/> {t.onboarding.api_key_invalid}
                       </p>
                     )}
+
+                    <div 
+                      className="flex items-center justify-between p-5 bg-background border border-border rounded-2xl cursor-pointer hover:border-text-primary/20 transition-all group mt-2"
+                      onClick={() => setValue("isFreeUser", !isFreeUser)}
+                    >
+                      <div className="space-y-0.5">
+                        <Label className="text-base font-bold text-text-primary cursor-pointer">
+                          {t.onboarding.free_user_label}
+                        </Label>
+                        <p className="text-[10px] text-text-muted font-medium leading-tight max-w-[220px]">
+                          {t.onboarding.free_user_guide}
+                        </p>
+                      </div>
+                      <div className={cn(
+                        "w-12 h-6 rounded-full p-1 transition-colors flex items-center shrink-0",
+                        isFreeUser ? "bg-text-primary" : "bg-border"
+                      )}>
+                        <motion.div 
+                          animate={{ x: isFreeUser ? 24 : 0 }}
+                          className="w-4 h-4 bg-background rounded-full shadow-sm"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}

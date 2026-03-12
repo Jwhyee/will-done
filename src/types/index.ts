@@ -43,6 +43,7 @@ export interface User {
   geminiApiKey: string | null;
   lang: string;
   isNotificationEnabled: boolean;
+  isFreeUser: boolean;
   dayStartTime: string;
 }
 
