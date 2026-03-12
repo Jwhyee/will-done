@@ -66,3 +66,13 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - **Database Schema**: Updated `users` table with `is_free_user` column (Boolean, default 1).
 - **Onboarding/Settings UI**: Introduced a "Free User" checkbox in the API Key configuration section, defaulting to checked.
 - **Future-Proofing**: This field will enable specialized error handling (e.g., immediate failure for 429s on free tier vs. retry logic for paid tier) in subsequent updates.
+
+## v1.5.0 - 2026-03-12 (Frontend Refactoring: Logic & View Separation)
+
+### Architecture Changes
+- **3-Layer Separation**: Defined a strict frontend architecture:
+  - **Layer 1: View Components**: Pure presentational React components, focusing only on rendering.
+  - **Layer 2: Custom Hooks**: Encapsulated business logic, state management, and side effects.
+  - **Layer 3: API Layer**: Standardized wrappers for Tauri IPC (`invoke`) to improve type safety and reusability.
+- **Refactoring Strategy**: Targeted "Fat Components" (Onboarding, Retrospective) for decomposition into smaller, more maintainable units while ensuring zero UI breakage.
+- **Improved Maintainability**: This architectural shift reduces component complexity and makes the codebase more modular and easier to test.

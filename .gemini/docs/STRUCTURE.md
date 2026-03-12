@@ -79,7 +79,11 @@
 ## CONVENTIONS (THIS PROJECT)
 1. **Surgical Separation**: Frontend and Backend are decoupled. Use Tauri commands as a clean API layer.
 2. **Feature Modularity**: New functionality should be placed in `src/features/{feature_name}`.
-3. **Rust TDD**: Write `#[test]` in Rust modules for complex logic (especially timeline calculations) before exposing as commands.
+3. **Frontend Architecture (3-Layer)**:
+   - **Layer 1: View**: Pure presentational components (`components/`). Max 150 lines. No `invoke`.
+   - **Layer 2: Hook**: Feature logic and state (`hooks/`).
+   - **Layer 3: API**: IPC wrappers (`api/`).
+4. **Rust TDD**: Write `#[test]` in Rust modules for complex logic (especially timeline calculations) before exposing as commands.
 4. **Zod Validation**: All forms must use Zod schemas for runtime type safety.
 5. **Dnd Constraints**: Timeline operations must respect logical day boundaries (configured in user settings).
 
