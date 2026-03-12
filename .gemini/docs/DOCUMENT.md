@@ -49,3 +49,12 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - **Dynamic Time-Shifting**: Implemented logic to pull up subsequent tasks when a task is completed early or "on time" (if there was a gap), eliminating unintended gaps in the timeline and maintaining task continuity.
 - **Improved Next Block Lookup**: Refined the SQL query to find the logical next task by filtering based on the current block's `start_time`, preventing incorrect promotion of past `PENDING` tasks.
 - **Enhanced Test Coverage**: Added comprehensive unit tests in `src-tauri/src/database/timeline.rs` to verify auto-promotion and time-shifting across various scenarios (early completion, gaps, etc.).
+
+## v1.3.0 - 2026-03-12 (Retrospective Feature Simplification)
+
+### Architecture Changes
+- **Feature Reduction**: Completely removed Weekly and Monthly retrospective functionalities to focus on Daily retrospectives.
+- **Frontend Refactoring**: Simplified `RetrospectiveView.tsx`, `DateSelector.tsx`, and `utils.ts` by removing range calculations and UI toggles for non-daily types.
+- **Backend Cleanup**: Removed AI prompt logic for Weekly and Monthly retrospectives in `src-tauri/src/commands/retrospective.rs`.
+- **Type Safety**: Restricted `retroType` to `"DAILY"` in global TypeScript definitions.
+- **I18n**: Removed translations for `weekly` and `monthly` keys in both Korean and English locales.
