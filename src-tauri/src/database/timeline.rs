@@ -122,3 +122,38 @@ pub async fn check_active_block_exists(pool: &SqlitePool, workspace_id: i64) -> 
         .await?;
     Ok(active_block.is_some())
 }
+
+pub async fn get_unfinished_past_task_dates(pool: &SqlitePool, workspace_id: i64, day_start_time: &str) -> Result<Vec<String>> {
+    let now = Local::now();
+    let current_time = now.format("%H:%M").to_string();
+    let current_logical_date = if current_time < day_start_time.to_string() {
+        now.date_naive() - Duration::days(1)
+    } else {
+        now.date_naive()
+    };
+    let current_logical_date_str = current_logical_date.format("%Y-%m-%d").to_string();
+
+    let rows = sqlx::query(
+        "SELECT DISTINCT logical_date FROM (
+            SELECT 
+                CASE 
+                    WHEN strftime('%H:%M', start_time) < ?1 
+                    THEN date(start_time, '-1 day') 
+                    ELSE date(start_time) 
+                END as logical_date
+            FROM time_blocks
+            WHERE workspace_id = ?2 AND status = 'NOW'
+        ) 
+        WHERE logical_date < ?3
+        ORDER BY logical_date ASC"
+    )
+    .bind(day_start_time)
+    .bind(workspace_id)
+    .bind(current_logical_date_str)
+    .fetch_all(pool)
+    .await?;
+
+    use sqlx::Row;
+    let dates: Vec<String> = rows.iter().map(|r| r.get::<String, _>("logical_date")).collect();
+    Ok(dates)
+}

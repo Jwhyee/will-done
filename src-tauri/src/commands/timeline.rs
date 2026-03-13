@@ -97,3 +97,8 @@ pub async fn get_active_dates(state: State<'_, DbState>, workspace_id: i64) -> R
 pub async fn get_greeting(state: State<'_, DbState>, workspace_id: i64, lang: String) -> Result<String> {
     services::timeline::get_greeting(&state.pool, workspace_id, lang).await
 }
+
+#[tauri::command]
+pub async fn check_unfinished_past_tasks(state: State<'_, DbState>, workspace_id: i64) -> Result<Vec<String>> {
+    services::timeline::check_unfinished_past_tasks(&state.pool, workspace_id).await
+}

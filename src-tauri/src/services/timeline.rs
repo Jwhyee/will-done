@@ -317,6 +317,9 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
 
     match input.action.as_str() {
         "COMPLETE_ON_TIME" | "COMPLETE_NOW" | "COMPLETE_AGO" => {
+            let user = database::user::get_user(pool).await?.ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
+            let day_start_time = user.day_start_time;
+
             let end_dt = if input.action == "COMPLETE_NOW" {
                 Local::now().naive_local()
             } else if input.action == "COMPLETE_AGO" {
@@ -334,16 +337,36 @@ pub async fn process_task_transition(pool: &SqlitePool, input: TaskTransitionInp
             sqlx::query("UPDATE time_blocks SET status = 'DONE', end_time = ?1, review_memo = ?2 WHERE id = ?3")
                 .bind(end_dt.format("%Y-%m-%dT%H:%M:00").to_string()).bind(input.review_memo).bind(input.block_id).execute(&mut *tx).await?;
 
-            let next_block: Option<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status IN ('WILL', 'PENDING') AND id != ?2 AND start_time >= ?3 ORDER BY start_time ASC LIMIT 1")
-                .bind(block.workspace_id).bind(input.block_id).bind(&block.start_time).fetch_optional(&mut *tx).await?;
+            // Logical Day calculation
+            let now = Local::now();
+            let current_time_str = now.format("%H:%M").to_string();
+            let current_logical_date = if current_time_str < day_start_time {
+                now.date_naive() - Duration::days(1)
+            } else {
+                now.date_naive()
+            };
 
-            if let Some(nb) = next_block {
-                let nb_start = NaiveDateTime::parse_from_str(&nb.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
-                let diff = (end_dt - nb_start).num_minutes();
-                if diff != 0 { shift_future_blocks(&mut tx, block.workspace_id, nb_start, diff).await?; }
-                sqlx::query("UPDATE time_blocks SET status = 'NOW' WHERE id = ?1").bind(nb.id).execute(&mut *tx).await?;
-                if let Some(tid) = nb.task_id {
-                    sqlx::query("UPDATE time_blocks SET status = 'CONTINUED' WHERE task_id = ?1 AND status = 'PENDING' AND id < ?2").bind(tid).bind(nb.id).execute(&mut *tx).await?;
+            let block_start = NaiveDateTime::parse_from_str(&block.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+            let block_time_str = block_start.format("%H:%M").to_string();
+            let block_logical_date = if block_time_str < day_start_time {
+                block_start.date() - Duration::days(1)
+            } else {
+                block_start.date()
+            };
+
+            // Only promote next tasks if the completed task belongs to the current logical day or future
+            if block_logical_date >= current_logical_date {
+                let next_block: Option<TimeBlock> = sqlx::query_as("SELECT * FROM time_blocks WHERE workspace_id = ?1 AND status IN ('WILL', 'PENDING') AND id != ?2 AND start_time >= ?3 ORDER BY start_time ASC LIMIT 1")
+                    .bind(block.workspace_id).bind(input.block_id).bind(&block.start_time).fetch_optional(&mut *tx).await?;
+
+                if let Some(nb) = next_block {
+                    let nb_start = NaiveDateTime::parse_from_str(&nb.start_time, "%Y-%m-%dT%H:%M:%S").unwrap();
+                    let diff = (end_dt - nb_start).num_minutes();
+                    if diff != 0 { shift_future_blocks(&mut tx, block.workspace_id, nb_start, diff).await?; }
+                    sqlx::query("UPDATE time_blocks SET status = 'NOW' WHERE id = ?1").bind(nb.id).execute(&mut *tx).await?;
+                    if let Some(tid) = nb.task_id {
+                        sqlx::query("UPDATE time_blocks SET status = 'CONTINUED' WHERE task_id = ?1 AND status = 'PENDING' AND id < ?2").bind(tid).bind(nb.id).execute(&mut *tx).await?;
+                    }
                 }
             }
         },
@@ -595,6 +618,11 @@ pub async fn get_greeting(pool: &SqlitePool, workspace_id: i64, lang: String) ->
     Ok(greeting)
 }
 
+pub async fn check_unfinished_past_tasks(pool: &SqlitePool, workspace_id: i64) -> Result<Vec<String>> {
+    let user = database::user::get_user(pool).await?.ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
+    database::timeline::get_unfinished_past_task_dates(pool, workspace_id, &user.day_start_time).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -607,6 +635,9 @@ mod tests {
             .await
             .expect("Failed to connect to memory db");
 
+        sqlx::query("CREATE TABLE users (id INTEGER PRIMARY KEY CHECK (id = 1), nickname TEXT NOT NULL, gemini_api_key TEXT, lang TEXT NOT NULL DEFAULT 'en', last_successful_model TEXT, is_notification_enabled BOOLEAN NOT NULL DEFAULT 0, is_free_user BOOLEAN NOT NULL DEFAULT 1, day_start_time TEXT NOT NULL DEFAULT '04:00')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO users (id, nickname, gemini_api_key, lang, is_notification_enabled, is_free_user, day_start_time) VALUES (1, 'TestUser', 'dummy_key', 'en', 1, 1, '04:00')").execute(&pool).await.unwrap();
+        
         sqlx::query("CREATE TABLE workspaces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, core_time_start TEXT, core_time_end TEXT, role_intro TEXT)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE unplugged_times (id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id INTEGER NOT NULL, label TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, last_used TEXT NOT NULL)").execute(&pool).await.unwrap();
@@ -767,5 +798,83 @@ mod tests {
         assert_eq!(blocks[1].id, 12);
         assert_eq!(blocks[2].id, 11);
         assert_eq!(blocks[1].start_time, "2026-03-01T10:00:00");
+    }
+
+    #[tokio::test]
+    async fn test_get_unfinished_past_task_dates() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // Let's assume day_start_time is 04:00
+        // If current logical date is 2026-03-10
+        // A task at 2026-03-09 10:00 (NOW) -> logical 2026-03-09 (PAST)
+        // A task at 2026-03-10 01:00 (NOW) -> logical 2026-03-09 (PAST)
+        // A task at 2026-03-10 10:00 (NOW) -> logical 2026-03-10 (TODAY, NOT PAST)
+
+        // Mocking "now" is hard without a trait, but we can set start_times far in the past.
+        let past_date_1 = "2020-01-01T10:00:00"; // Logical 2020-01-01
+        let past_date_2 = "2020-01-02T01:00:00"; // Logical 2020-01-01 (if day_start is 04:00)
+        let past_date_3 = "2020-01-03T10:00:00"; // Logical 2020-01-03
+
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'T1')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (1, 1, 1, 'T1', ?1, '2020-01-01T11:00:00', 'NOW')").bind(past_date_1).execute(&pool).await.unwrap();
+        
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'T2')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (2, 2, 1, 'T2', ?1, '2020-01-02T02:00:00', 'NOW')").bind(past_date_2).execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (3, 1, 'T3')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (3, 3, 1, 'T3', ?1, '2020-01-03T11:00:00', 'NOW')").bind(past_date_3).execute(&pool).await.unwrap();
+
+        let dates = database::timeline::get_unfinished_past_task_dates(&pool, 1, "04:00").await.unwrap();
+        
+        assert!(dates.contains(&"2020-01-01".to_string()));
+        assert!(dates.contains(&"2020-01-03".to_string()));
+        assert_eq!(dates.len(), 2);
+        assert_eq!(dates[0], "2020-01-01");
+        assert_eq!(dates[1], "2020-01-03");
+    }
+
+    #[tokio::test]
+    async fn test_past_task_completion_no_auto_promotion() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO workspaces (id, name) VALUES (1, 'Test')").execute(&pool).await.unwrap();
+
+        // 1. Setup a past NOW task
+        let past_start = "2020-01-01T10:00:00";
+        let past_end = "2020-01-01T11:00:00";
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (1, 1, 'Past Task')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (1, 1, 1, 'Past Task', ?1, ?2, 'NOW')")
+            .bind(past_start).bind(past_end).execute(&pool).await.unwrap();
+
+        // 2. Setup a today WILL task (assuming current logical date is today)
+        let now = Local::now();
+        let day_start_time = "04:00";
+        let today_logical = if now.format("%H:%M").to_string() < day_start_time.to_string() {
+            now.date_naive() - Duration::days(1)
+        } else {
+            now.date_naive()
+        };
+        let today_start = format!("{}T10:00:00", today_logical.format("%Y-%m-%d"));
+        let today_end = format!("{}T11:00:00", today_logical.format("%Y-%m-%d"));
+        sqlx::query("INSERT INTO tasks (id, workspace_id, title) VALUES (2, 1, 'Today Task')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO time_blocks (id, task_id, workspace_id, title, start_time, end_time, status) VALUES (2, 2, 1, 'Today Task', ?1, ?2, 'WILL')")
+            .bind(&today_start).bind(&today_end).execute(&pool).await.unwrap();
+
+        // 3. Complete the past task
+        let input = TaskTransitionInput {
+            block_id: 1,
+            action: "COMPLETE_ON_TIME".to_string(),
+            extra_minutes: None,
+            review_memo: None,
+        };
+        process_task_transition(&pool, input).await.unwrap();
+
+        // 4. Verify past task is DONE
+        let past_block: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 1").fetch_one(&pool).await.unwrap();
+        assert_eq!(past_block.status, "DONE");
+
+        // 5. Verify today task is still WILL (NO auto-promotion)
+        let today_block: TimeBlock = sqlx::query_as("SELECT * FROM time_blocks WHERE id = 2").fetch_one(&pool).await.unwrap();
+        assert_eq!(today_block.status, "WILL");
     }
 }

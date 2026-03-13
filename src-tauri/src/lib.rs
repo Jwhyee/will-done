@@ -272,6 +272,7 @@ pub fn run() {
             commands::timeline::move_task_to_bottom,
             commands::timeline::get_active_dates,
             commands::timeline::get_today_completed_duration,
+            commands::timeline::check_unfinished_past_tasks,
             commands::achievement::generate_achievement,
             commands::achievement::get_saved_achievements,
             commands::achievement::get_latest_saved_achievement,
