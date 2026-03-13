@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, Send, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, Send, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +27,8 @@ interface WorkspaceTimelineProps {
   onMoveTaskStep: (blockId: number, direction: "up" | "down") => Promise<void>;
   onMoveTaskToPriority: (blockId: number) => Promise<void>;
   onMoveTaskToBottom: (blockId: number) => Promise<void>;
+  isNotToday: boolean;
+  onGoToToday: () => void;
 }
 
 export const WorkspaceTimeline = ({
@@ -48,6 +50,8 @@ export const WorkspaceTimeline = ({
   onMoveTaskStep,
   onMoveTaskToPriority,
   onMoveTaskToBottom,
+  isNotToday,
+  onGoToToday,
 }: WorkspaceTimelineProps) => {
   const [isDoneVisible, setIsDoneVisible] = useState(false);
 
@@ -168,6 +172,20 @@ export const WorkspaceTimeline = ({
               ))}
             </SortableContext>
           </DroppableArea>
+        )}
+
+        {isNotToday && (
+          <div className="flex justify-center pt-8">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onGoToToday}
+              className="rounded-full px-6 h-10 gap-2 font-bold transition-all hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+            >
+              <RotateCcw size={16} />
+              {t.timeline.button.go_to_today}
+            </Button>
+          </div>
         )}
       </div>
     </ScrollArea>

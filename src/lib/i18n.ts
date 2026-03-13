@@ -209,6 +209,11 @@ export const translations = {
         many: "{m}월 {d}일 외 {n}일에 완료 처리하지 않은 태스크가 있습니다.",
       }
     },
+    timeline: {
+      button: {
+        go_to_today: "오늘로 이동",
+      }
+    },
     achievement: {
       title: "성과",
       create_tab: "성과 문서 생성",
@@ -502,6 +507,11 @@ export const translations = {
         plural_2: "There are unfinished tasks on {m1}/{d1} and {m2}/{d2}.",
         plural_3: "There are unfinished tasks on {m1}/{d1}, {m2}/{d2}, and {m3}/{d3}.",
         many: "There are unfinished tasks on {m}/{d} and {n} other days.",
+      }
+    },
+    timeline: {
+      button: {
+        go_to_today: "Go to Today",
       }
     },
     achievement: {

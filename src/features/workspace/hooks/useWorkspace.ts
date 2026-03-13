@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,6 +10,9 @@ interface UseWorkspaceProps {
   t: any;
   user: User | null;
   currentTime: Date;
+  logicalDate: Date;
+  selectedDate: Date | null;
+  onDateChange: (date: Date | null) => void;
   timeline: TimeBlock[];
   onTaskSubmit: (data: any, isInbox?: boolean) => Promise<void>;
   onEditTaskSubmit: (blockId: number, data: any) => Promise<void>;
@@ -18,6 +22,9 @@ export const useWorkspace = ({
   t,
   user,
   currentTime,
+  logicalDate,
+  selectedDate,
+  onDateChange,
   timeline,
   onTaskSubmit,
   onEditTaskSubmit,
@@ -142,6 +149,12 @@ export const useWorkspace = ({
     return totalMinutes > 0 ? Math.round((doneMinutes / totalMinutes) * 100) : 0;
   };
 
+  const isNotToday = !!selectedDate && format(selectedDate, "yyyy-MM-dd") !== format(logicalDate, "yyyy-MM-dd");
+
+  const handleGoToToday = () => {
+    onDateChange(null);
+  };
+
   return {
     hoverTaskId,
     setHoverTaskId,
@@ -162,5 +175,7 @@ export const useWorkspace = ({
     editTaskBlock,
     setEditTaskBlock,
     calculateProgress,
+    isNotToday,
+    handleGoToToday,
   };
 };

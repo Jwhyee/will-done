@@ -55,7 +55,8 @@ export const WorkspaceView = ({
     hoverTaskId, setHoverTaskId, deleteTaskProps, setDeleteTaskProps, isSplitDelete, setIsSplitDelete,
     moveAllConfirm, setMoveAllConfirm, exceededConfirm, setExceededConfirm, isInboxOpen, setIsInboxOpen,
     taskForm, handleTaskSubmit, handleTaskError, handleEditTaskSubmit, editTaskBlock, setEditTaskBlock, calculateProgress,
-  } = useWorkspace({ t, user, currentTime, timeline, onTaskSubmit, onEditTaskSubmit });
+    isNotToday, handleGoToToday,
+  } = useWorkspace({ t, user, currentTime, logicalDate, selectedDate, onDateChange, timeline, onTaskSubmit, onEditTaskSubmit });
 
   const dailyProgress = calculateProgress();
   const isPastView = !!selectedDate && format(selectedDate, "yyyy-MM-dd") !== format(logicalDate, "yyyy-MM-dd");
@@ -82,6 +83,8 @@ export const WorkspaceView = ({
         onMoveTaskStep={onMoveTaskStep}
         onMoveTaskToPriority={onMoveTaskToPriority}
         onMoveTaskToBottom={onMoveTaskToBottom}
+        isNotToday={isNotToday}
+        onGoToToday={handleGoToToday}
       />
 
       <WorkspaceInbox t={t} isOpen={isInboxOpen} onOpenChange={setIsInboxOpen} inboxTasks={inboxTasks} onMoveToTimeline={onMoveToTimeline} onDeleteTask={onDeleteTask} onMoveAllConfirm={() => setMoveAllConfirm(true)} />
