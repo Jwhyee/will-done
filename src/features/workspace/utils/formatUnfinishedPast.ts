@@ -3,7 +3,7 @@ export const formatUnfinishedPastText = (dates: string[], t: any) => {
   
   const formatDate = (dateStr: string) => {
     // dates are in YYYY-MM-DD format from the backend
-    const [y, m, d] = dateStr.split("-").map(Number);
+    const [m, d] = dateStr.split("-").map(Number);
     return { m, d };
   };
 
