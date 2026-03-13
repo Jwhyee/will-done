@@ -116,3 +116,22 @@ The `will-done` project follows a **Modular Monolith** pattern on the backend an
 - **Frontend (React)**: Renamed feature directory from \`retrospective\` to \`achievement\`, along with all internal components, hooks, and API callers.
 - **UI/UX Refinement**: Updated all UI strings from "회고" to "성과" (Achievement) to better align with the "Brag Document" purpose of the feature.
 - **Route Path**: Updated the main navigation path from \`/retrospective\` to \`/achievement\`.
+
+## v1.9.0 - 2026-03-13 (Unfinished Past Task Highlighting)
+
+### Architecture Changes
+- **Data Integrity Layer**: Added a detection mechanism for "leaked" tasks—those left in `NOW` status on logical dates that have already passed.
+- **Backend IPC**: Introduced `check_unfinished_past_tasks` command to return a list of past logical dates requiring user attention.
+- **Visual Feedback System**:
+    - **Header Alert**: A dynamically formatted banner in the Workspace header providing context about the number and dates of unfinished tasks.
+    - **Interactive Indicators**: Applied a breathing red ring to the `DateSelector` trigger and red dot indicators to specific `Calendar` day cells.
+- **State Synchronization**: Integrated unfinished date checks into the standard task lifecycle (creation, completion, deletion) to ensure the UI reflects the true database state in real-time.
+
+## v1.10.0 - 2026-03-13 (Past Task Completion Control)
+
+### Architecture Changes
+- **Backend Task Transition Logic**: Updated `process_task_transition` in `services/timeline.rs` to detect "Past Logical Days". If a task being completed belongs to a past logical date, the automatic promotion of the next task to `NOW` is disabled to prevent unintended timeline shifts in the current day.
+- **Frontend UI Visibility**: Modified `SortableItem.tsx` to enable completion and deletion buttons for `NOW` tasks even when viewing past dates (`isPastView`).
+- **Context-Aware Modals**: Enhanced `TransitionModal` to receive `isPastView` state, providing specialized visual hints and descriptions when completing tasks from previous days.
+- **Improved State Sync**: Leveraged the existing `unfinishedPastDates` infrastructure to ensure that completing or deleting a past `NOW` task immediately clears the corresponding red alerts in the UI.
+- **Robustness**: Added comprehensive unit tests in Rust to verify that completing past tasks correctly updates their status without triggering auto-promotion for future tasks.
