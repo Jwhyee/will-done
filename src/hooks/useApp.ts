@@ -56,6 +56,7 @@ export function useApp() {
   const [overId, setOverId] = useState<string | null>(null);
   const [isWorkspaceCreateModalOpen, setIsWorkspaceCreateModalOpen] = useState(false);
   const [todayCompletedDuration, setTodayCompletedDuration] = useState<number>(0);
+  const [unfinishedPastDates, setUnfinishedPastDates] = useState<string[]>([]);
   const [dismissedBlockId, setDismissedBlockId] = useState<number | null>(null);
   const lastNotifiedBlockId = useRef<number | null>(null);
 
@@ -83,6 +84,9 @@ export function useApp() {
 
       const completedDuration = await workspaceApi.getTodayCompletedDuration(activeWorkspaceId);
       setTodayCompletedDuration(completedDuration);
+
+      const pastDates = await workspaceApi.checkUnfinishedPastTasks(activeWorkspaceId);
+      setUnfinishedPastDates(pastDates);
 
       const now = new Date();
       const isToday = dateStr === format(logicalDate, "yyyy-MM-dd");
@@ -427,5 +431,6 @@ export function useApp() {
     onMoveTaskStep,
     onMoveTaskToPriority,
     onMoveTaskToBottom,
+    unfinishedPastDates,
   };
 }

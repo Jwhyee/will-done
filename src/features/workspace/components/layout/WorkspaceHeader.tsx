@@ -10,6 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { TaskForm } from "../forms/TaskForm";
 import { User } from "@/types";
+import { formatUnfinishedPastText } from "../../utils/formatUnfinishedPast";
+import { AlertCircle } from "lucide-react";
 
 interface WorkspaceHeaderProps {
   t: any;
@@ -28,6 +30,7 @@ interface WorkspaceHeaderProps {
   onOpenInbox: () => void;
   onOpenAchievement: () => void;
   isPastView: boolean;
+  unfinishedPastDates: string[];
 }
 
 export const WorkspaceHeader = ({
@@ -47,6 +50,7 @@ export const WorkspaceHeader = ({
   onOpenInbox,
   onOpenAchievement,
   isPastView,
+  unfinishedPastDates,
 }: WorkspaceHeaderProps) => {
   const [activeDates, setActiveDates] = useState<string[]>([]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -54,6 +58,8 @@ export const WorkspaceHeader = ({
   const activeLocale = user?.lang === "ko" ? locales.ko : locales.enUS;
 
   const viewDate = selectedDate || logicalDate;
+  const hasUnfinishedPast = unfinishedPastDates.length > 0;
+  const unfinishedPastText = formatUnfinishedPastText(unfinishedPastDates, t);
 
   useEffect(() => {
     if (activeWorkspaceId) {
@@ -76,16 +82,24 @@ export const WorkspaceHeader = ({
 
   return (
     <header className="px-8 pt-8 pb-6 flex flex-col space-y-4 shrink-0 bg-background/80 backdrop-blur-md z-50 border-b border-border select-none relative">
+      {hasUnfinishedPast && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl mb-2 animate-in fade-in slide-in-from-top-2 duration-500">
+          <AlertCircle size={14} className="text-red-500 shrink-0" />
+          <p className="text-[12px] font-bold text-red-500 leading-none tracking-tight">
+            {unfinishedPastText}
+          </p>
+        </div>
+      )}
       <div className="flex items-center justify-between relative z-50">
         <div className="space-y-1 w-full max-w-2xl">
           <div className="flex items-center space-x-3 mb-1">
             <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
               <PopoverTrigger asChild>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-surface-elevated cursor-pointer transition-all active:scale-95 group border border-transparent hover:border-border/50">
-                  <div className={`text-[11px] font-bold uppercase tracking-wider transition-colors ${isPastView ? 'text-accent' : 'text-text-primary'}`}>
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-surface-elevated cursor-pointer transition-all active:scale-95 group border border-transparent hover:border-border/50 ${hasUnfinishedPast ? 'ring-2 ring-red-500 animate-pulse bg-red-500/5 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''}`}>
+                  <div className={`text-[11px] font-bold uppercase tracking-wider transition-colors ${isPastView ? 'text-accent' : hasUnfinishedPast ? 'text-red-500' : 'text-text-primary'}`}>
                     {format(viewDate, user?.lang === "ko" ? "yyyy년 M월 d일 (EEE)" : "MMM d, yyyy (EEE)", { locale: activeLocale })}
                   </div>
-                  <CalendarIcon size={12} className={`transition-colors ${isPastView ? 'text-accent' : 'text-text-muted group-hover:text-text-primary'}`} />
+                  <CalendarIcon size={12} className={`transition-colors ${isPastView ? 'text-accent' : hasUnfinishedPast ? 'text-red-500' : 'text-text-muted group-hover:text-text-primary'}`} />
                 </div>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 bg-surface-elevated border-border shadow-2xl rounded-2xl overflow-hidden" align="start">
@@ -102,6 +116,7 @@ export const WorkspaceHeader = ({
                   initialFocus
                   locale={activeLocale}
                   className="p-3"
+                  highlightDates={unfinishedPastDates}
                 />
                 <div className="p-2 border-t border-border bg-surface/50">
                   <Button

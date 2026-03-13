@@ -317,7 +317,7 @@ export const SortableItem = ({
                 </Tooltip>
 
                 {/* COMPLETE (NOW only) */}
-                {isNow && !isPastView && (
+                {isNow && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span>

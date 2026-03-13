@@ -54,6 +54,9 @@ export const workspaceApi = {
   getTodayCompletedDuration: (workspaceId: number) =>
     invoke<number>("get_today_completed_duration", { workspaceId }),
 
+  checkUnfinishedPastTasks: (workspaceId: number) =>
+    invoke<string[]>("check_unfinished_past_tasks", { workspaceId }),
+
   getProjects: () =>
     invoke<any[]>("get_projects"),
 

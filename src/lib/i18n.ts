@@ -130,6 +130,8 @@ export const translations = {
         not_yet_warning: "아직 목표 시간이 되지 않았습니다.",
         modal_title: "태스크 완료",
         modal_desc: "[{title}] 태스크를 완료하시겠습니까?",
+        past_task_hint: "과거 미완료 태스크",
+        past_task_desc: "과거 논리적 날짜의 미완료 태스크를 완료 처리합니다. 다음 태스크 자동 시작은 수행되지 않습니다.",
         continue_btn: "계속 진행",
       },
       status: {
@@ -199,7 +201,13 @@ export const translations = {
         "허리를 쭉 펴고 기지개를 한 번 켜보세요. 몸이 훨씬 가벼워질 거예요! ✨",
         "오랫동안 앉아 계셨네요. 잠시 업무에서 눈을 떼고 먼 곳을 바라보며 눈을 쉬어주세요. 👀",
         "일어서서 업무를 진행해보는 건 어떨까요? 집중력을 높이는 데 도움이 됩니다! 🚶",
-      ]
+      ],
+      unfinished_past: {
+        singular: "{m}월 {d}일에 완료 처리하지 않은 태스크가 있습니다.",
+        plural_2: "{m1}월 {d1}일, {m2}월 {d2}일에 완료 처리하지 않은 태스크가 있습니다.",
+        plural_3: "{m1}월 {d1}일, {m2}월 {d2}일, {m3}월 {d3}일에 완료 처리하지 않은 태스크가 있습니다.",
+        many: "{m}월 {d}일 외 {n}일에 완료 처리하지 않은 태스크가 있습니다.",
+      }
     },
     achievement: {
       title: "성과",
@@ -417,6 +425,8 @@ export const translations = {
         not_yet_warning: "Target time has not been reached yet.",
         modal_title: "Task Finished",
         modal_desc: "Are you sure you want to finish [{title}]?",
+        past_task_hint: "Past Task",
+        past_task_desc: "Completing an unfinished task from a past logical day. Next task auto-promotion is disabled.",
         continue_btn: "Still working",
       },
       status: {
@@ -486,7 +496,13 @@ export const translations = {
         "Stretch your back and arms. Your body will feel much lighter! ✨",
         "You've been sitting for a long time. Take a break and look far away to rest your eyes. 👀",
         "How about trying to work standing up? it helps boost concentration! 🚶",
-      ]
+      ],
+      unfinished_past: {
+        singular: "There is an unfinished task on {m}/{d}.",
+        plural_2: "There are unfinished tasks on {m1}/{d1} and {m2}/{d2}.",
+        plural_3: "There are unfinished tasks on {m1}/{d1}, {m2}/{d2}, and {m3}/{d3}.",
+        many: "There are unfinished tasks on {m}/{d} and {n} other days.",
+      }
     },
     achievement: {
       title: "Achievement",

@@ -39,6 +39,7 @@ interface WorkspaceViewProps {
   setTransitionBlock: (block: TimeBlock | null) => void;
   workspaces: Workspace[];
   overId: string | null;
+  unfinishedPastDates: string[];
 }
 
 export const WorkspaceView = ({
@@ -47,6 +48,7 @@ export const WorkspaceView = ({
   onMoveToInbox, onDeleteTask, onHandleSplitTaskDeletion, onMoveAllToTimeline, onMoveToTimeline,
   onMoveTaskStep, onMoveTaskToPriority, onMoveTaskToBottom,
   onOpenAchievement, onCreateWorkspace, transitionBlock, setTransitionBlock, workspaces, overId,
+  unfinishedPastDates,
 }: WorkspaceViewProps) => {
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
   const {
@@ -66,7 +68,7 @@ export const WorkspaceView = ({
         t={t} user={user} greeting={greeting} currentTime={currentTime} logicalDate={logicalDate} selectedDate={selectedDate}
         onDateChange={onDateChange} activeWorkspaceId={activeWorkspaceId} dailyProgress={dailyProgress} inboxTasksCount={inboxTasks.length}
         taskForm={taskForm} onTaskSubmit={handleTaskSubmit} onTaskError={handleTaskError} onOpenInbox={() => setIsInboxOpen(true)}
-        onOpenAchievement={onOpenAchievement} isPastView={isPastView}
+        onOpenAchievement={onOpenAchievement} isPastView={isPastView} unfinishedPastDates={unfinishedPastDates}
       />
 
       <WorkspaceTimeline
@@ -97,6 +99,7 @@ export const WorkspaceView = ({
       <TransitionModal
         t={t}
         transitionBlock={transitionBlock}
+        isPastView={isPastView}
         onClose={() => {
           if (transitionBlock) onDismissTransition(transitionBlock.id);
           setTransitionBlock(null);

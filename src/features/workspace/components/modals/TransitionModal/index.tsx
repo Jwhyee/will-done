@@ -12,6 +12,7 @@ import { CompletionSection } from "./CompletionSection";
 interface TransitionModalProps {
   t: any;
   transitionBlock: TimeBlock | null;
+  isPastView?: boolean;
   onClose: () => void;
   onTransition: (action: string, extraMinutes?: number, reviewMemo?: string) => Promise<void>;
   currentTime: Date;
@@ -23,6 +24,7 @@ type CompletionType = "COMPLETE_ON_TIME" | "COMPLETE_NOW" | "COMPLETE_AGO";
 export const TransitionModal = ({
   t,
   transitionBlock,
+  isPastView = false,
   onClose,
   onTransition,
   currentTime,
@@ -72,11 +74,18 @@ export const TransitionModal = ({
     <Dialog open={!!transitionBlock} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[440px] bg-surface-elevated border-border text-text-primary shadow-2xl rounded-3xl p-6 antialiased overflow-hidden">
         <DialogHeader className="space-y-1">
-          <DialogTitle className="text-xl font-black tracking-tighter text-text-primary">
+          <DialogTitle className="text-xl font-black tracking-tighter text-text-primary flex items-center gap-2">
             {t.main.transition.modal_title || t.main.transition.title}
+            {isPastView && (
+              <span className="text-[10px] bg-warning/20 text-warning px-2 py-0.5 rounded-full uppercase font-black tracking-widest animate-pulse">
+                {t.main.transition.past_task_hint}
+              </span>
+            )}
           </DialogTitle>
           <DialogDescription className="text-text-secondary text-[11px] font-medium">
-            {t.main.transition.modal_desc ? t.main.transition.modal_desc.replace("{title}", transitionBlock.title) : t.main.transition.description}
+            {isPastView 
+              ? t.main.transition.past_task_desc
+              : (t.main.transition.modal_desc ? t.main.transition.modal_desc.replace("{title}", transitionBlock.title) : t.main.transition.description)}
           </DialogDescription>
         </DialogHeader>
 

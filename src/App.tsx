@@ -90,6 +90,7 @@ function AppContent() {
     onMoveTaskStep,
     onMoveTaskToPriority,
     onMoveTaskToBottom,
+    unfinishedPastDates,
   } = useApp();
 
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
@@ -223,6 +224,7 @@ function AppContent() {
               transitionBlock={transitionBlock}
               setTransitionBlock={setTransitionBlock}
               overId={overId}
+              unfinishedPastDates={unfinishedPastDates}
             />
           </MainLayout>
         );
